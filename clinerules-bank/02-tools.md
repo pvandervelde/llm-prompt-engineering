@@ -9,6 +9,7 @@ Rules in this file are prefixed with `tool-` to indicate that they are tool rule
    - Initiate appropriate tool usage without explicit human prompting
    - Treat tools as extensions of analytical capabilities
    - Multiple tools should be used in parallel when beneficial
+   - In your output, mention the tools used and their purpose
 
 2. **tool-decision-making**: When choosing tools, consider:
    - Primary goal of the current task
