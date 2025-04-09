@@ -18,14 +18,13 @@ Rules in this file are prefixed with `tool-` to indicate that they are tool rule
    - Previous tool usage patterns in the conversation
    - Query type and required verification level
 
-3. **tool-grounding**: Grounding is the process of verifying and validating information from multiple sources.
-   - Use grounding to ensure accuracy and reliability of information
-   - Cross-reference findings from different tools
-   - Document grounding results and sources
+## Available Tools
 
-## Hierarchy
+The following tools are available for use in this project. Use them according to the guidelines.
 
-1. **tool-hierarchy-sequential-thinking**: Sequential Thinking is the primary entry point for all tasks.
+### General
+
+1. Sequential Thinking is the primary entry point for all tasks. Use it liberally to guide the process.
    - Automatically begins with each new topic or request
    - Guides the selection and integration of other tools
    - Core Functions:
@@ -35,14 +34,10 @@ Rules in this file are prefixed with `tool-` to indicate that they are tool rule
      - Course correction
      - Integration of multiple tool outputs
 
-2. **tool-information-search**: All search tools must be used according to the query type matrix for
-   comprehensive coverage.
-   1. primary search tool for all searches: Brave search
-   2. secondary search tool for all searches: Tavily search
-   3. enhanced search tools for specific query types: Perplexity for technical queries and Tavily
-      context for background information
+### Search
 
-## Query Type Matrix
+A number of search tools are available for use. Use them according the following
+table:
 
 | Query Type | Primary Tools | Secondary Tools | Verification |
 |------------|--------------|-----------------|--------------|
@@ -50,5 +45,27 @@ Rules in this file are prefixed with `tool-` to indicate that they are tool rule
 | Technical | Perplexity + Tavily | Jina.ai | Optional |
 | Current Events | Brave + Tavily | Perplexity | Required |
 | Research | Tavily + Brave | All Others | Required |
-| Source Analysis | Jina.ai + Tavily | Grounding | Required |
+| Source Analysis | Tavily | Grounding | Required |
 | Quick Answers | Tavily QnA | Perplexity | Optional |
+
+**Grounding** is the process of verifying and validating information from multiple sources.
+
+- Use grounding to ensure accuracy and reliability of information
+- Cross-reference findings from different tools
+- Document grounding results and sources
+
+#### Available Search Tools
+
+1. Brave Search is the primary search tool for all queries.
+   - Use for general searches and current events
+   - Provides a wide range of information
+
+2. Tavily Search is the secondary search tool for all queries.
+   - Use for specific queries and to complement Brave Search
+   - Provides additional context and information
+   - Use for background information and contextual searches
+
+3. Perplexity is an enhanced search tool for technical queries.
+   - Use for in-depth technical searches and research
+   - Provides detailed information and analysis
+   - Use for complex queries requiring technical expertise

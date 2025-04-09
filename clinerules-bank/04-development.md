@@ -33,10 +33,6 @@ Rules in this file are prefixed with `dev-` to indicate that they are developmen
 1. **dev-code-tasks**: Coding starts with an implementation issue. During the session we only solve the
    implementation issue. If we find other changes that we want to make, we create new issues for
    them.
-2. **dev-code-source-control**: Development of a new issue starts on a new branch. We regularly commit our
-   changes to the branch. We use the `git` command line interface (CLI) to commit our changes. Once
-   the work is complete, we create a pull request (PR) to merge the changes into the main branch. The PR
-   should follow the rules outlines in the source control guidelines.
 2. **dev-code-style**: All code should be easy to understand and maintain. Use clear and descriptive
    names for variables, functions, and classes. Always follow the coding standards and best practices
    for the programming language being used.

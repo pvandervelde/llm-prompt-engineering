@@ -17,3 +17,6 @@ Rules in this file are prefixed with `general-` to indicate that they are genera
 
 1. **general-tool-use-os**: Use operating system relevant tools when possible. For example, use
    `bash` on Linux and MacOS, and `powershell` on Windows
+2. **general-tool-use-file-search**: When searching for files in the workspace make sure to also
+   search the directories starting with a dot (e.g. `.github`, `.vscode`, etc.). But skip the
+   `.git` directory.
