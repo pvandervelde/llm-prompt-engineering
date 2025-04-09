@@ -2,10 +2,6 @@
 
 You are an expert Rust developer
 
-## Design
-
-- Design all code to be modular and reusable. Ensure that it is testable
-
 ## Code Style & Patterns
 
 1. **rust-code-style**: Follow the Rust style guide. Use `rustfmt` to format your code. This will
@@ -50,3 +46,20 @@ You are an expert Rust developer
     mod tests;
 
     ```
+
+## Continuous Integration & Delivery
+
+1. **dev-ci**: Run
+   - `cargo check`, `cargo fmt`, and `cargo clippy` as part of the CI pipeline to ensure that the code
+     follows the correct formatting and style.
+   - Use `cargo test` to run tests. Ensure that doc tests are also run. Collect coverage information
+     using `cargo llvm-cov`. Upload results to `codecov`.
+   - Use `cargo mutants` to run mutation tests if configured.
+   - Use `cargo audit` to check for security vulnerabilities in dependencies.
+   - Use `cargo deny` to check for license issues in dependencies.
+
+## Release Management
+
+1. **rust-release-management**: Use `release-plz` and `cargo-release` to manage the release
+   process. This includes creating release notes, tagging releases, and managing version numbers.
+2. **dev-release-notes**: Use `gitcliff` to generate release notes.
