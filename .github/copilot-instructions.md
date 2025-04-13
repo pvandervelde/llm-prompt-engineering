@@ -38,7 +38,7 @@
   type should be one of the following: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`,
   `test`. The scope should be the name of the module or component being changed. The subject should
   be a short description of the change. The `work_item_ref` is one of the following issue references:
-  `fixes`, `closes`, `resolves`, `references` or `related to` followed by the issue number.
+  `references` or `related to` followed by the issue number.
   Finally those parts make the following format for commit messages:
 
   ```text
@@ -63,8 +63,7 @@
 
 - **wf-issue-creation**: All issues should be created in the repository. This includes bugs, new features,
   and any other changes to the codebase. Issues should be created for all tasks, even if they are small.
-  This includes creating an issue for the creation of a design document, implementation issues, and any other
-  tasks that need to be completed. Issues should be linked together to show the relationship between them.
+  Issues should be linked together to show the relationship between them.
 
 - **wf-branch-selection**: Each task is done on its own branch. Before you start a task check that you are on the
   correct branch. Code is *never* directly committed to the `main` or `master` branches. If no
