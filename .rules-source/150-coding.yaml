@@ -1,0 +1,23 @@
+- name: coding-whitespace
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, test]
+  text: |
+    Always leave a whitespace between a line of code and a comment. This improves readability and helps to distinguish
+    between code and comments.
+
+- name: coding-style
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, architect]
+  text: |
+    Follow the style guides for the language. Use the appropriate formatters to format your code. This will
+    help ensure that the code is consistent and easy to read.

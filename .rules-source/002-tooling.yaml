@@ -1,0 +1,23 @@
+- name: general-tool-use-os
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  text: |
+    Use operating system relevant tools when possible. For example, use
+    `bash` on Linux and MacOS, and `powershell` on Windows
+
+- name: general-tool-use-file-search
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  text: |
+    When searching for files in the workspace make sure to also
+    search hidden directories (e.g. `./.github`, `./.vscode`, etc.). But skip the `.git` directory.
