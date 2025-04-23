@@ -249,16 +249,3 @@
     production. This will help ensure that the code is working as expected and that there are no
     regressions. Use continuous integration and continuous deployment (CI/CD) tools to automate the
     deployment process.
-
-- name: wf-release-notes
-  editors:
-    - name: copilot
-      modes: [agent, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, code]
-  text: |
-    All releases should have release notes that describe the changes made in
-    the release. This includes new features, bug fixes, and any other relevant information. Use a
-    consistent format for release notes to make them easy to read and understand.
