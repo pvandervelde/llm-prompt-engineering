@@ -1,0 +1,47 @@
+- name: general-mention-rules-used
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  text: |
+    Every time you choose to apply a rule(s), explicitly state the
+    rule(s) in the output. You can use the `rule` tag to do this. For example, `#rule: rule_name`.
+
+- name: general-mention-knowledge
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  text: |
+    List all assumptions and uncertainties you need to clear up before
+    completing this task.
+
+- name: general-confidence-check
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  text: |
+    Rate confidence (1-10) before saving files, after saving, after
+    rejections, and before task completion
+
+- name: general-grounding
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  text: |
+    Always verify and validate information from multiple sources. Cross-reference findings from
+    different tools and document results and sources
