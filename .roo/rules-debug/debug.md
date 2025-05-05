@@ -14,6 +14,12 @@ rejections, and before task completion
 **general-grounding:** Always verify and validate information from multiple sources. Cross-reference findings from
 different tools and document results and sources
 
+**general-focus:** Focus on the task at hand. Avoid distractions and stay on topic.
+If you need to switch tasks, make sure to finish the current task first.
+
+**general-memory-bank:** Use a memory bank to store information that is relevant to the task at hand.
+This can include code snippets, documentation, and other resources. Use the memory bank to help you stay on track and avoid distractions.
+
 ## tooling
 
 **general-tool-use-os:** Use operating system relevant tools when possible. For example, use
@@ -23,6 +29,9 @@ different tools and document results and sources
 search hidden directories (e.g. `./.github`, `./.vscode`, etc.). But skip the `.git` directory.
 
 ## scm
+
+**scm-hygiene:** Commit changes frequently and in small increments. Follow the `scm-commit-message` format for commit messages. Use
+`git fetch --prune` and `git pull` to update your local branch before pushing changes.
 
 **scm-git-pull-request-title:** The pull request title should follow the conventional commit format.
 `<type>(<scope>): <subject>` where `type` is one of the following: `feat`, `fix`, `chore`, `docs`,
@@ -54,6 +63,16 @@ description
 ```
 
 ## workflow-guidelines
+
+**wf-coding-flow:** The coding flow is as follows:
+1. Create an issue for the task. Follow the guidelines in `wf-issue-use`, `wf-find-issue`, `wf-issue-template`, and `wf-issue-creation`.
+2. Create a design document for the task. Follow the guidelines in `wf-design-before-code` and `wf-design-spec-layout`.
+3. Create a branch for the task. Follow the guidelines in `wf-branch-selection` and the source control guidelines.
+4. Write code for the task. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, and the language specific guidelines.
+5. Write tests for the code. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, `wf-unit-test-coverage`, and `wf-test-methods` and the language specific guidelines.
+6. Document the code. Follow the guidelines in `wf-documentation`.
+7. Create a pull request for the code. Follow the guidelines in `wf-pull-request` and the source control guidelines.
+8. Review and merge the pull request.
 
 **wf-issue-use:** Before starting any task determine if you need an issue for it. If so search for the
 appropriate issue in the issue tracker. If there is no issue, suggest to create one.
@@ -107,8 +126,20 @@ person who created it. Always invite copilot on the review.
 
 ## coding
 
+**coding-design-architecture:** Design modular, maintainable system components using appropriate technologies and frameworks. Ensure that integration
+points are clearly defined and documented.
+
+**coding-design-pseudo-code:** Use pseudo-code to outline the logic and structure of the code before implementation. This helps to clarify the
+design and identify potential issues early in the development process.
+
 **coding-whitespace:** Always leave a whitespace between a line of code and a comment. This improves readability and helps to distinguish
 between code and comments.
+
+**coding-style:** Follow the style guides for the language. Use the appropriate formatters to format your code. This will
+help ensure that the code is consistent and easy to read.
+
+**coding-comments:** Use comments to explain why the code is doing something, not what it is doing. Use comments to explain complex
+logic or algorithms. Avoid using comments to explain simple code or code that is self-explanatory.
 
 ## coding-markdown
 
@@ -117,9 +148,6 @@ between code and comments.
 **md-mermaid:** In mermaid diagrams, if there is a "(" or ")" in the label, put the entire label in quotes. This is to avoid parsing errors in the mermaid parser.
 
 ## coding-rust
-
-**rust-code-style:** Follow the Rust style guide. Use `rustfmt` to format your code. This will
-help ensure that the code is consistent and easy to read.
 
 **rust-element-ordering:** Use the following order for elements in a module. Elements of one type
 should be grouped together and ordered alphabetically. The order is as follows:

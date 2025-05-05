@@ -1,4 +1,4 @@
-# Roo Instructions - test
+# Roo Instructions - flow-architect
 
 ## prompt-instructions
 
@@ -93,18 +93,27 @@ correct branch. Code is *never* directly committed to the `main` or `master` bra
 suitable branch exist create a new local branch from `main` or `master` for your changes and switch to that branch.
 For example `git checkout -b feature-add-new-user main` or `git checkout -b fix-bug-in-login-page master`.
 
-**wf-code-tasks:** Coding starts with an implementation issue. During the session we only solve the
-implementation issue. If we find other changes that we want to make, we create new issues for
-them.
+**wf-design-before-code:** Before writing any code for a new feature or bug fix, create a design document
+that outlines the architecture, data flow, and any other relevant details. Place design documents in the
+`specs` directory of the repository.
 
-**wf-code-style:** All code should be easy to understand and maintain. Use clear and descriptive
-names for variables, functions, and classes. Always follow the coding standards and best practices
-for the programming language being used.
-
-**wf-unit-test-coverage:** All business logic should be covered by unit tests. We're aiming to cover
-all input and output paths of the code. This includes edge cases and error handling. Use coverage
-tools to measure the test coverage and use mutation testing to ensure that the tests are
-effective.
+**wf-design-spec-layout:** The design document should be in markdown format and any diagrams should
+should follow the mermaid language. Follow the markdown style guide and ensure that lines are no
+longer than 100 characters. It should follow the following structure:
+- Title
+- Problem description
+- Surrounding context
+- Proposed solution
+  - Design goals
+  - Design constraints
+  - Design decisions
+  - Alternatives considered
+- Design
+  - Architecture
+  - Data flow
+  - Module breakdown
+  - Other relevant details
+- Conclusion
 
 **wf-test-methods:** Employ different test approaches to get good coverage of both happy path
 and error handling. Consider approaches like unit tests, property based testing, fuzz testing,
@@ -128,6 +137,20 @@ The PR should include a description which changes were made, why the changes wer
 relevant issue numbers, results from testing, and any other relevant information. Assign the PR to the
 person who created it. Always invite copilot on the review.
 
+**wf-release-management:** Use a release management tool to manage the release process. This
+includes creating release notes, tagging releases, and managing version numbers. Use semantic
+versioning to version releases. Use a language specific tool if it is available, otherwise use
+something like `release-please` or `semantic-release` to automate the release process.
+
+**wf-release-notes:** All releases should have release notes that describe the changes made in
+the release. This includes new features, bug fixes, and any other relevant information. Use a
+consistent format for release notes to make them easy to read and understand.
+
+**wf-deployment:** All code should be deployed to a staging environment before being deployed to
+production. This will help ensure that the code is working as expected and that there are no
+regressions. Use continuous integration and continuous deployment (CI/CD) tools to automate the
+deployment process.
+
 ## coding
 
 **coding-design-architecture:** Design modular, maintainable system components using appropriate technologies and frameworks. Ensure that integration
@@ -139,6 +162,12 @@ design and identify potential issues early in the development process.
 **coding-whitespace:** Always leave a whitespace between a line of code and a comment. This improves readability and helps to distinguish
 between code and comments.
 
+**coding-style:** Follow the style guides for the language. Use the appropriate formatters to format your code. This will
+help ensure that the code is consistent and easy to read.
+
+**coding-comments:** Use comments to explain why the code is doing something, not what it is doing. Use comments to explain complex
+logic or algorithms. Avoid using comments to explain simple code or code that is self-explanatory.
+
 ## coding-markdown
 
 **md-lines:** Ensure that lines in markdown are no longer than 100 characters. Use proper formatting for lists, headings, and code blocks.
@@ -147,20 +176,24 @@ between code and comments.
 
 ## coding-rust
 
+**rust-element-ordering:** Use the following order for elements in a module. Elements of one type
+should be grouped together and ordered alphabetically. The order is as follows:
+- imports - organized by standard library, third-party crates, and local modules
+- constants
+- traits
+- structs with their implementations.
+- enums with their implementations.
+- functions
+- the main function
+
 **rust-documentation:** For public items documentation comments are always added. For private items
 documentation comments are added when the item is complex or not self-explanatory. Use `///` for
 documentation comments and `//!` for module-level documentation. Add examples to the documentation
 comments when possible.
 
-**rust-test-location:** Put unit tests in their own file. They are placed next to the file they
-are testing and are named `<file_under_test>_tests.rs`. Reference them from the file under test with
-an import, which is placed at the end of the other imports and usings. This will look something like:
-
-``` rust
-#[cfg(test)]
-#[path = "<file_under_test>_tests.rs"]
-mod tests;
-```
+**rust-modules:** When making modules in a crate create a `<module_name>.rs` file in the `src`
+directory. If the module is large enough to warrant its own directory, create a directory with the
+same name as the module. Place any source files for the module in the directory.
 
 **rust-ci:** Run
 - `cargo check`, `cargo fmt`, and `cargo clippy` as part of the CI pipeline to ensure that the code
@@ -171,6 +204,11 @@ mod tests;
 - Use `cargo audit` to check for security vulnerabilities in dependencies.
 - Use `cargo deny` to check for license issues in dependencies.
 
+**rust-release-management:** Use tooling to manage the release process. This includes creating release notes, tagging releases,
+and managing version numbers.
+
+**rust-release-notes:** Use `gitcliff` to generate release notes.
+
 ## coding-terraform
 
 **tf-documentation:** Add documentation comments for each resource, module, and variable.
@@ -180,5 +218,8 @@ documentation comments when possible.
 **tf-ci:** Run `terraform validate` and `terraform fmt` as part of the CI pipeline. This will help ensure
 that the code is valid and follows the correct formatting. Use `terraform plan` to check for any
 changes before applying them.
+
+**tf-release-management:** Use tooling to manage the release
+process. This includes creating release notes, tagging releases, and managing version numbers.
 
 
