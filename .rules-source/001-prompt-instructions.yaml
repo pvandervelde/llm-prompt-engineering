@@ -5,7 +5,18 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, ask, code, debug, test]
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
   text: |
     Every time you choose to apply a rule(s), explicitly state the
     rule(s) in the output. You can use the `rule` tag to do this. For example, `#rule: rule_name`.
@@ -17,7 +28,18 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, ask, code, debug, test]
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
   text: |
     List all assumptions and uncertainties you need to clear up before
     completing this task.
@@ -29,7 +51,18 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, ask, code, debug, test]
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
   text: |
     Rate confidence (1-10) before saving files, after saving, after
     rejections, and before task completion
@@ -41,7 +74,18 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, ask, code, debug, test]
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
   text: |
     Always verify and validate information from multiple sources. Cross-reference findings from
     different tools and document results and sources

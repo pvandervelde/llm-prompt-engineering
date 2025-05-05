@@ -5,7 +5,8 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, debug, test]
+      modes:
+        [architect, code, debug, test, flow-architect, flow-code, flow-debug]
   text: |
     Add documentation comments for each resource, module, and variable.
     Use the `#` symbol for comments. Use `##` for module-level documentation. Add examples to the
@@ -18,7 +19,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, test]
+      modes: [architect, code, test, flow-architect, flow-code]
   text: |
     Run `terraform validate` and `terraform fmt` as part of the CI pipeline. This will help ensure
     that the code is valid and follows the correct formatting. Use `terraform plan` to check for any
@@ -31,7 +32,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code]
+      modes: [architect, code, flow-architect, flow-code]
   text: |
     Use tooling to manage the release
     process. This includes creating release notes, tagging releases, and managing version numbers.

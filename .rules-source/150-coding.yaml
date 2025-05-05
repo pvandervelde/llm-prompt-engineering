@@ -5,7 +5,8 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, test]
+      modes:
+        [architect, code, debug, test, flow-architect, flow-code, flow-debug]
   text: |
     Always leave a whitespace between a line of code and a comment. This improves readability and helps to distinguish
     between code and comments.
@@ -17,7 +18,7 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, architect]
+      modes: [architect, code, debug, flow-architect, flow-code, flow-debug]
   text: |
     Follow the style guides for the language. Use the appropriate formatters to format your code. This will
     help ensure that the code is consistent and easy to read.
