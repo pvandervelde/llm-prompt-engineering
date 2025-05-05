@@ -19,13 +19,13 @@
         ]
   text: |
     The coding flow is as follows:
-    1. Create an issue for the task. Follow the guidlines in `wf-issue-use`, `wf-find-issue`, `wf-issue-template`, and `wf-issue-creation`.
-    2. Create a design document for the task. Follow the guidlines in `wf-design-before-code` and `wf-design-spec-layout`.
-    3. Create a branch for the task. Follow the guidlines in `wf-branch-selection` and the source control guidelines.
-    4. Write code for the task. Follow the guidlines in `wf-code-tasks`, `wf-code-style`, and the language specific guidelines.
-    5. Write tests for the code. Follow the guidlines in `wf-code-tasks`, `wf-code-style`, `wf-unit-test-coverage`, and `wf-test-methods` and the language specific guidelines.
-    6. Document the code. Follow the guidlines in `wf-documentation`.
-    7. Create a pull request for the code. Follow the guidlines in `wf-pull-request` and the source control guidelines.
+    1. Create an issue for the task. Follow the guidelines in `wf-issue-use`, `wf-find-issue`, `wf-issue-template`, and `wf-issue-creation`.
+    2. Create a design document for the task. Follow the guidelines in `wf-design-before-code` and `wf-design-spec-layout`.
+    3. Create a branch for the task. Follow the guidelines in `wf-branch-selection` and the source control guidelines.
+    4. Write code for the task. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, and the language specific guidelines.
+    5. Write tests for the code. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, `wf-unit-test-coverage`, and `wf-test-methods` and the language specific guidelines.
+    6. Document the code. Follow the guidelines in `wf-documentation`.
+    7. Create a pull request for the code. Follow the guidelines in `wf-pull-request` and the source control guidelines.
     8. Review and merge the pull request.
 
 - name: wf-issue-use
