@@ -89,3 +89,49 @@
   text: |
     Always verify and validate information from multiple sources. Cross-reference findings from
     different tools and document results and sources
+
+- name: general-focus
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
+  text: |
+    Focus on the task at hand. Avoid distractions and stay on topic.
+    If you need to switch tasks, make sure to finish the current task first.
+
+- name: general-memory-bank
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
+  text: |
+    Use a memory bank to store information that is relevant to the task at hand.
+    This can include code snippets, documentation, and other resources. Use the memory bank to help you stay on track and avoid distractions.
