@@ -38,7 +38,8 @@ jobs:
 
       - name: Create Cline zip
         run: |
-          zip -j artifacts/cline.zip output/.clinerules
+          cd output
+          zip -r ../artifacts/cline.zip .clinerules
 
       - name: Create Roo zip
         run: |
