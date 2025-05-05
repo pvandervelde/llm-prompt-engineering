@@ -1,3 +1,26 @@
+- name: scm-hygiene
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
+  text: |
+    Commit changes frequently and in small increments. Follow the `scm-commit-message` format for commit messages. Use
+    `git fetch --prune` and `git pull` to update your local branch before pushing changes.
+
 - name: scm-git-pull-request-title
   editors:
     - name: copilot
