@@ -5,7 +5,18 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, ask, code, debug, test]
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
   text: |
     Every time you choose to apply a rule(s), explicitly state the
     rule(s) in the output. You can use the `rule` tag to do this. For example, `#rule: rule_name`.
@@ -17,7 +28,18 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, ask, code, debug, test]
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
   text: |
     List all assumptions and uncertainties you need to clear up before
     completing this task.
@@ -29,7 +51,18 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, ask, code, debug, test]
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
   text: |
     Rate confidence (1-10) before saving files, after saving, after
     rejections, and before task completion
@@ -41,7 +74,64 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, ask, code, debug, test]
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
   text: |
     Always verify and validate information from multiple sources. Cross-reference findings from
     different tools and document results and sources
+
+- name: general-focus
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
+  text: |
+    Focus on the task at hand. Avoid distractions and stay on topic.
+    If you need to switch tasks, make sure to finish the current task first.
+
+- name: general-memory-bank
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes:
+        [
+          architect,
+          ask,
+          code,
+          debug,
+          test,
+          flow-architect,
+          flow-ask,
+          flow-code,
+          flow-debug,
+        ]
+  text: |
+    Use a memory bank to store information that is relevant to the task at hand.
+    This can include code snippets, documentation, and other resources. Use the memory bank to help you stay on track and avoid distractions.

@@ -1,4 +1,4 @@
-# Roo Instructions - ask
+# Roo Instructions - flow-ask
 
 ## prompt-instructions
 
@@ -33,9 +33,6 @@ search hidden directories (e.g. `./.github`, `./.vscode`, etc.). But skip the `.
 **scm-hygiene:** Commit changes frequently and in small increments. Follow the `scm-commit-message` format for commit messages. Use
 `git fetch --prune` and `git pull` to update your local branch before pushing changes.
 
-**scm-git-pull-request-review:** All pull requests should be reviewed by at least one other developer and
-GitHub copilot before being merged into the main branch.
-
 ## workflow-guidelines
 
 **wf-coding-flow:** The coding flow is as follows:
@@ -55,17 +52,11 @@ appropriate issue in the issue tracker. If there is no issue, suggest to create 
 do an approximate comparison of the issue title and description with the task at hand. If you find multiple
 issues that are an approximate match, ask the user to clarify which issue should be used.
 
-**wf-documentation:** The coding task is not complete without documentation. All code should be
-well-documented. Use comments to explain the purpose of complex code and to provide context for
-future developers. Use docstrings to document functions, classes, and modules. The documentation
-should be clear and concise.
-
-**wf-documentation-standards:** Follow the documentation standards and best practices for the
-programming language being used.
-
 ## coding-markdown
 
 **md-lines:** Ensure that lines in markdown are no longer than 100 characters. Use proper formatting for lists, headings, and code blocks.
+
+**md-mermaid:** In mermaid diagrams, if there is a "(" or ")" in the label, put the entire label in quotes. This is to avoid parsing errors in the mermaid parser.
 
 ## coding-rust
 

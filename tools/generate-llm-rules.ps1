@@ -84,14 +84,25 @@ if (-not (Test-Path $outputDirCopilot))
 {
     New-Item -ItemType Directory -Path $outputDirCopilot | Out-Null
 }
+
 if (-not (Test-Path $outputDirCline))
 {
     New-Item -ItemType Directory -Path $outputDirCline | Out-Null
+
 }
 if (-not (Test-Path $outputDirRooBase))
 {
     New-Item -ItemType Directory -Path $outputDirRooBase | Out-Null
 }
+
+# Define output files and directories
+$outputFileCopilot = Join-Path $outputDirCopilot "copilot-instructions.md"
+$outputFileCline = Join-Path $outputDirCline ".clinerules"
+
+# Clear existing files in output directories
+Remove-Item -Path $outputFileCopilot -ErrorAction SilentlyContinue
+Remove-Item -Path $outputFileCline -ErrorAction SilentlyContinue
+Remove-Item -Path (Join-Path $outputDirRooBase "*") -ErrorAction SilentlyContinue
 
 # Read all YAML files in source directory
 $yamlFiles = Get-ChildItem -Path $sourceDir -Filter *.yaml
