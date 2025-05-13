@@ -219,6 +219,48 @@
     tools to measure the test coverage and use mutation testing to ensure that the tests are
     effective.
 
+- name: wf-unit-test-check
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, test, debug, flow-code, flow-debug]
+  apply-to:
+    - "**"
+  text: |
+    When you think you've solved the presented problem, run all available tests. Fix any issues that
+    you find.
+
+- name: wf-unit-test-create-new
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, test, debug, flow-code, flow-debug]
+  apply-to:
+    - "**"
+  text: |
+    Whenever you create a new test, run it to verify that it passes. If it doesn't pass, revise
+    either the test (or the code it tests) until the test passes.
+
+- name: wf-unit-test-changes
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, test, debug, flow-code, flow-debug]
+  apply-to:
+    - "**"
+  text: |
+    Whenever you make a change, run the tests and fix any errors that are revealed. Fix one error at
+    a time and provide an explanation of why you think the change you made fixes the error
+
 - name: wf-test-methods
   editors:
     - name: copilot
