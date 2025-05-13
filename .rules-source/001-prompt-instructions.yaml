@@ -17,6 +17,8 @@
           flow-code,
           flow-debug,
         ]
+  apply-to:
+    - "**"
   text: |
     Every time you choose to apply a rule(s), explicitly state the
     rule(s) in the output. You can use the `rule` tag to do this. For example, `#rule: rule_name`.
@@ -40,6 +42,8 @@
           flow-code,
           flow-debug,
         ]
+  apply-to:
+    - "**"
   text: |
     List all assumptions and uncertainties you need to clear up before
     completing this task.
@@ -63,6 +67,8 @@
           flow-code,
           flow-debug,
         ]
+  apply-to:
+    - "**"
   text: |
     Rate confidence (1-10) before saving files, after saving, after
     rejections, and before task completion
@@ -86,6 +92,8 @@
           flow-code,
           flow-debug,
         ]
+  apply-to:
+    - "**"
   text: |
     Always verify and validate information from multiple sources. Cross-reference findings from
     different tools and document results and sources
@@ -132,6 +140,8 @@
           flow-code,
           flow-debug,
         ]
+  apply-to:
+    - "**"
   text: |
     Use a memory bank to store information that is relevant to the task at hand.
     This can include code snippets, documentation, and other resources. Use the memory bank to help you stay on track and avoid distractions.

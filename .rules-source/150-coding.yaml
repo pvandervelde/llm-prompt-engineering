@@ -7,6 +7,8 @@
     - name: roo
       modes:
         [architect, code, debug, test, flow-architect, flow-code, flow-debug]
+  apply-to:
+    - "**"
   text: |
     Design modular, maintainable system components using appropriate technologies and frameworks. Ensure that integration
     points are clearly defined and documented.
@@ -20,6 +22,8 @@
     - name: roo
       modes:
         [architect, code, debug, test, flow-architect, flow-code, flow-debug]
+  apply-to:
+    - "**"
   text: |
     Use pseudo-code to outline the logic and structure of the code before implementation. This helps to clarify the
     design and identify potential issues early in the development process.
@@ -33,6 +37,8 @@
     - name: roo
       modes:
         [architect, code, debug, test, flow-architect, flow-code, flow-debug]
+  apply-to:
+    - "**"
   text: |
     Always leave a whitespace between a line of code and a comment. This improves readability and helps to distinguish
     between code and comments.
@@ -45,6 +51,8 @@
       modes: [act]
     - name: roo
       modes: [architect, code, debug, flow-architect, flow-code, flow-debug]
+  apply-to:
+    - "**"
   text: |
     Follow the style guides for the language. Use the appropriate formatters to format your code. This will
     help ensure that the code is consistent and easy to read.
@@ -57,6 +65,8 @@
       modes: [act]
     - name: roo
       modes: [code, debug, architect, flow-architect, flow-code, flow-debug]
+  apply-to:
+    - "**"
   text: |
     Use comments to explain why the code is doing something, not what it is doing. Use comments to explain complex
     logic or algorithms. Avoid using comments to explain simple code or code that is self-explanatory.
