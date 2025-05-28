@@ -70,8 +70,9 @@
   apply-to:
     - "**"
   text: |
-    Rate confidence (1-10) before saving files, after saving, after
-    rejections, and before task completion
+    On a 1-10 scale, where 10 is absolute conviction backed by overwhelming evidence, rate your confidence in each recommendation you are giving me.
+    Don't hedge - if something is a 3, say it is a 3 and explain why. If it is a 9 defend that high rating.
+    Do this before saving files, after saving, after rejections, and before task completion
 
 - name: general-grounding
   editors:
