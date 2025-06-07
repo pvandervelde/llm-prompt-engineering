@@ -5,18 +5,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -30,20 +19,23 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
     When searching for files in the workspace make sure to also
     search hidden directories (e.g. `./.github`, `./.vscode`, etc.). But skip the `.git` directory.
+
+- name: tool-shell-safety
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    When generating shell commands, avoid destructive operations (e.g. `rm -rf`, `curl | sh`) unless
+    explicitly requested. Use `set -euo pipefail` for bash scripts where robustness matters.

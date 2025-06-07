@@ -1,3 +1,17 @@
+- name: general-voice-and-tone
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use a calm, precise, professional tone when explaining or documenting. Avoid overly casual
+    phrasing. Keep comments and responses focused, technical, and respectful.
+
 - name: general-mention-rules-used
   editors:
     - name: copilot
@@ -5,18 +19,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -30,18 +33,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -55,18 +47,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -81,18 +62,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -106,18 +76,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   text: |
     Focus on the task at hand. Avoid distractions and stay on topic.
     If you need to switch tasks, make sure to finish the current task first.
@@ -129,20 +88,12 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
     Use a memory bank to store information that is relevant to the task at hand.
-    This can include code snippets, documentation, and other resources. Use the memory bank to help you stay on track and avoid distractions.
+    This can include code snippets, documentation, and other resources. Use the memory bank to help you
+    stay on track and avoid distractions. Store structured entries (e.g. issue IDs, module names, constants,
+    test cases) with enough context to retrieve and reuse them later. Organize memory entries by domain
+    (e.g. rust::errors, infra::ci) when applicable.

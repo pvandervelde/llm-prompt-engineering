@@ -5,18 +5,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -37,18 +26,7 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -62,18 +40,7 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -88,8 +55,7 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
   apply-to:
     - "**"
   text: |
@@ -103,8 +69,7 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
   apply-to:
     - "**"
   text: |
@@ -119,8 +84,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
   apply-to:
     - "**"
   text: |
@@ -136,7 +100,7 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes: [architect, flow-architect]
+      modes: [architect]
   apply-to:
     - "**"
   text: |
@@ -151,7 +115,7 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes: [architect, flow-architect]
+      modes: [architect]
   apply-to:
     - "**"
   text: |
@@ -180,7 +144,7 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, test, flow-code, flow-debug]
+      modes: [code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -195,7 +159,7 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, test, flow-code, flow-debug]
+      modes: [code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -210,7 +174,7 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, test, debug, flow-code, flow-debug]
+      modes: [code, test, debug]
   apply-to:
     - "**"
   text: |
@@ -226,7 +190,7 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, test, debug, flow-code, flow-debug]
+      modes: [code, test, debug]
   apply-to:
     - "**"
   text: |
@@ -240,7 +204,7 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, test, debug, flow-code, flow-debug]
+      modes: [code, test, debug]
   apply-to:
     - "**"
   text: |
@@ -254,7 +218,7 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, test, debug, flow-code, flow-debug]
+      modes: [code, test, debug]
   apply-to:
     - "**"
   text: |
@@ -268,8 +232,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
   apply-to:
     - "**"
   text: |
@@ -285,17 +248,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -311,17 +264,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
@@ -335,7 +278,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, test, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test]
   apply-to:
     - "**"
   text: |
@@ -350,8 +293,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
   apply-to:
     - "**"
   text: |
@@ -367,7 +309,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, flow-architect, flow-code]
+      modes: [architect, code]
   apply-to:
     - "**"
   text: |
@@ -383,7 +325,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, flow-architect, flow-code]
+      modes: [architect, code]
   apply-to:
     - "**"
   text: |
@@ -398,7 +340,7 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, flow-architect, flow-code]
+      modes: [architect, code]
   apply-to:
     - "**"
   text: |

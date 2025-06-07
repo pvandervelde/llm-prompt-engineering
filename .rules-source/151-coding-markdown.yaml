@@ -5,21 +5,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
   apply-to:
-    - "*.md"
-    - "**/*.md"
+    - "**"
   text: |
     Ensure that lines in markdown are no longer than 100 characters. Use proper formatting for lists, headings, and code blocks.
 
@@ -30,19 +18,8 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, code, debug, test]
   apply-to:
-    - "*.md"
-    - "**/*.md"
+    - "**"
   text: |
     In mermaid diagrams, if there is a "(" or ")" in the label, put the entire label in quotes. This is to avoid parsing errors in the mermaid parser.
