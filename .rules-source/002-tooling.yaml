@@ -39,3 +39,17 @@
   text: |
     When generating shell commands, avoid destructive operations (e.g. `rm -rf`, `curl | sh`) unless
     explicitly requested. Use `set -euo pipefail` for bash scripts where robustness matters.
+
+- name: tool-wait-for-completion
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    When running commands that take a long time to complete, wait for the command to finish before
+    proceeding. If the command is still running, inform the user and wait for it to complete.
