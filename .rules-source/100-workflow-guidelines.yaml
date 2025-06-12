@@ -10,14 +10,34 @@
     - "**"
   text: |
     The coding flow is as follows:
-    1. Create an issue for the task. Follow the guidelines in `wf-issue-use`, `wf-find-issue`, `wf-issue-template`, and `wf-issue-creation`.
-    2. Create a design document for the task. Follow the guidelines in `wf-design-before-code` and `wf-design-spec-layout`.
-    3. Create a branch for the task. Follow the guidelines in `wf-branch-selection` and the source control guidelines.
-    4. Write code for the task. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, and the language specific guidelines.
-    5. Write tests for the code. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, `wf-unit-test-coverage`, and `wf-test-methods` and the language specific guidelines.
-    6. Document the code. Follow the guidelines in `wf-documentation`.
-    7. Create a pull request for the code. Follow the guidelines in `wf-pull-request` and the source control guidelines.
-    8. Review and merge the pull request.
+    1. Deeply understand the task at hand. Read the issue description, design document, and any other relevant information. Follow the guidelines in `wf-issue-use`, `wf-find-issue`.
+    2. Explore the codebase. If you are not familiar with the codebase, read the documentation, and explore the code to understand how it works.
+    3. Think hard about the task and how to solve it. If you need to, ask for clarification or additional information.
+    4. Develop a detailed plan for the task. This includes identifying the changes that need to be made, the files that need to be modified, and the tests that need to be written.
+    5. Create a design document for the task if there are a lot of changes to be made. Follow the guidelines in `wf-design-before-code` and `wf-design-spec-layout`.
+    6. Create a branch for the task. Follow the guidelines in `wf-branch-selection` and the source control guidelines.
+    7. Iterate writing code and running tests. Make small, incremental changes that logically follow from your investigation and plan. Always add or update tests and execute the tests. After each change run the tests. If there are any failures, correct them before continuing. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, `wf-unit-test-coverage`, and `wf-test-methods` and the language specific guidelines.
+    8. Confirm that the code is correct and meets the requirements of the task. Follow the guidelines in `wf-coding-effort`, `wf-issue-use`, and `wf-find-issue`.
+    9. Document the code. Follow the guidelines in `wf-documentation`.
+    10. Create a pull request for the code. Follow the guidelines in `wf-pull-request` and the source control guidelines.
+
+- name: wf-coding-effort
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Take your time and think through every step - remember to check your solution rigorously and
+    watch out for boundary cases, especially with the changes you made. Your solution must be perfect.
+    If not, continue working on it. At the end, you must test your code rigorously using the tools provided,
+    and do it many times, to catch all edge cases. If it is not robust, iterate more and make it perfect.
+    Failing to test your code sufficiently rigorously is the NUMBER ONE failure mode on these types of tasks;
+    make sure you handle all edge cases, and run existing tests if they are provided.
 
 - name: wf-issue-use
   editors:
