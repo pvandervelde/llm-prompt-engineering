@@ -99,9 +99,10 @@
   apply-to:
     - "**"
   text: |
-    Use the following order for elements in a module. Elements of one type
-    should be grouped together and ordered alphabetically. Avoid mixing impl
-    blocks and functions across struct/enum boundaries. The order is as follows:
+    Use the following order for elements in a module. Within each section (constants, traits, structs,
+    enums, functions), order items alphabetically by their name. Do not mix `impl` blocks and functions
+    across struct/enum boundaries; keep each type and its implementation(s) together. The order is
+    as follows:
     - imports - organized by standard library, third-party crates, and local modules
     - constants
     - traits
