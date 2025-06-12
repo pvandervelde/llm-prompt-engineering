@@ -40,6 +40,21 @@
     List all assumptions and uncertainties you need to clear up before
     completing this task.
 
+- name: general-think-carefully
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Your thinking should be thorough and so it's fine if it's very long. You can
+    think step by step before and after each action you decide to take.
+    Avoid rushing to complete tasks. If you need more time to think, say so.
+
 - name: general-confidence-check
   editors:
     - name: copilot
