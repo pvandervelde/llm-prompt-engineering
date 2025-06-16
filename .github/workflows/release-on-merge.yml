@@ -34,7 +34,8 @@ jobs:
       - name: Create Copilot zip
         run: |
           mkdir -p artifacts
-          zip -j artifacts/copilot.zip output/.github/copilot-instructions.md
+          cd output
+          zip -r ../artifacts/copilot.zip .github/instructions
 
       - name: Create Cline zip
         run: |
