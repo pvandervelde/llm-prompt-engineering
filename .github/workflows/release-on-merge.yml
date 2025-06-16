@@ -17,6 +17,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install versioning dependencies
+        run: npm install conventional-recommended-bump semver
+
+      - name: Calculate next version
+        id: next_version
+        run: echo "version=$(node ./tools/calculate-next-version.js)" >> $GITHUB_OUTPUT
+
       - name: Install powershell-yaml module
         shell: pwsh
         run: |
@@ -47,51 +59,35 @@ jobs:
           cd output
           zip -r ../artifacts/roo.zip .roo
 
-      - name: Get next version
-        id: version
+      - name: Create and push git tag
         if: github.ref == 'refs/heads/master'
-        uses: mathieudutour/github-tag-action@v6.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: patch
-          release_branches: master
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.next_version.outputs.version }}
+          git push origin ${{ steps.next_version.outputs.version }}
 
       - name: Create GitHub Release
         id: create_release
         if: github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.new_tag }}
-          name: Release ${{ steps.version.outputs.new_tag }}
+          tag_name: ${{ steps.next_version.outputs.version }}
+          name: Release ${{ steps.next_version.outputs.version }}
           body: |
             Automated release on PR merge to master.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Copilot zip to Release
+      - name: Upload all zips to Release
         if: github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.new_tag }}
-          files: artifacts/copilot.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Cline zip to Release
-        if: github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.new_tag }}
-          files: artifacts/cline.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Roo zip to Release
-        if: github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.new_tag }}
-          files: artifacts/roo.zip
+          tag_name: ${{ steps.next_version.outputs.version }}
+          files: |
+            artifacts/copilot.zip
+            artifacts/cline.zip
+            artifacts/roo.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
