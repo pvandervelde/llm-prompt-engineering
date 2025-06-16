@@ -5,28 +5,39 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
   text: |
     The coding flow is as follows:
-    1. Create an issue for the task. Follow the guidelines in `wf-issue-use`, `wf-find-issue`, `wf-issue-template`, and `wf-issue-creation`.
-    2. Create a design document for the task. Follow the guidelines in `wf-design-before-code` and `wf-design-spec-layout`.
-    3. Create a branch for the task. Follow the guidelines in `wf-branch-selection` and the source control guidelines.
-    4. Write code for the task. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, and the language specific guidelines.
-    5. Write tests for the code. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, `wf-unit-test-coverage`, and `wf-test-methods` and the language specific guidelines.
-    6. Document the code. Follow the guidelines in `wf-documentation`.
-    7. Create a pull request for the code. Follow the guidelines in `wf-pull-request` and the source control guidelines.
-    8. Review and merge the pull request.
+    1. Deeply understand the task at hand. Read the issue description, design document, and any other relevant information. Follow the guidelines in `wf-issue-use`, `wf-find-issue`.
+    2. Explore the codebase. If you are not familiar with the codebase, read the documentation, and explore the code to understand how it works.
+    3. Think hard about the task and how to solve it. If you need to, ask for clarification or additional information.
+    4. Develop a detailed plan for the task. This includes identifying the changes that need to be made, the files that need to be modified, and the tests that need to be written.
+    5. Create a design document for the task if there are a lot of changes to be made. Follow the guidelines in `wf-design-before-code` and `wf-design-spec-layout`.
+    6. Create a branch for the task. Follow the guidelines in `wf-branch-selection` and the source control guidelines.
+    7. Iterate writing code and running tests. Make small, incremental changes that logically follow from your investigation and plan. Always add or update tests and execute the tests. After each change run the tests. If there are any failures, correct them before continuing. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, `wf-unit-test-coverage`, and `wf-test-methods` and the language specific guidelines.
+    8. Confirm that the code is correct and meets the requirements of the task. Follow the guidelines in `wf-coding-effort`, `wf-issue-use`, and `wf-find-issue`.
+    9. Document the code. Follow the guidelines in `wf-documentation`.
+    10. Create a pull request for the code. Follow the guidelines in `wf-pull-request` and the source control guidelines.
+
+- name: wf-coding-effort
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Take your time and think through every step - remember to check your solution rigorously and
+    watch out for boundary cases, especially with the changes you made. Your solution must be perfect.
+    If not, continue working on it. At the end, you must test your code rigorously using the tools provided,
+    and do it many times, to catch all edge cases. If it is not robust, iterate more and make it perfect.
+    Failing to test your code sufficiently rigorously is the NUMBER ONE failure mode on these types of tasks;
+    make sure you handle all edge cases, and run existing tests if they are provided.
 
 - name: wf-issue-use
   editors:
@@ -35,18 +46,9 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
   text: |
     Before starting any task determine if you need an issue for it. If so search for the
     appropriate issue in the issue tracker. If there is no issue, suggest to create one.
@@ -58,18 +60,9 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
   text: |
     When searching for issues
     do an approximate comparison of the issue title and description with the task at hand. If you find multiple
@@ -82,8 +75,9 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
+  apply-to:
+    - "**"
   text: |
     When creating an issue use the issue templates. Issue templates can be found in the
     `./.github/ISSUE_TEMPLATE` directory.
@@ -95,8 +89,9 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
+  apply-to:
+    - "**"
   text: |
     All issues should be created in the repository. This includes bugs, new features,
     and any other changes to the codebase. Issues should be created for all tasks, even if they are small.
@@ -109,8 +104,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
+  apply-to:
+    - "**"
   text: |
     Each task is done on its own branch. Before you start a task check that you are on the
     correct branch. Code is *never* directly committed to the `main` or `master` branches. If no
@@ -124,7 +120,9 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes: [architect, flow-architect]
+      modes: [architect]
+  apply-to:
+    - "**"
   text: |
     Before writing any code for a new feature or bug fix, create a design document
     that outlines the architecture, data flow, and any other relevant details. Place design documents in the
@@ -137,7 +135,9 @@
     - name: cline
       modes: [plan]
     - name: roo
-      modes: [architect, flow-architect]
+      modes: [architect]
+  apply-to:
+    - "**"
   text: |
     The design document should be in markdown format and any diagrams should
     should follow the mermaid language. Follow the markdown style guide and ensure that lines are no
@@ -164,7 +164,9 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, test, flow-code, flow-debug]
+      modes: [code, debug, test]
+  apply-to:
+    - "**"
   text: |
     Coding starts with an implementation issue. During the session we only solve the
     implementation issue. If we find other changes that we want to make, we create new issues for
@@ -177,7 +179,9 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, test, flow-code, flow-debug]
+      modes: [code, debug, test]
+  apply-to:
+    - "**"
   text: |
     All code should be easy to understand and maintain. Use clear and descriptive
     names for variables, functions, and classes. Always follow the coding standards and best practices
@@ -190,12 +194,56 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, test, debug, flow-code, flow-debug]
+      modes: [code, test, debug]
+  apply-to:
+    - "**"
   text: |
     All business logic should be covered by unit tests. We're aiming to cover
     all input and output paths of the code. This includes edge cases and error handling. Use coverage
     tools to measure the test coverage and use mutation testing to ensure that the tests are
     effective.
+
+- name: wf-unit-test-check
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, test, debug]
+  apply-to:
+    - "**"
+  text: |
+    When you think you've solved the presented problem, run all available tests. Fix any issues that
+    you find.
+
+- name: wf-unit-test-create-new
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, test, debug]
+  apply-to:
+    - "**"
+  text: |
+    Whenever you create a new test, run it to verify that it passes. If it doesn't pass, revise
+    either the test (or the code it tests) until the test passes.
+
+- name: wf-unit-test-changes
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, test, debug]
+  apply-to:
+    - "**"
+  text: |
+    Whenever you make a change, run the tests and fix any errors that are revealed. Fix one error at
+    a time and provide an explanation of why you think the change you made fixes the error
 
 - name: wf-test-methods
   editors:
@@ -204,8 +252,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
+  apply-to:
+    - "**"
   text: |
     Employ different test approaches to get good coverage of both happy path
     and error handling. Consider approaches like unit tests, property based testing, fuzz testing,
@@ -219,17 +268,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
   text: |
     The coding task is not complete without documentation. All code should be
     well-documented. Use comments to explain the purpose of complex code and to provide context for
@@ -243,17 +284,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
   text: |
     Follow the documentation standards and best practices for the
     programming language being used.
@@ -265,7 +298,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, test, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test]
+  apply-to:
+    - "**"
   text: |
     All changes should be checked with a continuous integration (CI) tool before being
     merged into the main branch. Use CI tools to run tests, check code style, and perform other checks
@@ -278,8 +313,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
+  apply-to:
+    - "**"
   text: |
     Create a pull request (PR) for all changes made to the codebase.
     The PR should include a description which changes were made, why the changes were made, links to
@@ -293,7 +329,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, flow-architect, flow-code]
+      modes: [architect, code]
+  apply-to:
+    - "**"
   text: |
     Use a release management tool to manage the release process. This
     includes creating release notes, tagging releases, and managing version numbers. Use semantic
@@ -307,7 +345,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, flow-architect, flow-code]
+      modes: [architect, code]
+  apply-to:
+    - "**"
   text: |
     All releases should have release notes that describe the changes made in
     the release. This includes new features, bug fixes, and any other relevant information. Use a
@@ -320,7 +360,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, flow-architect, flow-code]
+      modes: [architect, code]
+  apply-to:
+    - "**"
   text: |
     All code should be deployed to a staging environment before being deployed to
     production. This will help ensure that the code is working as expected and that there are no

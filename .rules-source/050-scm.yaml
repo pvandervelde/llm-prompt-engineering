@@ -5,18 +5,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
   text: |
     Commit changes frequently and in small increments. Follow the `scm-commit-message` format for commit messages. Use
     `git fetch --prune` and `git pull` to update your local branch before pushing changes.
@@ -28,8 +19,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
+  apply-to:
+    - "**"
   text: |
     The pull request title should follow the conventional commit format.
     `<type>(<scope>): <subject>` where `type` is one of the following: `feat`, `fix`, `chore`, `docs`,
@@ -42,8 +34,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
+  apply-to:
+    - "**"
   text: |
     Use the pull request template if there is one. The pull request
     template can be found in the `./.github/PULL_REQUEST_TEMPLATE.md` file.
@@ -55,17 +48,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
   text: |
     All pull requests should be reviewed by at least one other developer and
     GitHub copilot before being merged into the main branch.
@@ -77,8 +62,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
+  apply-to:
+    - "**"
   text: |
     The branch name should be a brief summary of the changes being made. Branch
     names should be in lowercase and use hyphens to separate words. For example, `fix-bug-in-login-page`
@@ -91,8 +77,9 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes:
-        [architect, code, test, debug, flow-architect, flow-code, flow-debug]
+      modes: [architect, code, test, debug]
+  apply-to:
+    - "**"
   text: |
     For commit messages the
     type should be one of the following: `feat`, `fix`, `chore`, `docs`,

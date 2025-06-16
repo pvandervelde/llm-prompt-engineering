@@ -1,5 +1,6 @@
 # PowerShell script to generate LLM rule files from YAML source in .rules-source directory
 # Generates markdown files for Copilot, Cline, and Roo according to the spec
+# Updated for Copilot .instructions.md grouping logic (2025-05-14)
 
 # Requires powershell-yaml module: Install-Module powershell-yaml
 
@@ -59,22 +60,53 @@ function Write-RuleFile
     param(
         $filePath,
         $header,
+        $patterns,
         $rules
     )
 
-    $content = "# " + $header + [Environment]::NewLine + [Environment]::NewLine
+    # Initialize content as an array for proper appending
+    $content = @()
+
+    # Add YAML frontmatter if patterns exist
+    if ($patterns -and $patterns.Count -gt 0)
+    {
+        $content += "---"
+        if ($patterns.Count -eq 1)
+        {
+            $content += "applyTo: `"$($patterns[0])`""
+        }
+        else
+        {
+            $content += "applyTo:"
+            foreach ($p in $patterns)
+            {
+                $content += "  - `"$p`""
+            }
+        }
+        $content += "---"
+        $content += ""
+    }
+
+    # Add header
+    $content += "# $header"
+    $content += ""
+
+    # Add rules
     foreach ($group in $rules)
     {
         $name = $group.Name
         $groupName = $name.SubString($name.IndexOf("-") + 1)
-        $content += "## $($groupName)" + [Environment]::NewLine + [Environment]::NewLine
+        $content += "## $($groupName)"
+        $content += ""
         foreach ($rule in $group.Group)
         {
-            $content += "**$($rule.name):** $($rule.text)" + [Environment]::NewLine
+            $content += "**$($rule.name):** $($rule.text)"
         }
+        $content += ""
     }
 
-    Set-Content -Path $filePath -Value $content -Encoding UTF8
+    # Write all content joined by newlines
+    Set-Content -Path $filePath -Value ($content -join [Environment]::NewLine) -Encoding UTF8
 }
 
 #--------------------------End of Functions--------------------------
@@ -88,7 +120,6 @@ if (-not (Test-Path $outputDirCopilot))
 if (-not (Test-Path $outputDirCline))
 {
     New-Item -ItemType Directory -Path $outputDirCline | Out-Null
-
 }
 if (-not (Test-Path $outputDirRooBase))
 {
@@ -96,18 +127,25 @@ if (-not (Test-Path $outputDirRooBase))
 }
 
 # Define output files and directories
-$outputFileCopilot = Join-Path $outputDirCopilot "copilot-instructions.md"
 $outputFileCline = Join-Path $outputDirCline ".clinerules"
+$instructionsDir = Join-Path $outputDirCopilot "instructions"
 
 # Clear existing files in output directories
-Remove-Item -Path $outputFileCopilot -ErrorAction SilentlyContinue
 Remove-Item -Path $outputFileCline -ErrorAction SilentlyContinue
 Remove-Item -Path (Join-Path $outputDirRooBase "*") -ErrorAction SilentlyContinue
+if (Test-Path $instructionsDir)
+{
+    Remove-Item -Path (Join-Path $instructionsDir "*") -ErrorAction SilentlyContinue
+}
+else
+{
+    New-Item -ItemType Directory -Path $instructionsDir | Out-Null
+}
 
 # Read all YAML files in source directory
 $yamlFiles = Get-ChildItem -Path $sourceDir -Filter *.yaml
 
-# Aggregate all rules from all files
+# Aggregate all rules from all files, and track source file
 $allRules = @()
 
 Write-Host "Reading YAML files..."
@@ -122,6 +160,7 @@ foreach ($file in $yamlFiles)
     foreach ($rule in $rules)
     {
         $rule.group = $ruleGroup
+        $rule.sourceFileName = $fileName
     }
 
     # $rules is an array of rule objects
@@ -129,14 +168,39 @@ foreach ($file in $yamlFiles)
 }
 
 #
-# Generate Copilot markdown file (single file with all applicable rules)
+# Generate Copilot .instructions.md files according to new apply-to grouping logic
 #
-$copilotRules = $allRules | Where-Object { RuleAppliesTo $_ "copilot" } | Group-Object -Property group
-Write-Host "Generating Copilot rules file..."
-Write-RuleFile `
-    -filePath (Join-Path $outputDirCopilot "copilot-instructions.md") `
-    -header "Copilot Instructions" `
-    -rules $copilotRules
+Write-Host "Generating Copilot .instructions.md files..."
+$copilotRules = $allRules | Where-Object { RuleAppliesTo $_ "copilot" }
+
+# Group 1: Rules with no apply-to or apply-to contains "**", grouped by source file
+$copilotGroupA = $copilotRules | Where-Object { -not $_.'apply-to' -or $_.'apply-to' -contains '**' } | Group-Object sourceFileName
+foreach ($group in $copilotGroupA)
+{
+    $fileName = $group.Name
+    $wrappedGroup = @{ Name = $fileName; Group = $group.Group }
+    Write-RuleFile `
+        -filePath (Join-Path $instructionsDir "$fileName.instructions.md") `
+        -header "Copilot Instructions" `
+        -patterns @( "**" ) `
+        -rules @($wrappedGroup)
+}
+
+# Group 2: Rules with apply-to (excluding "**"), grouped by identical sorted apply-to sets
+$copilotGroupB = $copilotRules | Where-Object { $_.'apply-to' -and ($_.'apply-to' | Where-Object { $_ -ne '**' }) } | Group-Object sourceFileName
+foreach ($group in $copilotGroupB)
+{
+    $fileName = $group.Name
+    $patterns = $group.Group[0].'apply-to' | Where-Object { $_ -ne '**' } | Sort-Object
+    $filePath = Join-Path $instructionsDir "$fileName.instructions.md"
+
+    $wrappedGroup = @{ Name = $fileName; Group = $group.Group }
+    Write-RuleFile `
+        -filePath (Join-Path $instructionsDir "$fileName.instructions.md") `
+        -header "Copilot Instructions" `
+        -patterns $patterns `
+        -rules @($wrappedGroup)
+}
 
 #
 # Generate Cline rules file (single file with all applicable rules)
@@ -148,8 +212,7 @@ Write-RuleFile `
     -header "Cline Instructions" `
     -rules $clineRules
 
-# Generate Roo rules files per mode
-# Collect all roo modes from all rules
+# Generate Roo rules files per mode (unchanged)
 Write-Host "Generating Roo rules files..."
 $rooModes = @()
 foreach ($rule in $allRules)

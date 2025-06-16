@@ -1,3 +1,93 @@
+- name: rust-design-api-boundaries
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Minimize the public surface area. Expose only what is necessary using `pub(crate)` or `pub(super)`
+    where appropriate. Use `#[doc(hidden)]` on internals not meant for public use.
+
+- name: rust-avoid-unnecessary-allocation
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Prefer `&str` or `Cow<'_, str>` over `String` when borrowing is sufficient. Avoid `Vec` when arrays
+    or slices suffice. Optimize for minimal allocation in performance-sensitive or embedded code.
+
+- name: rust-compile-first
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, architect]
+  apply-to:
+    - "**"
+  text: |
+    All Rust code suggestions must be valid and compile without errors. Prefer suggestions that are `cargo check`-safe.
+    If the code depends on uncertain types, traits, or lifetimes, ask clarifying questions or break the solution
+    into smaller, verifiable steps.
+
+- name: rust-pedantic-mode
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, architect]
+  apply-to:
+    - "**"
+  text: |
+    Avoid unsafe code, unnecessary uses of `unwrap`, trait abuse, or macro-heavy logic.
+    Prioritize clarity, safety, and correctness over cleverness or brevity.
+
+- name: rust-error-design
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, architect]
+  apply-to:
+    - "**"
+  text: |
+    Use `thiserror` to define custom error types. Return informative error messages that clearly describe the
+    nature of the error and, if possible, how to resolve it.
+
+- name: rust-diag-checklist
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, architect]
+  apply-to:
+    - "**"
+  text: |
+    Before presenting final Rust code, run an internal diagnostic checklist:
+    - Are all types correct?
+    - Are all `Result` or `Option` paths handled?
+    - Are lifetimes correctly handled?
+    - Is ownership respected?
+    - Are tests present or explicitly justified?
+    - Have all assumptions been stated?
+
 - name: rust-element-ordering
   editors:
     - name: copilot
@@ -5,10 +95,14 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, architect, flow-architect, flow-code, flow-debug]
+      modes: [code, debug, architect]
+  apply-to:
+    - "**"
   text: |
-    Use the following order for elements in a module. Elements of one type
-    should be grouped together and ordered alphabetically. The order is as follows:
+    Use the following order for elements in a module. Within each section (constants, traits, structs,
+    enums, functions), order items alphabetically by their name. Do not mix `impl` blocks and functions
+    across struct/enum boundaries; keep each type and its implementation(s) together. The order is
+    as follows:
     - imports - organized by standard library, third-party crates, and local modules
     - constants
     - traits
@@ -24,18 +118,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes:
-        [
-          architect,
-          ask,
-          code,
-          debug,
-          test,
-          flow-architect,
-          flow-ask,
-          flow-code,
-          flow-debug,
-        ]
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
   text: |
     For public items documentation comments are always added. For private items
     documentation comments are added when the item is complex or not self-explanatory. Use `///` for
@@ -49,7 +134,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, flow-architect, flow-code]
+      modes: [architect, code]
+  apply-to:
+    - "**"
   text: |
     When making modules in a crate create a `<module_name>.rs` file in the `src`
     directory. If the module is large enough to warrant its own directory, create a directory with the
@@ -62,7 +149,9 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, flow-code, flow-debug]
+      modes: [code, debug]
+  apply-to:
+    - "**"
   text: |
     Use the `Result` type for functions that can return an error. Use the `?` operator
     to propagate errors. Avoid using `unwrap` or `expect` unless you are certain that the value will not be
@@ -75,7 +164,9 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, flow-code, flow-debug]
+      modes: [code, debug]
+  apply-to:
+    - "**"
   text: |
     Use clear and descriptive error messages. Avoid using generic error messages
     like "an error occurred". Instead, provide specific information about what went wrong and how to fix it.
@@ -87,7 +178,9 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, debug, flow-code, flow-debug]
+      modes: [code, debug]
+  apply-to:
+    - "**"
   text: |
     Use custom error types for your application. This will help you provide more
     meaningful error messages and make it easier to handle errors in a consistent way. Use the `thiserror`
@@ -100,11 +193,14 @@
     - name: cline
       modes: [act]
     - name: roo
-      modes: [code, test, debug, flow-code, flow-debug]
+      modes: [code, test, debug]
+  apply-to:
+    - "**"
   text: |
     Put unit tests in their own file. They are placed next to the file they
     are testing and are named `<file_under_test>_tests.rs`. Reference them from the file under test with
-    an import, which is placed at the end of the other imports and usings. This will look something like:
+    an import, which is placed at the end of the other imports and usings. This pattern separates test logic from
+    business logic, improving clarity and minimizing rebuild times during development. This will look something like:
 
     ``` rust
     #[cfg(test)]
@@ -119,7 +215,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, test, flow-architect, flow-code]
+      modes: [architect, code, test]
+  apply-to:
+    - "**"
   text: |
     Run
     - `cargo check`, `cargo fmt`, and `cargo clippy` as part of the CI pipeline to ensure that the code
@@ -137,7 +235,9 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, flow-architect, flow-code]
+      modes: [architect, code]
+  apply-to:
+    - "**"
   text: |
     Use tooling to manage the release process. This includes creating release notes, tagging releases,
     and managing version numbers.
@@ -149,6 +249,8 @@
     - name: cline
       modes: [plan, act]
     - name: roo
-      modes: [architect, code, flow-architect, flow-code]
+      modes: [architect, code]
+  apply-to:
+    - "**"
   text: |
     Use `gitcliff` to generate release notes.
