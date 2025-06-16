@@ -192,7 +192,6 @@ foreach ($group in $copilotGroupB)
 {
     $fileName = $group.Name
     $patterns = $group.Group[0].'apply-to' | Where-Object { $_ -ne '**' } | Sort-Object
-    # Sanitize filename: join patterns with double-underscore, replace * and ? with safe chars
     $filePath = Join-Path $instructionsDir "$fileName.instructions.md"
 
     $wrappedGroup = @{ Name = $fileName; Group = $group.Group }
