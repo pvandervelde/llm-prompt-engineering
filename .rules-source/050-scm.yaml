@@ -38,8 +38,9 @@
   apply-to:
     - "**"
   text: |
-    Use the pull request template if there is one. The pull request
-    template can be found in the `./.github/PULL_REQUEST_TEMPLATE.md` file.
+    Use the pull request template to provide a template for the pull request description. The pull request
+    template can be found in the `./.github/PULL_REQUEST_TEMPLATE.md` file. If there is no pull request template,
+    use a sensible layout for the pull request description.
 
 - name: scm-git-pull-request-review
   editors:

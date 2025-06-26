@@ -223,7 +223,7 @@
     - `cargo check`, `cargo fmt`, and `cargo clippy` as part of the CI pipeline to ensure that the code
       follows the correct formatting and style.
     - Use `cargo test` to run tests. Ensure that doc tests are also run. Collect coverage information
-      using `cargo llvm-cov`. Upload results to `codecov`.
+      using `cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info`.
     - Use `cargo mutants` to run mutation tests if configured.
     - Use `cargo audit` to check for security vulnerabilities in dependencies.
     - Use `cargo deny` to check for license issues in dependencies.

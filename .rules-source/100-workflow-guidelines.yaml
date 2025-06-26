@@ -9,7 +9,8 @@
   apply-to:
     - "**"
   text: |
-    The coding flow is as follows:
+    When solving a problem by writing code follow the coding flow steps below. This is a general guideline
+    for coding tasks. It is not a strict rule, but it is a good practice to follow. The steps are:
     1. Deeply understand the task at hand. Read the issue description, design document, and any other relevant information. Follow the guidelines in `wf-issue-use`, `wf-find-issue`.
     2. Explore the codebase. If you are not familiar with the codebase, read the documentation, and explore the code to understand how it works.
     3. Think hard about the task and how to solve it. If you need to, ask for clarification or additional information.
@@ -108,10 +109,11 @@
   apply-to:
     - "**"
   text: |
-    Each task is done on its own branch. Before you start a task check that you are on the
-    correct branch. Code is *never* directly committed to the `main` or `master` branches. If no
-    suitable branch exist create a new local branch from `main` or `master` for your changes and switch to that branch.
+    Each task is done on its own branch. Before you start a task check that you are on a sensible
+    branch. Code is *never* directly committed to the `main` or `master` branches. If you are on the `main`
+    or `master` branch create a new local branch from `main` or `master` for your changes and switch to that branch.
     For example `git checkout -b feature-add-new-user main` or `git checkout -b fix-bug-in-login-page master`.
+    If you are not sure if the current branch is sensible, ask the user to clarify.
 
 - name: wf-design-before-code
   editors:

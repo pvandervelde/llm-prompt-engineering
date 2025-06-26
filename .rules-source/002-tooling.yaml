@@ -12,6 +12,20 @@
     Use operating system relevant tools when possible. For example, use
     `bash` on Linux and MacOS, and `powershell` on Windows
 
+- name: general-line-end-use-os
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use operating system appropriate line endings in files and command lines. Avoid using `\r\n` or `\n`
+    to signify line endings, use actual line endings instead.
+
 - name: general-tool-use-file-search
   editors:
     - name: copilot
