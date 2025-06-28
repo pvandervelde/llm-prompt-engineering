@@ -26,6 +26,20 @@
     Prefer `&str` or `Cow<'_, str>` over `String` when borrowing is sufficient. Avoid `Vec` when arrays
     or slices suffice. Optimize for minimal allocation in performance-sensitive or embedded code.
 
+- name: rust-favour-traits-over-closures
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use traits to define behavior and interfaces. Prefer trait objects or generics over closures for
+    polymorphism. This improves type safety and reduces runtime overhead.
+
 - name: rust-compile-first
   editors:
     - name: copilot
