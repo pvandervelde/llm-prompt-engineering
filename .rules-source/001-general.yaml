@@ -111,4 +111,22 @@
     This can include code snippets, documentation, and other resources. Use the memory bank to help you
     stay on track and avoid distractions. Store structured entries (e.g. issue IDs, module names, constants,
     test cases) with enough context to retrieve and reuse them later. Organize memory entries by domain
-    (e.g. rust::errors, infra::ci) when applicable.
+    (e.g. rust::errors, infra::ci) when applicable. If no location for the memory bank is specified, use
+    `./.llm/memory/` as the default directory.
+
+- name: general-memory-bank-files
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    In your memory bank, store at least the following files:
+    - `./.llm/memory/current-state.md`: This file should contain the current state of the project,
+      including any ongoing tasks, issues, and relevant context.
+    - `./.llm/memory/issues-to-file.md`: This file should contain todo items, technical debt, and
+      other issues that need to be addressed in the project.

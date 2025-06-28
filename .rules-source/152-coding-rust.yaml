@@ -26,6 +26,20 @@
     Prefer `&str` or `Cow<'_, str>` over `String` when borrowing is sufficient. Avoid `Vec` when arrays
     or slices suffice. Optimize for minimal allocation in performance-sensitive or embedded code.
 
+- name: rust-favour-traits-over-closures
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use traits to define behavior and interfaces. Prefer trait objects or generics over closures for
+    polymorphism. This improves type safety and reduces runtime overhead.
+
 - name: rust-compile-first
   editors:
     - name: copilot
@@ -223,7 +237,7 @@
     - `cargo check`, `cargo fmt`, and `cargo clippy` as part of the CI pipeline to ensure that the code
       follows the correct formatting and style.
     - Use `cargo test` to run tests. Ensure that doc tests are also run. Collect coverage information
-      using `cargo llvm-cov`. Upload results to `codecov`.
+      using `cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info`.
     - Use `cargo mutants` to run mutation tests if configured.
     - Use `cargo audit` to check for security vulnerabilities in dependencies.
     - Use `cargo deny` to check for license issues in dependencies.
