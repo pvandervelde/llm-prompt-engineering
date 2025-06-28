@@ -1,1 +1,32 @@
+# Generated output files
 output/
+
+# PowerShell
+*.ps1xml
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Local configuration files
+config.local.*
+
+# Test outputs
+test-output/
+temp-test/
