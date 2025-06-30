@@ -17,7 +17,7 @@
     4. Develop a detailed plan for the task. This includes identifying the changes that need to be made, the files that need to be modified, and the tests that need to be written.
     5. Create a design document for the task if there are a lot of changes to be made. Follow the guidelines in `wf-design-before-code` and `wf-design-spec-layout`.
     6. Create a branch for the task. Follow the guidelines in `wf-branch-selection` and the source control guidelines.
-    7. Iterate writing code and running tests. Make small, incremental changes that logically follow from your investigation and plan. Always add or update tests and execute the tests. After each change run the tests. If there are any failures, correct them before continuing. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, `wf-unit-test-coverage`, and `wf-test-methods` and the language specific guidelines.
+    7. Iterate writing code and running tests. Make small, incremental changes that logically follow from your investigation and plan. Always add or update tests and execute the tests. After each change run the tests. If there are any failures, correct them before continuing. When the tests pass commit the changes. Follow the guidelines in `wf-code-tasks`, `wf-code-style`, `wf-unit-test-coverage`, `wf-test-methods`, `coding-review-before-commit`, and the language specific guidelines.
     8. Confirm that the code is correct and meets the requirements of the task. Follow the guidelines in `wf-coding-effort`, `wf-issue-use`, and `wf-find-issue`.
     9. Document the code. Follow the guidelines in `wf-documentation`.
     10. Create a pull request for the code. Follow the guidelines in `wf-pull-request` and the source control guidelines.

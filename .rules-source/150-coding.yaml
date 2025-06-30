@@ -138,3 +138,18 @@
   text: |
     If previous code suggestions failed to compile or pass tests, analyze why they failed. Do not repeat the same logic.
     Explain what went wrong, and describe how the new solution avoids the same problem.
+
+- name: coding-review-before-commit
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, architect]
+  apply-to:
+    - "**"
+  text: |
+    Before committing code, review it for correctness, style, and test coverage. Ensure that **all** rules are followed,
+    that the code is as simple as it could be, and that the code is ready for production use. Now is the time to refactor
+    or simplify the code if needed. If unsure, ask for a review from the user.
