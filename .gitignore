@@ -1,6 +1,9 @@
 # Generated output files
 output/
 
+# LLM working directory (plans, memory, etc.)
+.llm/
+
 # PowerShell
 *.ps1xml
 

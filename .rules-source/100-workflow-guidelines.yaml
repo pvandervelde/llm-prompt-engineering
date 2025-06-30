@@ -1,4 +1,5 @@
 - name: wf-coding-flow
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -23,6 +24,7 @@
     10. Create a pull request for the code. Follow the guidelines in `wf-pull-request` and the source control guidelines.
 
 - name: wf-coding-effort
+  scope: repository
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -41,6 +43,7 @@
     make sure you handle all edge cases, and run existing tests if they are provided.
 
 - name: wf-issue-use
+  scope: user
   editors:
     - name: copilot
       modes: [ask, agent]
@@ -55,6 +58,7 @@
     appropriate issue in the issue tracker. If there is no issue, suggest to create one.
 
 - name: wf-find-issue
+  scope: user
   editors:
     - name: copilot
       modes: [ask, agent]
@@ -70,6 +74,7 @@
     issues that are an approximate match, ask the user to clarify which issue should be used.
 
 - name: wf-issue-template
+  scope: user
   editors:
     - name: copilot
       modes: [agent]
@@ -84,6 +89,7 @@
     `./.github/ISSUE_TEMPLATE` directory.
 
 - name: wf-issue-creation
+  scope: user
   editors:
     - name: copilot
       modes: [agent]
@@ -99,6 +105,7 @@
     Issues should be linked together to show the relationship between them.
 
 - name: wf-branch-selection
+  scope: user
   editors:
     - name: copilot
       modes: [agent]
@@ -116,6 +123,7 @@
     If you are not sure if the current branch is sensible, ask the user to clarify.
 
 - name: wf-design-before-code
+  scope: user
   editors:
     - name: copilot
       modes: [ask, agent]
@@ -131,6 +139,7 @@
     `specs` directory of the repository.
 
 - name: wf-design-spec-layout
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -160,6 +169,7 @@
     - Conclusion
 
 - name: wf-code-tasks
+  scope: user
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -175,6 +185,7 @@
     them.
 
 - name: wf-code-style
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -190,6 +201,7 @@
     for the programming language being used.
 
 - name: wf-unit-test-coverage
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -206,6 +218,7 @@
     effective.
 
 - name: wf-unit-test-check
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -220,6 +233,7 @@
     you find.
 
 - name: wf-unit-test-create-new
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -234,6 +248,7 @@
     either the test (or the code it tests) until the test passes.
 
 - name: wf-unit-test-changes
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -248,6 +263,7 @@
     a time and provide an explanation of why you think the change you made fixes the error
 
 - name: wf-test-methods
+  scope: repository
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -264,6 +280,7 @@
     frameworks and tools for the programming language being used.
 
 - name: wf-documentation
+  scope: repository
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -280,6 +297,7 @@
     should be clear and concise.
 
 - name: wf-documentation-standards
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -294,6 +312,7 @@
     programming language being used.
 
 - name: wf-ci
+  scope: user
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -309,6 +328,7 @@
     automatically.
 
 - name: wf-pull-request
+  scope: user
   editors:
     - name: copilot
       modes: [agent, edit]
@@ -325,6 +345,7 @@
     person who created it. Always invite copilot on the review.
 
 - name: wf-release-management
+  scope: user
   editors:
     - name: copilot
       modes: [agent]
@@ -341,6 +362,7 @@
     something like `release-please` or `semantic-release` to automate the release process.
 
 - name: wf-release-notes
+  scope: user
   editors:
     - name: copilot
       modes: [agent, edit]
@@ -356,6 +378,7 @@
     consistent format for release notes to make them easy to read and understand.
 
 - name: wf-deployment
+  scope: user
   editors:
     - name: copilot
       modes: [agent]

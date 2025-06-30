@@ -1,4 +1,5 @@
 - name: general-tool-use-os
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -13,6 +14,7 @@
     `bash` on Linux and MacOS, and `powershell` on Windows
 
 - name: general-line-end-use-os
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -27,6 +29,7 @@
     to signify line endings, use actual line endings instead.
 
 - name: general-tool-use-file-search
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -41,6 +44,7 @@
     search hidden directories (e.g. `./.github`, `./.vscode`, etc.). But skip the `.git` directory.
 
 - name: tool-shell-safety
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -55,6 +59,7 @@
     explicitly requested. Use `set -euo pipefail` for bash scripts where robustness matters.
 
 - name: tool-wait-for-completion
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit, agent]

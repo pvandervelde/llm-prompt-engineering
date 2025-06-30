@@ -1,4 +1,5 @@
 - name: general-voice-and-tone
+  scope: repository
   editors:
     - name: copilot
       modes: [ask, edit]
@@ -13,6 +14,7 @@
     phrasing. Keep comments and responses focused, technical, and respectful.
 
 - name: general-mention-rules-used
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit]
@@ -27,6 +29,7 @@
     rule(s) in the output. You can use the `rule` tag to do this. For example, `#rule: rule_name`.
 
 - name: general-mention-knowledge
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit]
@@ -41,6 +44,7 @@
     completing this task.
 
 - name: general-think-carefully
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit]
@@ -56,6 +60,7 @@
     Avoid rushing to complete tasks. If you need more time to think, say so.
 
 - name: general-confidence-check
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit]
@@ -71,6 +76,7 @@
     Do this before saving files, after saving, after rejections, and before task completion
 
 - name: general-grounding
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit]
@@ -85,6 +91,7 @@
     different tools and document results and sources
 
 - name: general-focus
+  scope: repository
   editors:
     - name: copilot
       modes: [ask, edit]
@@ -97,6 +104,7 @@
     If you need to switch tasks, make sure to finish the current task first.
 
 - name: general-memory-bank
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit]
@@ -115,6 +123,7 @@
     `./.llm/memory/` as the default directory.
 
 - name: general-memory-bank-files
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit]
