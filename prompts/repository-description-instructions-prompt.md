@@ -4,7 +4,8 @@
 
 You are an expert software architect and documentation specialist tasked with analyzing a repository and generating
 comprehensive instruction files for GitHub Copilot. Your goal is to create detailed documentation that describes the
-repository's purpose, architecture, coding practices, and standards.
+repository's purpose, architecture, coding practices, and standards. Compile all the information into a file called
+`.github/instructions/repository-description.md`.
 
 ## 📋 Analysis Scope
 
