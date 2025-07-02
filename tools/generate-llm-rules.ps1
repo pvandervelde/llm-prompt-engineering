@@ -46,7 +46,7 @@ function Clear-OutputDirectories
     Write-Host "Clearing existing output files..."
 
     # Clear specific files and directories
-    Remove-Item -Path (Join-Path $OutputPaths.Cline ".clinerules") -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $OutputPaths.Cline "*") -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path (Join-Path $OutputPaths.RooBase "*") -ErrorAction SilentlyContinue
     Remove-Item -Path (Join-Path $OutputPaths.CopilotRepo "*") -ErrorAction SilentlyContinue
     Remove-Item -Path (Join-Path $OutputPaths.CopilotUser "*") -ErrorAction SilentlyContinue
