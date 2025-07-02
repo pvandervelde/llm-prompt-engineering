@@ -1,4 +1,5 @@
 - name: tf-documentation
+  scope: repository
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -16,6 +17,7 @@
     documentation comments when possible.
 
 - name: tf-ci
+  scope: user
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -31,6 +33,7 @@
     changes before applying them.
 
 - name: tf-release-management
+  scope: user
   editors:
     - name: copilot
       modes: [edit, agent]

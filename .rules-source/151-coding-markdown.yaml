@@ -1,4 +1,5 @@
 - name: md-lines
+  scope: repository
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -12,6 +13,7 @@
     Ensure that lines in markdown are no longer than 100 characters. Use proper formatting for lists, headings, and code blocks.
 
 - name: md-mermaid
+  scope: repository
   editors:
     - name: copilot
       modes: [ask, edit, agent]

@@ -1,4 +1,5 @@
 - name: coding-design-architecture
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -13,6 +14,7 @@
     points are clearly defined and documented.
 
 - name: coding-design-pseudo-code
+  scope: user
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -27,6 +29,7 @@
     design and identify potential issues early in the development process.
 
 - name: coding-whitespace
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -41,6 +44,7 @@
     between code and comments.
 
 - name: coding-style
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -55,6 +59,7 @@
     help ensure that the code is consistent and easy to read.
 
 - name: coding-comments
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -70,6 +75,7 @@
     Avoid commenting obvious control flow or syntax.
 
 - name: coding-tests-always
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -84,6 +90,7 @@
     Include realistic inputs, edge cases, and error conditions. Use the naming convention rules for test files.
 
 - name: coding-test-granularity
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -98,6 +105,7 @@
     Prefer many small, specific tests over a few broad ones.
 
 - name: coding-test-execution
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -112,6 +120,7 @@
     status. Use `cargo test` as the default unless a better method is available.
 
 - name: coding-explain-before-code
+  scope: user
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -126,6 +135,7 @@
     Use pseudocode or step-by-step outlines when helpful.
 
 - name: coding-reflect-on-failure
+  scope: user
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -140,6 +150,7 @@
     Explain what went wrong, and describe how the new solution avoids the same problem.
 
 - name: coding-review-before-commit
+  scope: repository
   editors:
     - name: copilot
       modes: [edit, agent]
@@ -152,4 +163,4 @@
   text: |
     Before committing code, review it for correctness, style, and test coverage. Ensure that **all** rules are followed,
     that the code is as simple as it could be, and that the code is ready for production use. Now is the time to refactor
-    or simplify the code if needed. If unsure, ask for a review from the user.
+    or simplify the code if needed.
