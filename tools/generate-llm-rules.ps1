@@ -152,6 +152,9 @@ function New-CopilotInstructionsByScope
 
     Write-Host "  Generating $ScopeLabel-specific Copilot .instructions.md files..."
 
+    # Determine file suffix based on scope
+    $scopeSuffix = if ($ScopeLabel -eq "User") { "-user" } else { "-repository" }
+
     # Group 1: Rules with no apply-to or apply-to contains "**", grouped by source file
     $globalRules = $Rules | Where-Object { -not $_.'apply-to' -or $_.'apply-to' -contains '**' } | Group-Object sourceFileName
     foreach ($group in $globalRules)
@@ -159,7 +162,7 @@ function New-CopilotInstructionsByScope
         $fileName = $group.Name
         $wrappedGroup = @{ Name = $fileName; Group = $group.Group }
         Write-RuleFile `
-            -FilePath (Join-Path $OutputDir "$fileName.instructions.md") `
+            -FilePath (Join-Path $OutputDir "$fileName$scopeSuffix.instructions.md") `
             -Header "Copilot Instructions ($ScopeLabel)" `
             -Patterns @( "**" ) `
             -Rules @($wrappedGroup)
@@ -174,7 +177,7 @@ function New-CopilotInstructionsByScope
 
         $wrappedGroup = @{ Name = $fileName; Group = $group.Group }
         Write-RuleFile `
-            -FilePath (Join-Path $OutputDir "$fileName.instructions.md") `
+            -FilePath (Join-Path $OutputDir "$fileName$scopeSuffix.instructions.md") `
             -Header "Copilot Instructions ($ScopeLabel)" `
             -Patterns $patterns `
             -Rules @($wrappedGroup)
