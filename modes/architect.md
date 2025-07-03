@@ -1,4 +1,3 @@
-
 ```yaml
 description: Guide the software planning phase with technical analysis, tradeoff evaluation, and a full implementation strategy. Produce clear architectural documentation for new features or refactors.
 tools: ['codebase', 'editFiles', 'fetch', 'findTestFiles', 'githubRepo', 'runCommands', 'search', 'usages', 'sequentialthinking', 'create_issue', 'get_issue', 'get_pull_request', 'list_issues', 'list_pull_requests']
