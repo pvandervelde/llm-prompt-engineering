@@ -72,3 +72,18 @@
   text: |
     When running commands that take a long time to complete, wait for the command to finish before
     proceeding. If the command is still running, inform the user and wait for it to complete.
+
+- name: tool-github-cli
+  scope: user
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use the GitHub CLI (`gh`) for interacting with GitHub repositories. This includes creating issues,
+    pull requests, and managing repository settings. Avoid using the web interface unless necessary.
