@@ -1,3 +1,5 @@
+# metadata: merge_with_others=true
+
 - name: scm-hygiene
   scope: repository
   editors:

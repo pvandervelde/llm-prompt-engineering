@@ -274,6 +274,15 @@ function Read-YamlRules
         Write-Verbose "Processing file: $($file.Name)"
 
         $content = Get-Content -Path $file.FullName -Raw
+
+        # Parse file-level metadata from comment at top of file
+        $mergeWithOthers = $false
+        if ($content -match '^\s*#\s*metadata:\s*merge_with_others\s*=\s*true')
+        {
+            $mergeWithOthers = $true
+            Write-Verbose "File $($file.Name) marked for merging with others"
+        }
+
         $rules = ConvertFrom-Yaml $content
 
         $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.FullName)
@@ -284,6 +293,7 @@ function Read-YamlRules
             # Enrich each rule with metadata
             $rule.group = $ruleGroup
             $rule.sourceFileName = $fileName
+            $rule.mergeWithOthers = $mergeWithOthers
 
             # Set default scope to 'user' if not specified (backward compatibility)
             if (-not $rule.scope)
@@ -359,13 +369,38 @@ function Get-PatternFileName
         ""
     }
 
-    # Handle global patterns or no pattern
+    # Handle special merged pattern
+    if ($Pattern -eq "MERGED")
+    {
+        return "${prefix}general"
+    }
+
+    # Handle file-based grouping (non-merged files)
+    if ($Pattern -match "^FILE:(.+)$")
+    {
+        $fileName = $Matches[1]
+        # Extract the meaningful part from the filename (after first hyphen)
+        if ($fileName -match "^\d+-(.+)$")
+        {
+            $languagePart = $Matches[1]
+            # Remove "coding-" prefix if present
+            $languagePart = $languagePart -replace "^coding-", ""
+            return "${prefix}${languagePart}"
+        }
+        else
+        {
+            # Fallback to full filename
+            return "${prefix}${fileName}"
+        }
+    }
+
+    # Handle global patterns or no pattern (legacy behavior)
     if (-not $Pattern -or $Pattern -eq "**")
     {
         return "${prefix}general"
     }
 
-    # Common pattern mappings
+    # Common pattern mappings (legacy behavior)
     $patternMappings = @{
         "**/*.rs"    = "rust"
         "**/*.ts"    = "typescript"
@@ -403,7 +438,7 @@ function Get-PatternFileName
     return "$prefix$sanitized"
 }
 
-# Groups rules by their apply-to patterns
+# Groups rules by their apply-to patterns, with special handling for merge_with_others
 function Get-RulesByPattern
 {
     param(
@@ -414,28 +449,26 @@ function Get-RulesByPattern
 
     foreach ($rule in $Rules)
     {
-        $patterns = @()
-
-        # Handle rules with no apply-to (treat as global)
-        if (-not $rule.'apply-to')
+        # If rule is marked for merging, put it in a special "MERGED" category
+        if ($rule.mergeWithOthers)
         {
-            $patterns += "**"
-        }
-        else
-        {
-            # Handle rules with apply-to patterns
-            $patterns += $rule.'apply-to'
-        }
-
-        # Add rule to each pattern group
-        foreach ($pattern in $patterns)
-        {
-            if (-not $patternGroups.ContainsKey($pattern))
+            if (-not $patternGroups.ContainsKey("MERGED"))
             {
-                $patternGroups[$pattern] = @()
+                $patternGroups["MERGED"] = @()
             }
-            $patternGroups[$pattern] += $rule
+            $patternGroups["MERGED"] += $rule
+            continue
         }
+
+        # For non-merge rules, group by source file name instead of patterns
+        # This allows language-specific files to remain separate regardless of their patterns
+        $groupKey = "FILE:$($rule.sourceFileName)"
+
+        if (-not $patternGroups.ContainsKey($groupKey))
+        {
+            $patternGroups[$groupKey] = @()
+        }
+        $patternGroups[$groupKey] += $rule
     }
 
     # Convert to array of pattern objects
@@ -464,8 +497,8 @@ function Write-PatternRuleFile
     # Initialize content as an array for proper appending
     $content = @()
 
-    # Add YAML frontmatter for the pattern
-    if ($Pattern -and $Pattern -ne "**")
+    # Add YAML frontmatter for the pattern (but not for MERGED - general files)
+    if ($Pattern -and $Pattern -ne "**" -and $Pattern -ne "MERGED" -and -not $Pattern.StartsWith("FILE:"))
     {
         $content += "---"
         $content += "applyTo: `"$Pattern`""
@@ -479,11 +512,51 @@ function Write-PatternRuleFile
         $content += "---"
         $content += ""
     }
+    elseif ($Pattern -and $Pattern.StartsWith("FILE:"))
+    {
+        # For file-based grouping, check if the rules have specific patterns
+        $uniquePatterns = $Rules | ForEach-Object { $_.PSObject.Properties["apply-to"].Value } | Where-Object { $_ -and $_ -ne "**" } | Sort-Object | Get-Unique
+
+        if ($uniquePatterns -and $uniquePatterns.Count -gt 0)
+        {
+            $content += "---"
+            if ($uniquePatterns.Count -eq 1)
+            {
+                $content += "applyTo: `"$($uniquePatterns[0])`""
+            }
+            else
+            {
+                $content += "applyTo:"
+                foreach ($pattern in $uniquePatterns)
+                {
+                    $content += "  - `"$pattern`""
+                }
+            }
+            $content += "---"
+            $content += ""
+        }
+    }
+    # Note: MERGED pattern gets no frontmatter - it's a general file
 
     # Add header with pattern information
-    $patternName = if ($Pattern -eq "**" -or -not $Pattern)
+    $patternName = if ($Pattern -eq "**" -or -not $Pattern -or $Pattern -eq "MERGED")
     {
         "General"
+    }
+    elseif ($Pattern.StartsWith("FILE:"))
+    {
+        $fileName = $Pattern.Substring(5)  # Remove "FILE:" prefix
+        if ($fileName -match "^\d+-(.+)$")
+        {
+            $languagePart = $Matches[1]
+            $languagePart = $languagePart -replace "^coding-", ""
+            $languagePart = $languagePart.Substring(0, 1).ToUpper() + $languagePart.Substring(1)
+            $languagePart
+        }
+        else
+        {
+            $fileName
+        }
     }
     else
     {
