@@ -1,3 +1,5 @@
+# metadata: merge_with_others=true
+
 - name: coding-design-architecture
   scope: repository
   editors:

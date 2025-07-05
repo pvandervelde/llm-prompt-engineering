@@ -150,37 +150,26 @@ function New-CopilotInstructionsByScope
         return
     }
 
-    Write-Host "  Generating $ScopeLabel-specific Copilot .instructions.md files..."
+    Write-Host "  Generating $ScopeLabel-specific Copilot .instructions.md files using pattern-based grouping..."
 
-    # Determine file suffix based on scope
-    $scopeSuffix = if ($ScopeLabel -eq "User") { "-user" } else { "-repository" }
+    # Group rules by their apply-to patterns
+    $patternGroups = Get-RulesByPattern -Rules $Rules
 
-    # Group 1: Rules with no apply-to or apply-to contains "**", grouped by source file
-    $globalRules = $Rules | Where-Object { -not $_.'apply-to' -or $_.'apply-to' -contains '**' } | Group-Object sourceFileName
-    foreach ($group in $globalRules)
+    Write-Host "  Found $($patternGroups.Count) pattern groups for $ScopeLabel scope"
+
+    # Generate a file for each pattern group
+    foreach ($patternGroup in $patternGroups)
     {
-        $fileName = $group.Name
-        $wrappedGroup = @{ Name = $fileName; Group = $group.Group }
-        Write-RuleFile `
-            -FilePath (Join-Path $OutputDir "$fileName$scopeSuffix.instructions.md") `
-            -Header "Copilot Instructions ($ScopeLabel)" `
-            -Patterns @( "**" ) `
-            -Rules @($wrappedGroup)
-    }
+        $fileName = Get-PatternFileName -Pattern $patternGroup.Pattern -ScopeLabel $ScopeLabel
+        $filePath = Join-Path $OutputDir "$fileName.instructions.md"
 
-    # Group 2: Rules with specific apply-to patterns (excluding "**"), grouped by source file
-    $specificRules = $Rules | Where-Object { $_.'apply-to' -and ($_.'apply-to' | Where-Object { $_ -ne '**' }) } | Group-Object sourceFileName
-    foreach ($group in $specificRules)
-    {
-        $fileName = $group.Name
-        $patterns = $group.Group[0].'apply-to' | Where-Object { $_ -ne '**' } | Sort-Object
+        Write-Host "    Writing $($patternGroup.Rules.Count) rules for pattern '$($patternGroup.Pattern)' to $fileName.instructions.md"
 
-        $wrappedGroup = @{ Name = $fileName; Group = $group.Group }
-        Write-RuleFile `
-            -FilePath (Join-Path $OutputDir "$fileName$scopeSuffix.instructions.md") `
-            -Header "Copilot Instructions ($ScopeLabel)" `
-            -Patterns $patterns `
-            -Rules @($wrappedGroup)
+        Write-PatternRuleFile `
+            -FilePath $filePath `
+            -Pattern $patternGroup.Pattern `
+            -ScopeLabel $ScopeLabel `
+            -Rules $patternGroup.Rules
     }
 }
 
@@ -285,6 +274,15 @@ function Read-YamlRules
         Write-Verbose "Processing file: $($file.Name)"
 
         $content = Get-Content -Path $file.FullName -Raw
+
+        # Parse file-level metadata from comment at top of file
+        $mergeWithOthers = $false
+        if ($content -match '^\s*#\s*metadata:\s*merge_with_others\s*=\s*true')
+        {
+            $mergeWithOthers = $true
+            Write-Verbose "File $($file.Name) marked for merging with others"
+        }
+
         $rules = ConvertFrom-Yaml $content
 
         $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.FullName)
@@ -295,6 +293,7 @@ function Read-YamlRules
             # Enrich each rule with metadata
             $rule.group = $ruleGroup
             $rule.sourceFileName = $fileName
+            $rule.mergeWithOthers = $mergeWithOthers
 
             # Set default scope to 'user' if not specified (backward compatibility)
             if (-not $rule.scope)
@@ -352,6 +351,242 @@ function Test-RuleAppliesTo
     return $false
 }
 
+# Gets the filename for a given pattern and scope
+function Get-PatternFileName
+{
+    param(
+        [string]$Pattern,
+        [string]$ScopeLabel
+    )
+
+    # Determine prefix based on scope
+    $prefix = if ($ScopeLabel -eq "User")
+    {
+        "user-"
+    }
+    else
+    {
+        ""
+    }
+
+    # Handle special merged pattern
+    if ($Pattern -eq "MERGED")
+    {
+        return "${prefix}general"
+    }
+
+    # Handle file-based grouping (non-merged files)
+    if ($Pattern -match "^FILE:(.+)$")
+    {
+        $fileName = $Matches[1]
+        # Extract the meaningful part from the filename (after first hyphen)
+        if ($fileName -match "^\d+-(.+)$")
+        {
+            $languagePart = $Matches[1]
+            # Remove "coding-" prefix if present
+            $languagePart = $languagePart -replace "^coding-", ""
+            return "${prefix}${languagePart}"
+        }
+        else
+        {
+            # Fallback to full filename
+            return "${prefix}${fileName}"
+        }
+    }
+
+    # Handle global patterns or no pattern (legacy behavior)
+    if (-not $Pattern -or $Pattern -eq "**")
+    {
+        return "${prefix}general"
+    }
+
+    # Common pattern mappings (legacy behavior)
+    $patternMappings = @{
+        "**/*.rs"    = "rust"
+        "**/*.ts"    = "typescript"
+        "**/*.js"    = "javascript"
+        "**/*.md"    = "markdown"
+        "**/*.py"    = "python"
+        "**/*.tf"    = "terraform"
+        "**/*.go"    = "go"
+        "**/*.java"  = "java"
+        "**/*.cs"    = "csharp"
+        "**/*.cpp"   = "cpp"
+        "**/*.c"     = "c"
+        "src/**"     = "src"
+        "test/**"    = "test"
+        "tests/**"   = "tests"
+        "docs/**"    = "docs"
+        "doc/**"     = "doc"
+        "scripts/**" = "scripts"
+        "tools/**"   = "tools"
+        "build/**"   = "build"
+        "deploy/**"  = "deploy"
+        "config/**"  = "config"
+        "configs/**" = "configs"
+    }
+
+    # Check if we have a direct mapping
+    if ($patternMappings.ContainsKey($Pattern))
+    {
+        return "$prefix$($patternMappings[$Pattern])"
+    }
+
+    # Sanitize pattern for filename
+    $sanitized = $Pattern -replace '\*', 'star' -replace '/', '-' -replace '\\', '-' -replace '[<>:"|?]', '-'
+    $sanitized = $sanitized -replace '-+', '-' -replace '^-|-$', ''
+
+    return "$prefix$sanitized"
+}
+
+# Groups rules by their apply-to patterns, with special handling for merge_with_others
+function Get-RulesByPattern
+{
+    param(
+        [PSCustomObject[]]$Rules
+    )
+
+    $patternGroups = @{}
+
+    foreach ($rule in $Rules)
+    {
+        # If rule is marked for merging, put it in a special "MERGED" category
+        if ($rule.mergeWithOthers)
+        {
+            if (-not $patternGroups.ContainsKey("MERGED"))
+            {
+                $patternGroups["MERGED"] = @()
+            }
+            $patternGroups["MERGED"] += $rule
+            continue
+        }
+
+        # For non-merge rules, group by source file name instead of patterns
+        # This allows language-specific files to remain separate regardless of their patterns
+        $groupKey = "FILE:$($rule.sourceFileName)"
+
+        if (-not $patternGroups.ContainsKey($groupKey))
+        {
+            $patternGroups[$groupKey] = @()
+        }
+        $patternGroups[$groupKey] += $rule
+    }
+
+    # Convert to array of pattern objects
+    $result = @()
+    foreach ($pattern in $patternGroups.Keys)
+    {
+        $result += [PSCustomObject]@{
+            Pattern = $pattern
+            Rules   = $patternGroups[$pattern]
+        }
+    }
+
+    return $result
+}
+
+# Writes a pattern-specific rule file
+function Write-PatternRuleFile
+{
+    param(
+        [string]$FilePath,
+        [string]$Pattern,
+        [string]$ScopeLabel,
+        [PSCustomObject[]]$Rules
+    )
+
+    # Initialize content as an array for proper appending
+    $content = @()
+
+    # Add YAML frontmatter for the pattern (but not for MERGED - general files)
+    if ($Pattern -and $Pattern -ne "**" -and $Pattern -ne "MERGED" -and -not $Pattern.StartsWith("FILE:"))
+    {
+        $content += "---"
+        $content += "applyTo: `"$Pattern`""
+        $content += "---"
+        $content += ""
+    }
+    elseif ($Pattern -eq "**")
+    {
+        $content += "---"
+        $content += "applyTo: `"**`""
+        $content += "---"
+        $content += ""
+    }
+    elseif ($Pattern -and $Pattern.StartsWith("FILE:"))
+    {
+        # For file-based grouping, check if the rules have specific patterns
+        $uniquePatterns = $Rules | ForEach-Object { $_.PSObject.Properties["apply-to"].Value } | Where-Object { $_ -and $_ -ne "**" } | Sort-Object | Get-Unique
+
+        if ($uniquePatterns -and $uniquePatterns.Count -gt 0)
+        {
+            $content += "---"
+            if ($uniquePatterns.Count -eq 1)
+            {
+                $content += "applyTo: `"$($uniquePatterns[0])`""
+            }
+            else
+            {
+                $content += "applyTo:"
+                foreach ($pattern in $uniquePatterns)
+                {
+                    $content += "  - `"$pattern`""
+                }
+            }
+            $content += "---"
+            $content += ""
+        }
+    }
+    # Note: MERGED pattern gets no frontmatter - it's a general file
+
+    # Add header with pattern information
+    $patternName = if ($Pattern -eq "**" -or -not $Pattern -or $Pattern -eq "MERGED")
+    {
+        "General"
+    }
+    elseif ($Pattern.StartsWith("FILE:"))
+    {
+        $fileName = $Pattern.Substring(5)  # Remove "FILE:" prefix
+        if ($fileName -match "^\d+-(.+)$")
+        {
+            $languagePart = $Matches[1]
+            $languagePart = $languagePart -replace "^coding-", ""
+            $languagePart = $languagePart.Substring(0, 1).ToUpper() + $languagePart.Substring(1)
+            $languagePart
+        }
+        else
+        {
+            $fileName
+        }
+    }
+    else
+    {
+        $Pattern
+    }
+    $content += "# Copilot Instructions ($ScopeLabel) - $patternName"
+    $content += ""
+
+    # Group rules by source file for organization
+    $rulesBySource = $Rules | Group-Object sourceFileName
+
+    foreach ($group in $rulesBySource)
+    {
+        $fileName = $group.Name
+        $groupName = $fileName.SubString($fileName.IndexOf("-") + 1)
+        $content += "## $groupName"
+        $content += ""
+
+        foreach ($rule in $group.Group)
+        {
+            $content += "**$($rule.name):** $($rule.text)"
+        }
+        $content += ""
+    }
+
+    # Write all content joined by newlines
+    Set-Content -Path $FilePath -Value ($content -join [Environment]::NewLine) -Encoding UTF8
+}
+
 # Writes a rule file with YAML frontmatter and grouped rules
 function Write-RuleFile
 {
@@ -406,7 +641,6 @@ function Write-RuleFile
     # Write all content joined by newlines
     Set-Content -Path $FilePath -Value ($content -join [Environment]::NewLine) -Encoding UTF8
 }
-
 #--------------------------End of Functions--------------------------
 
 # ------------------------- Main Script Execution -------------------------
