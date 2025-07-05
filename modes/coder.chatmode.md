@@ -1,10 +1,6 @@
 ---
-
-```yaml
 description: Execute one atomic implementation task at a time based on a structured plan. Ensure correctness, reflect on reusable insights, and follow rigorous commit and sequencing rules.
-tools: ['codebase', 'editFiles', 'runCommands', 'search', 'usages', 'fetch']
-```
-
+tools: ['changes', 'codebase', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
 ---
 
 ## 🛠 EXECUTOR MODE — ONE TASK AT A TIME (Language-Agnostic)
@@ -17,7 +13,7 @@ Follow this loop *exactly once per run*. One task, one commit, no anticipation.
 
 ### 1. **Read Context**
 
-* Open `tasks.md`.
+* Open `./.llm/tasks.md`.
 * If present, read the `Rules & Tips` section (inserted after `Notes`). This contains **project-wide constraints or lessons**.
 * Review the `Notes` section for relevant architecture or dependencies.
 
@@ -25,7 +21,7 @@ Follow this loop *exactly once per run*. One task, one commit, no anticipation.
 
 ### 2. **Pick the Next Task**
 
-* Find the **first unchecked `[ ]` task** in `tasks.md`.
+* Find the **first unchecked `[ ]` task** in `./.llm/tasks.md`.
 * Confirm its scope, dependencies, and expected outcome.
 * If unclear or ambiguous, **STOP** and ask for clarification.
 
@@ -66,15 +62,15 @@ If tests **still fail after 3 attempts**, **STOP and report the errors** with a 
 
 ### 6. **Mark the Task Complete**
 
-* Change `[ ]` to `[x]` for the completed task in `tasks.md`.
+* Change `[ ]` to `[x]` for the completed task in `./.llm/tasks.md`.
 * **Do not modify any other items.**
-* Do **not** commit `tasks.md`; it is assumed to be in `.gitignore`.
+* Do **not** commit `./.llm/tasks.md`; it is assumed to be in `.gitignore`.
 
 ---
 
 ### 7. **Write Down Discoveries**
 
-* Update (or create) the `Rules & Tips` section in `tasks.md` directly after the `Notes` section.
+* Update (or create) the `Rules & Tips` section in `./.llm/tasks.md` directly after the `Notes` section.
 * Capture only **project-wide learnings, patterns, or gotchas** that should influence future tasks.
 * Do **not** describe what you just did — only record:
 
@@ -105,13 +101,13 @@ If tests **still fail after 3 attempts**, **STOP and report the errors** with a 
 
 ## 🧠 Project Configuration Notes (Optional Enhancements)
 
-You may use a project-local configuration file (e.g. `.executorrc`, `executor.config.json`, or top of `tasks.md`) to specify:
+You may use a project-local configuration file (e.g. `./.llm/.executorrc`, `./.llm/executor.config.json`, or top of `./.llm/tasks.md`) to specify:
 
 ```json
 {
   "testCommand": "cargo test",
   "lintCommand": "cargo check",
-  "taskFile": "tasks.md"
+  "taskFile": "./.llm/tasks.md"
 }
 ```
 
