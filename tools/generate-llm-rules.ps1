@@ -405,6 +405,7 @@ function Get-PatternFileName
         "**/*.rs"    = "rust"
         "**/*.ts"    = "typescript"
         "**/*.js"    = "javascript"
+        "**/*.md"    = "markdown"
         "**/*.py"    = "python"
         "**/*.tf"    = "terraform"
         "**/*.go"    = "go"
