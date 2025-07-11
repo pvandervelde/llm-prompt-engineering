@@ -1,0 +1,336 @@
+- name: csharp-async-patterns
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use `async`/`await` for I/O-bound operations. Avoid `async void` except for event handlers -
+    use `async Task` instead. Use `ConfigureAwait(false)` in library code. Don't block on async
+    code with `.Result` or `.Wait()`. Use `CancellationToken` for long-running operations.
+    Prefer `Task.Run` for CPU-bound work in async contexts.
+
+- name: csharp-ci
+  scope: user
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code, test]
+  apply-to:
+    - "**"
+  text: |
+    Run `dotnet build`, `dotnet test`, and `dotnet format` in CI pipeline. Use `dotnet pack`
+    for NuGet packages. Run static analysis with SonarQube or CodeQL. Use `dotnet publish`
+    for deployment artifacts. Collect code coverage with coverlet. Run security scans
+    with tools like CodeQL or Security Code Scan.
+
+- name: csharp-collections
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use `List<T>` for mutable sequences, `IReadOnlyList<T>` for immutable access,
+    `IEnumerable<T>` for streaming data. Use `Dictionary<TKey, TValue>` for lookups,
+    `HashSet<T>` for unique values. Prefer `ICollection<T>` interfaces in method parameters.
+    Use `Span<T>` and `Memory<T>` for high-performance scenarios. Consider `ImmutableList<T>`
+    for thread-safe immutable collections.
+
+- name: csharp-configuration
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use the Options pattern with `IOptions<T>`, `IOptionsSnapshot<T>`, or `IOptionsMonitor<T>`.
+    Store configuration in appsettings.json, environment variables, or Azure Key Vault.
+    Validate configuration with DataAnnotations or FluentValidation. Use strongly-typed
+    configuration classes. Follow the 12-factor app methodology for environment-specific settings.
+
+- name: csharp-dependency-injection
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use constructor injection for required dependencies. Register services with appropriate
+    lifetimes: Singleton, Scoped, or Transient. Use interfaces for loose coupling. Avoid
+    service locator pattern. Use factory patterns for complex object creation. Register
+    services in composition root (Program.cs or Startup.cs).
+
+- name: csharp-documentation
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use XML documentation comments (`///`) for all public APIs. Include `<summary>`,
+    `<param>`, `<returns>`, and `<exception>` tags. Use `<example>` for complex methods.
+    Generate documentation with DocFX or similar tools. Use meaningful parameter names
+    that don't require additional documentation. Document thread safety and performance
+    characteristics for public APIs.
+
+- name: csharp-error-handling
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug]
+  apply-to:
+    - "**"
+  text: |
+    Use exceptions for exceptional circumstances, not control flow. Create custom
+    exceptions inheriting from appropriate base classes. Use `ArgumentException`,
+    `ArgumentNullException`, `InvalidOperationException` appropriately. Consider
+    Result<T> pattern for expected failures. Use `using` statements for IDisposable.
+    Log exceptions with sufficient context for debugging.
+
+- name: csharp-file-organization
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    One class per file with matching filename and class name. Organize using statements:
+    System namespaces first, then third-party, then local (alphabetically within groups).
+    Use file-scoped namespaces in .NET 6+. Place interfaces, enums, and records in
+    separate files when they're used across multiple classes. Use folder structure
+    that mirrors namespace structure.
+
+- name: csharp-linq-usage
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Prefer method syntax over query syntax for simple operations. Use meaningful
+    variable names in lambda expressions. Avoid ToList() unless materialization is
+    required. Use FirstOrDefault() vs Single() appropriately. Consider performance
+    implications of deferred execution. Use AsParallel() judiciously for CPU-bound
+    operations on large datasets.
+
+- name: csharp-logging
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use ILogger<T> with dependency injection. Use structured logging with message
+    templates: `logger.LogInformation("User {UserId} performed action {Action}", userId, action)`.
+    Use appropriate log levels: Trace, Debug, Information, Warning, Error, Critical.
+    Use LoggerMessage.Define for high-performance logging. Don't log sensitive data.
+    Use correlation IDs for distributed tracing.
+
+- name: csharp-memory-management
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use `using` statements or `using` declarations for IDisposable resources. Implement
+    IDisposable pattern correctly with Dispose(bool disposing). Use weak references
+    for large object graphs to prevent memory leaks. Consider object pooling for
+    frequently allocated objects. Use Span<T> and Memory<T> to avoid unnecessary
+    allocations. Profile memory usage with tools like JetBrains dotMemory.
+
+- name: csharp-naming-conventions
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use PascalCase for classes, methods, properties, and public fields. Use camelCase
+    for parameters, local variables, and private fields. Use SCREAMING_SNAKE_CASE
+    for constants. Prefix interfaces with 'I'. Use descriptive names - avoid
+    abbreviations. Use verbs for methods, nouns for properties. Boolean properties
+    should be positive and answerable with yes/no.
+
+- name: csharp-null-safety
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Enable nullable reference types in .NET 6+. Use null-conditional operators (`?.`,
+    `??`, `??=`) appropriately. Validate public method parameters with guard clauses
+    or throw helper methods. Use `[NotNull]` and `[MaybeNull]` attributes when needed.
+    Prefer non-nullable types - make nullability explicit and intentional. Use null
+    object pattern to avoid null checks where appropriate.
+
+- name: csharp-package-management
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code]
+  apply-to:
+    - "**"
+  text: |
+    Use Central Package Management for multi-project solutions. Pin package versions
+    in production applications. Use floating versions (`*-*`) only in development.
+    Group packages logically in Directory.Packages.props. Use PackageReference over
+    packages.config. Audit packages regularly for security vulnerabilities. Document
+    why specific package versions are pinned.
+
+- name: csharp-performance
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Profile before optimizing. Use BenchmarkDotNet for micro-benchmarks. Prefer
+    struct over class for small, immutable value types. Use readonly when possible.
+    Avoid boxing/unboxing with generics. Use StringBuilder for string concatenation
+    in loops. Consider ValueTask<T> for frequently synchronous async methods.
+    Use ArrayPool<T> for temporary large arrays.
+
+- name: csharp-release-management
+  scope: user
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code]
+  apply-to:
+    - "**"
+  text: |
+    Use semantic versioning for libraries and NuGet packages. Use GitVersion or
+    similar for automated versioning. Create release notes from conventional commits.
+    Use GitHub Releases or Azure DevOps for release management. Tag releases with
+    version numbers. Automate package publishing to NuGet.org or private feeds.
+
+- name: csharp-security
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Never store secrets in code - use Azure Key Vault, user secrets, or environment
+    variables. Validate all input data. Use parameterized queries to prevent SQL
+    injection. Implement proper authentication and authorization. Use HTTPS everywhere.
+    Keep dependencies updated. Use Code Access Security judiciously. Follow OWASP
+    guidelines for web applications.
+
+- name: csharp-testing
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, test, debug]
+  apply-to:
+    - "**"
+  text: |
+    Use xUnit, NUnit, or MSTest for unit testing. Follow AAA pattern (Arrange, Act,
+    Assert). Use descriptive test method names that explain the scenario. Use test
+    doubles (mocks, stubs) appropriately with Moq or NSubstitute. Write integration
+    tests with TestServer for web APIs. Aim for high code coverage but focus on
+    critical paths. Use theories for parameterized tests.
+
+- name: csharp-type-design
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use records for immutable data structures. Use classes for mutable entities with
+    behavior. Use structs for small, immutable value types. Implement IEquatable<T>
+    for value types. Use sealed classes when inheritance isn't intended. Design
+    interfaces focused on specific behaviors. Use abstract classes for shared
+    implementation with inheritance.
