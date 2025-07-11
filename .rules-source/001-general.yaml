@@ -31,21 +31,6 @@
     Focus on the task at hand. Avoid distractions and stay on topic.
     If you need to switch tasks, make sure to finish the current task first.
 
-- name: general-grounding
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Always verify and validate information from multiple sources. Cross-reference findings from
-    different tools and document results and sources
-
 - name: general-incremental-delivery
   scope: user
   editors:
@@ -81,24 +66,6 @@
     test cases) with enough context to retrieve and reuse them later. Organize memory entries by domain
     (e.g. rust::errors, infra::ci) when applicable. If no location for the memory bank is specified, use
     `./.llm/memory/` as the default directory.
-
-- name: general-memory-bank-files
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    In your memory bank, store at least the following files:
-    - `./.llm/memory/current-state.md`: This file should contain the current state of the project,
-      including any ongoing tasks, issues, and relevant context.
-    - `./.llm/memory/issues-to-file.md`: This file should contain todo items, technical debt, and
-      other issues that need to be addressed in the project.
 
 - name: general-mention-knowledge
   scope: user

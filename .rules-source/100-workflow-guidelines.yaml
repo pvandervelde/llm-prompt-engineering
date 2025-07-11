@@ -1,23 +1,5 @@
 # metadata: merge_with_others=true
 
-- name: wf-api-design
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [ask, edit, agent]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Design APIs following REST principles, GraphQL best practices, or appropriate RPC patterns.
-    Version APIs appropriately using URL versioning, header versioning, or content negotiation.
-    Document APIs with OpenAPI/Swagger, GraphQL schema, or equivalent documentation tools.
-    Consider backward compatibility and implement graceful deprecation strategies. Use consistent
-    naming conventions, error handling patterns, and response formats across all endpoints.
-
 - name: wf-branch-selection
   scope: user
   editors:
@@ -36,22 +18,6 @@
     For example `git checkout -b feature-add-new-user main` or `git checkout -b fix-bug-in-login-page master`.
     If you are not sure if the current branch is sensible, ask the user to clarify.
 
-- name: wf-ci
-  scope: user
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, code, test]
-  apply-to:
-    - "**"
-  text: |
-    All changes should be checked with a continuous integration (CI) tool before being
-    merged into the main branch. Use CI tools to run tests, check code style, and perform other checks
-    automatically.
-
 - name: wf-code-style
   scope: repository
   editors:
@@ -67,22 +33,6 @@
     All code should be easy to understand and maintain. Use clear and descriptive
     names for variables, functions, and classes. Always follow the coding standards and best practices
     for the programming language being used.
-
-- name: wf-code-tasks
-  scope: user
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Coding starts with an implementation issue. During the session we only solve the
-    implementation issue. If we find other changes that we want to make, we create new issues for
-    them.
 
 - name: wf-coding-effort
   scope: repository
@@ -128,41 +78,6 @@
     9. Document the code. Follow the guidelines in `wf-documentation`.
     10. Create a pull request for the code. Follow the guidelines in `wf-pull-request` and the source control guidelines.
 
-- name: wf-database-changes
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [ask, edit, agent]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Handle database schema changes with proper migration scripts that can be applied and rolled back safely.
-    Test migrations on realistic data volumes and scenarios. Plan rollback strategies for all database changes.
-    Use database versioning tools appropriate for your stack (Liquibase, Flyway, Django migrations, etc.).
-    Never modify existing migrations after they've been applied to production. Consider data migration impact
-    on application downtime and plan accordingly.
-
-- name: wf-deployment
-  scope: user
-  editors:
-    - name: copilot
-      modes: [agent]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, code]
-  apply-to:
-    - "**"
-  text: |
-    All code should be deployed to a staging environment before being deployed to
-    production. This will help ensure that the code is working as expected and that there are no
-    regressions. Use continuous integration and continuous deployment (CI/CD) tools to automate the
-    deployment process.
-
 - name: wf-design-before-code
   scope: user
   editors:
@@ -201,7 +116,6 @@
       - Design goals
       - Design constraints
       - Design decisions
-      - Alternatives considered
     - Design
       - Architecture
       - Data flow
@@ -240,56 +154,6 @@
   text: |
     Follow the documentation standards and best practices for the
     programming language being used.
-
-- name: wf-find-issue
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, agent]
-    - name: cline
-      modes: [plan]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    When searching for issues
-    do an approximate comparison of the issue title and description with the task at hand. If you find multiple
-    issues that are an approximate match, ask the user to clarify which issue should be used.
-
-- name: wf-incident-response
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, agent]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    For production incidents, follow established incident response procedures: assess impact,
-    implement immediate mitigation, communicate status to stakeholders, conduct root cause analysis,
-    and implement preventive measures. Document all incidents with timelines, actions taken, and
-    lessons learned. Use post-mortem reviews to improve processes and prevent recurrence.
-    Maintain incident response runbooks and keep them up to date.
-
-- name: wf-issue-creation
-  scope: user
-  editors:
-    - name: copilot
-      modes: [agent]
-    - name: cline
-      modes: [plan]
-    - name: roo
-      modes: [architect, code, test, debug]
-  apply-to:
-    - "**"
-  text: |
-    All issues should be created in the repository. This includes bugs, new features,
-    and any other changes to the codebase. Issues should be created for all tasks, even if they are small.
-    Issues should be linked together to show the relationship between them.
 
 - name: wf-issue-template
   scope: user
@@ -356,39 +220,6 @@
     relevant issue numbers, results from testing, and any other relevant information. Assign the PR to the
     person who created it. Always invite copilot on the review.
 
-- name: wf-release-management
-  scope: user
-  editors:
-    - name: copilot
-      modes: [agent]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, code]
-  apply-to:
-    - "**"
-  text: |
-    Use a release management tool to manage the release process. This
-    includes creating release notes, tagging releases, and managing version numbers. Use semantic
-    versioning to version releases. Use a language specific tool if it is available, otherwise use
-    something like `release-please` or `semantic-release` to automate the release process.
-
-- name: wf-release-notes
-  scope: user
-  editors:
-    - name: copilot
-      modes: [agent, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, code]
-  apply-to:
-    - "**"
-  text: |
-    All releases should have release notes that describe the changes made in
-    the release. This includes new features, bug fixes, and any other relevant information. Use a
-    consistent format for release notes to make them easy to read and understand.
-
 - name: wf-test-methods
   scope: repository
   editors:
@@ -421,21 +252,6 @@
     Whenever you make a change, run the tests and fix any errors that are revealed. Fix one error at
     a time and provide an explanation of why you think the change you made fixes the error
 
-- name: wf-unit-test-check
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [code, test, debug]
-  apply-to:
-    - "**"
-  text: |
-    When you think you've solved the presented problem, run all available tests. Fix any issues that
-    you find.
-
 - name: wf-unit-test-coverage
   scope: repository
   editors:
@@ -452,18 +268,3 @@
     all input and output paths of the code. This includes edge cases and error handling. Use coverage
     tools to measure the test coverage and use mutation testing to ensure that the tests are
     effective.
-
-- name: wf-unit-test-create-new
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [code, test, debug]
-  apply-to:
-    - "**"
-  text: |
-    Whenever you create a new test, run it to verify that it passes. If it doesn't pass, revise
-    either the test (or the code it tests) until the test passes.

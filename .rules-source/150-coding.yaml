@@ -144,21 +144,6 @@
     Follow the style guides for the language. Use the appropriate formatters to format your code. This will
     help ensure that the code is consistent and easy to read.
 
-- name: coding-test-execution
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [code, debug, architect]
-  apply-to:
-    - "**"
-  text: |
-    Always assume tests should be executed. If tests cannot be run, clearly state this and provide expected output or
-    status. Use appropriate test runners for the language and framework being used.
-
 - name: coding-test-granularity
   scope: repository
   editors:
@@ -188,18 +173,3 @@
   text: |
     After implementing any logic, immediately write unit tests that verify its correctness.
     Include realistic inputs, edge cases, and error conditions. Use the naming convention rules for test files.
-
-- name: coding-whitespace
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [architect, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Always leave a whitespace between a line of code and a comment. This improves readability and helps to distinguish
-    between code and comments.
