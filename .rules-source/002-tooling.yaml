@@ -1,6 +1,23 @@
 # metadata: merge_with_others=true
 
-- name: general-tool-use-os
+- name: tool-container-usage
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use Docker/Podman for consistent development environments and deployment. Prefer official
+    base images and use multi-stage builds for optimization. Use .dockerignore to optimize
+    build context and reduce image size. Pin base image versions for reproducibility. Use
+    appropriate user permissions and don't run as root. Include health checks in production containers.
+
+- name: tool-github-cli
   scope: user
   editors:
     - name: copilot
@@ -12,10 +29,27 @@
   apply-to:
     - "**"
   text: |
-    Use operating system relevant tools when possible. For example, use
-    `bash` on Linux and MacOS, and `powershell` on Windows
+    Use the GitHub CLI (`gh`) for interacting with GitHub repositories. This includes creating issues,
+    pull requests, and managing repository settings. Avoid using the web interface unless necessary.
 
-- name: general-line-end-use-os
+- name: tool-infrastructure-as-code
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use infrastructure as code tools (Terraform, Pulumi, CloudFormation, Bicep) instead of manual
+    cloud console configuration. Version control all infrastructure definitions. Use modules/templates
+    for reusable components. Plan and review infrastructure changes before applying. Use separate
+    state files for different environments. Document infrastructure dependencies and deployment procedures.
+
+- name: tool-line-end-use-os
   scope: user
   editors:
     - name: copilot
@@ -30,8 +64,8 @@
     Use operating system appropriate line endings in files and command lines. Avoid using `\r\n` or `\n`
     to signify line endings, use actual line endings instead.
 
-- name: general-tool-use-file-search
-  scope: user
+- name: tool-package-managers
+  scope: repository
   editors:
     - name: copilot
       modes: [ask, edit, agent]
@@ -42,8 +76,11 @@
   apply-to:
     - "**"
   text: |
-    When searching for files in the workspace make sure to also
-    search hidden directories (e.g. `./.github`, `./.vscode`, etc.). But skip the `.git` directory.
+    Use appropriate package managers for each language: npm/pnpm/yarn for Node.js, pip/poetry/pipenv
+    for Python, cargo for Rust, dotnet for .NET, composer for PHP. Pin exact versions in lock files
+    for reproducible builds. Separate production and development dependencies. Use private registries
+    when needed. Regularly audit dependencies for security vulnerabilities. Keep dependencies updated
+    but test thoroughly before upgrading.
 
 - name: tool-shell-safety
   scope: user
@@ -60,6 +97,36 @@
     When generating shell commands, avoid destructive operations (e.g. `rm -rf`, `curl | sh`) unless
     explicitly requested. Use `set -euo pipefail` for bash scripts where robustness matters.
 
+- name: tool-use-file-search
+  scope: user
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    When searching for files in the workspace make sure to also
+    search hidden directories (e.g. `./.github`, `./.vscode`, etc.). But skip the `.git` directory.
+
+- name: tool-use-os
+  scope: user
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use operating system relevant tools when possible. For example, use
+    `bash` on Linux and MacOS, and `powershell` on Windows
+
 - name: tool-wait-for-completion
   scope: user
   editors:
@@ -74,18 +141,3 @@
   text: |
     When running commands that take a long time to complete, wait for the command to finish before
     proceeding. If the command is still running, inform the user and wait for it to complete.
-
-- name: tool-github-cli
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit, agent]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Use the GitHub CLI (`gh`) for interacting with GitHub repositories. This includes creating issues,
-    pull requests, and managing repository settings. Avoid using the web interface unless necessary.

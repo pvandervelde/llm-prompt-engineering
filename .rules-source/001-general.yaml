@@ -1,66 +1,5 @@
 # metadata: merge_with_others=true
 
-- name: general-voice-and-tone
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Use a calm, precise, professional tone when explaining or documenting. Avoid overly casual
-    phrasing. Keep comments and responses focused, technical, and respectful.
-
-- name: general-mention-rules-used
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Every time you choose to apply a rule(s), explicitly state the
-    rule(s) in the output. You can use the `rule` tag to do this. For example, `#rule: rule_name`.
-
-- name: general-mention-knowledge
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    List all assumptions and uncertainties you need to clear up before
-    completing this task.
-
-- name: general-think-carefully
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Your thinking should be thorough and so it's fine if it's very long. You can
-    think step by step before and after each action you decide to take.
-    Avoid rushing to complete tasks. If you need more time to think, say so.
-
 - name: general-confidence-check
   scope: user
   editors:
@@ -77,6 +16,21 @@
     Don't hedge - if something is a 3, say it is a 3 and explain why. If it is a 9 defend that high rating.
     Do this before saving files, after saving, after rejections, and before task completion
 
+- name: general-focus
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Focus on the task at hand. Avoid distractions and stay on topic.
+    If you need to switch tasks, make sure to finish the current task first.
+
 - name: general-grounding
   scope: user
   editors:
@@ -92,8 +46,8 @@
     Always verify and validate information from multiple sources. Cross-reference findings from
     different tools and document results and sources
 
-- name: general-focus
-  scope: repository
+- name: general-incremental-delivery
+  scope: user
   editors:
     - name: copilot
       modes: [ask, edit]
@@ -101,9 +55,13 @@
       modes: [plan, act]
     - name: roo
       modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
   text: |
-    Focus on the task at hand. Avoid distractions and stay on topic.
-    If you need to switch tasks, make sure to finish the current task first.
+    Break large tasks into smaller, deliverable increments that can be completed and tested
+    independently. Each increment should provide visible progress and value. Prioritize
+    critical functionality first. Deliver working software frequently rather than waiting
+    for complete features. Use feature flags when necessary to enable incremental deployment.
 
 - name: general-memory-bank
   scope: user
@@ -141,3 +99,81 @@
       including any ongoing tasks, issues, and relevant context.
     - `./.llm/memory/issues-to-file.md`: This file should contain todo items, technical debt, and
       other issues that need to be addressed in the project.
+
+- name: general-mention-knowledge
+  scope: user
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    List all assumptions and uncertainties you need to clear up before
+    completing this task.
+
+- name: general-mention-rules-used
+  scope: user
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Every time you choose to apply a rule(s), explicitly state the
+    rule(s) in the output. You can use the `rule` tag to do this. For example, `#rule: rule_name`.
+
+- name: general-stakeholder-communication
+  scope: user
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Communicate changes that affect users, APIs, or system behavior to relevant stakeholders
+    early and clearly. Include impact assessment, migration paths, and timelines. Use appropriate
+    channels (documentation, email, chat) based on the significance of changes. Provide regular
+    status updates for long-running tasks. Ask for clarification when requirements are ambiguous.
+
+- name: general-think-carefully
+  scope: user
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Your thinking should be thorough and so it's fine if it's very long. You can
+    think step by step before and after each action you decide to take.
+    Avoid rushing to complete tasks. If you need more time to think, say so.
+
+- name: general-voice-and-tone
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [ask, edit]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use a calm, precise, professional tone when explaining or documenting. Avoid overly casual
+    phrasing. Keep comments and responses focused, technical, and respectful.
