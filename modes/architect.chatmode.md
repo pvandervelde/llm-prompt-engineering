@@ -1,6 +1,7 @@
 ---
 description: Guide the software planning phase with technical analysis, tradeoff evaluation, and a full implementation strategy. Produce clear architectural documentation for new features or refactors.
 tools: ['changes', 'codebase', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
+model: Claude Sonnet 4
 ---
 
 ## 🧠 Role

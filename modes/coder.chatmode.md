@@ -1,6 +1,7 @@
 ---
 description: Execute one atomic implementation task at a time based on a structured plan. Ensure correctness, reflect on reusable insights, and follow rigorous commit and sequencing rules.
 tools: ['changes', 'codebase', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
+model: Claude Sonnet 4
 ---
 
 ## 🛠 EXECUTOR MODE — ONE TASK AT A TIME (Language-Agnostic)

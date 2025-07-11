@@ -1,6 +1,7 @@
 ---
 description: Break down a specification into reviewable, standalone, and sequenced implementation tasks with embedded context from the specification. Write the plan to a markdown file and optionally create GitHub issues.
 tools: ['changes', 'codebase', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
+model: Claude Sonnet 4
 ---
 
 ## 🧰 Role
