@@ -1,0 +1,377 @@
+- name: html-css-accessibility
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Follow WCAG 2.1 AA guidelines. Use semantic HTML elements (`<nav>`, `<main>`, `<article>`,
+    `<section>`, `<aside>`). Provide alt text for images, labels for form inputs, and proper
+    heading hierarchy. Ensure keyboard navigation works throughout. Test with screen readers.
+    Maintain color contrast ratios (4.5:1 normal, 3:1 large text). Use `aria-*` attributes
+    when semantic HTML isn't sufficient. Support reduced motion preferences with `prefers-reduced-motion`.
+
+- name: html-css-animations
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use CSS transitions for simple state changes, animations for complex sequences. Prefer
+    `transform` and `opacity` for performant animations. Use `will-change` sparingly and
+    remove after animation completes. Implement `prefers-reduced-motion` for accessibility.
+    Use `animation-fill-mode` appropriately. Keep animations under 200-500ms for micro-interactions.
+    Use easing functions (`cubic-bezier`) for natural motion. Test animations on slower devices.
+
+- name: html-css-browser-support
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Define browser support requirements clearly in project documentation. Use feature detection
+    with `@supports` for CSS features. Implement progressive enhancement - basic functionality
+    works everywhere, enhanced features for modern browsers. Use autoprefixer for vendor prefixes.
+    Test on actual devices and browsers, not just development tools. Consider polyfills for
+    critical features in older browsers. Use browserslist configuration for consistent tooling.
+
+- name: html-css-ci
+  scope: user
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code, test]
+  apply-to:
+    - "**"
+  text: |
+    Run HTML validation with `html-validate` or W3C validator. Use CSS linting with `stylelint`.
+    Check accessibility with `axe-core` or `pa11y`. Test responsive design with `backstop.js`
+    or similar visual regression testing. Validate performance with Lighthouse CI. Use `prettier`
+    for formatting. Test across multiple browsers with tools like `playwright` or `selenium`.
+    Include bundle size analysis for CSS and assets.
+
+- name: html-css-css-architecture
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use methodologies like BEM, ITCSS, or CSS-in-JS for scalable architecture. Organize CSS
+    with consistent file structure: variables, base styles, components, utilities. Use CSS
+    custom properties for theming and dynamic values. Implement design tokens for consistent
+    spacing, colors, and typography. Avoid deep nesting (max 3-4 levels). Use utility classes
+    sparingly for common patterns. Document CSS architecture decisions.
+
+- name: html-css-css-grid-flexbox
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use CSS Grid for two-dimensional layouts (rows and columns). Use Flexbox for one-dimensional
+    layouts and component alignment. Understand `fr` units, `minmax()`, and `auto-fit`/`auto-fill`
+    in Grid. Use `gap` instead of margins between grid/flex items. Implement proper fallbacks
+    for older browsers. Use `place-items`, `place-content`, and `place-self` for alignment.
+    Consider container queries for component-based responsive design.
+
+- name: html-css-documentation
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Document component APIs, design patterns, and CSS architecture decisions. Use style guides
+    or design systems documentation (Storybook, Fractal). Include examples of HTML structure
+    and CSS usage. Document browser support requirements and known issues. Use KSS or similar
+    for CSS documentation. Include accessibility considerations and keyboard interaction patterns.
+    Maintain a living style guide that stays current with the codebase.
+
+- name: html-css-file-organization
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Organize files by component or feature, not by file type. Use consistent naming conventions:
+    kebab-case for CSS classes and files. Structure: `src/components/button/button.html`,
+    `button.css`, `button.js`. Use partial files for Sass/Less (`_variables.scss`). Keep
+    related HTML, CSS, and JS files together. Use index files for clean imports. Separate
+    vendor/third-party styles from custom styles.
+
+- name: html-css-forms
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use semantic form elements with proper labels and fieldsets. Implement proper form validation
+    with HTML5 attributes and custom CSS/JS. Use `aria-describedby` for error messages and help
+    text. Style focus states clearly for keyboard navigation. Use appropriate input types
+    (`email`, `tel`, `date`, etc.). Implement consistent error styling and messaging. Consider
+    form accessibility on mobile devices. Use `autocomplete` attributes for better UX.
+
+- name: html-css-formatting
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, architect]
+  apply-to:
+    - "**"
+  text: |
+    Use Prettier for consistent formatting with 2-space indentation. Use lowercase for HTML
+    attributes and tags. Quote all HTML attribute values. Use meaningful indentation to show
+    document structure. Break long CSS rules across multiple lines. Use consistent property
+    ordering in CSS (positioning, box model, typography, visual). Use single quotes in CSS,
+    double quotes in HTML. End CSS rules with semicolons always.
+
+- name: html-css-html-semantics
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use semantic HTML5 elements: `<header>`, `<nav>`, `<main>`, `<article>`, `<section>`,
+    `<aside>`, `<footer>`. Use heading hierarchy properly (h1-h6). Use `<button>` for actions,
+    `<a>` for navigation. Use `<time>` for dates, `<address>` for contact info. Use `<dl>`,
+    `<dt>`, `<dd>` for key-value pairs. Avoid `<div>` and `<span>` when semantic elements exist.
+    Use `role` attributes when semantic meaning isn't clear.
+
+- name: html-css-images-media
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use responsive images with `srcset` and `sizes` attributes. Implement lazy loading with
+    `loading="lazy"` for below-fold images. Use appropriate image formats: WebP for photos,
+    SVG for icons and illustrations. Provide fallbacks for modern formats. Use `picture`
+    element for art direction. Optimize images for web (compression, sizing). Use CSS
+    `object-fit` for image cropping. Include proper alt text for all content images.
+
+- name: html-css-naming-conventions
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use kebab-case for CSS classes and IDs. Use BEM methodology for component styling:
+    `.block__element--modifier`. Use semantic class names that describe purpose, not appearance
+    (`btn-primary` not `btn-blue`). Use consistent prefixes for utilities (`u-`, `js-`).
+    Avoid styling based on IDs. Use data attributes for JavaScript hooks (`data-js="component"`).
+    Keep class names concise but descriptive.
+
+- name: html-css-performance
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Minimize CSS bundle size with tree-shaking and critical CSS extraction. Use CSS containment
+    (`contain` property) for performance isolation. Optimize selector performance - avoid deep
+    descendant selectors. Use `transform` and `opacity` for animations to trigger GPU acceleration.
+    Minimize reflows and repaints. Use `content-visibility` for off-screen content. Optimize
+    web fonts with `font-display: swap`. Measure Core Web Vitals and optimize accordingly.
+
+- name: html-css-preprocessors
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use Sass/SCSS or PostCSS for enhanced CSS capabilities. Organize Sass partials logically
+    and use proper import order. Use mixins for reusable patterns, functions for calculations.
+    Use Sass maps for configuration (colors, breakpoints). Avoid deep nesting (max 3 levels).
+    Use CSS custom properties instead of Sass variables when runtime changes are needed.
+    Configure autoprefixer and other PostCSS plugins appropriately.
+
+- name: html-css-release-management
+  scope: user
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code]
+  apply-to:
+    - "**"
+  text: |
+    Version CSS and design systems with semantic versioning. Use build tools to generate
+    CSS bundles with cache-busting hashes. Document breaking changes in design system updates.
+    Use feature flags or progressive enhancement for new CSS features. Test visual changes
+    with visual regression testing. Coordinate CSS releases with design team updates.
+    Maintain backwards compatibility when possible.
+
+- name: html-css-responsive-design
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Design mobile-first with progressive enhancement. Use relative units (`rem`, `em`, `%`,
+    `vw`, `vh`) over fixed pixels. Implement fluid typography with `clamp()`. Use CSS Grid
+    and Flexbox for flexible layouts. Test on real devices, not just browser dev tools.
+    Use logical properties (`inline-start` vs `left`) for internationalization. Consider
+    container queries for component-based responsive design. Optimize touch targets (min 44px).
+
+- name: html-css-security
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Sanitize user-generated content that affects styling. Use Content Security Policy (CSP)
+    to prevent CSS injection attacks. Validate and sanitize any CSS custom properties set
+    via JavaScript. Be cautious with `innerHTML` and user-controlled content. Use `rel="noopener"`
+    for external links. Avoid inline styles that could be exploited. Use HTTPS for all
+    external resources. Validate SVG content to prevent XSS.
+
+- name: html-css-testing
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, test, debug]
+  apply-to:
+    - "**"
+  text: |
+    Use visual regression testing tools like BackstopJS, Percy, or Chromatic. Test accessibility
+    with automated tools (axe, lighthouse) and manual testing. Test responsive design across
+    different viewport sizes and devices. Use HTML validation tools to catch markup errors.
+    Test CSS in different browsers and browser versions. Test keyboard navigation and screen
+    reader compatibility. Include performance testing for CSS bundle size and render times.
+
+- name: html-css-typography
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use a typographic scale for consistent sizing (`1rem`, `1.125rem`, `1.25rem`, etc.).
+    Implement proper line-height (1.4-1.6 for body text). Use `font-display: swap` for web
+    fonts. Provide font fallbacks with similar metrics. Use relative units for typography.
+    Implement proper font loading strategies (preload critical fonts). Consider variable
+    fonts for performance and flexibility. Ensure text remains readable during font load.
+
+- name: html-css-utilities
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use utility classes for common patterns (margins, padding, text alignment). Keep utilities
+    simple and single-purpose (`.mt-4`, `.text-center`). Use CSS custom properties for
+    dynamic values. Implement helper classes for accessibility (`.sr-only` for screen readers).
+    Use print stylesheets for print-friendly pages. Create utility classes for common
+    responsive patterns. Document utility classes in style guide or design system.
