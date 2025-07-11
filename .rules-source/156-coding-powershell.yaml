@@ -1,0 +1,360 @@
+- name: powershell-advanced-functions
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use `[CmdletBinding()]` for advanced functions. Define parameter sets with
+    `[Parameter(ParameterSetName='SetName')]`. Use `[ValidateSet()]`, `[ValidateRange()]`,
+    `[ValidateNotNullOrEmpty()]` for parameter validation. Implement `ShouldProcess`
+    for functions that modify system state. Use `Begin`, `Process`, `End` blocks
+    appropriately. Support pipeline input with `ValueFromPipeline` and `ValueFromPipelineByPropertyName`.
+
+- name: powershell-ci
+  scope: user
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code, test]
+  apply-to:
+    - "**"
+  text: |
+    Run `Invoke-ScriptAnalyzer` for static analysis and best practice validation.
+    Use `Invoke-Pester` for testing with code coverage reporting. Validate scripts
+    with `Test-ScriptFileInfo`. Use `Import-PowerShellDataFile` to validate .psd1
+    files. Test cross-platform compatibility on Windows, Linux, and macOS when using
+    PowerShell Core. Use GitHub Actions or Azure Pipelines for CI/CD.
+
+- name: powershell-cmdlet-design
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use approved verbs from `Get-Verb` for function names. Follow Verb-Noun naming
+    convention: `Get-Something`, `Set-Configuration`. Use singular nouns for cmdlet
+    names. Support common parameters (`-Verbose`, `-Debug`, `-WhatIf`, `-Confirm`).
+    Design for pipeline usage - accept input and produce meaningful output objects.
+    Use standard parameter names (`-Path` not `-File`, `-ComputerName` not `-Server`).
+
+- name: powershell-cross-platform
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use `[System.IO.Path]::Combine()` or `Join-Path` for path operations. Check
+    `$IsWindows`, `$IsLinux`, `$IsMacOS` for platform-specific code. Use `$PSVersionTable`
+    to check PowerShell version. Avoid Windows-specific cmdlets like `Get-WmiObject` -
+    use `Get-CimInstance` instead. Test registry operations with `Test-Path HKLM:`
+    before accessing. Use platform-appropriate line endings with `[Environment]::NewLine`.
+
+- name: powershell-documentation
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [ask, edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, ask, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use comment-based help for all functions with `.SYNOPSIS`, `.DESCRIPTION`,
+    `.PARAMETER`, `.EXAMPLE`, `.NOTES`, `.LINK`. Place help at the beginning of
+    functions or in separate .md files for modules. Use `New-MarkdownHelp` from
+    PlatyPS for external help generation. Include multiple examples showing different
+    use cases. Document parameter requirements and acceptable values.
+
+- name: powershell-error-handling
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug]
+  apply-to:
+    - "**"
+  text: |
+    Use `try`/`catch`/`finally` for structured error handling. Set `$ErrorActionPreference`
+    appropriately (`Stop`, `Continue`, `SilentlyContinue`). Use `throw` for custom
+    exceptions with meaningful messages. Check `$?` and `$LastExitCode` for external
+    command success. Use `Write-Error` with `-ErrorAction Stop` for terminating errors.
+    Catch specific exception types when possible: `catch [System.IO.FileNotFoundException]`.
+
+- name: powershell-file-organization
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Structure modules with `.psm1` for functions, `.psd1` for manifest, and separate
+    `.ps1` files for large functions. Use folder structure: `Public/`, `Private/`,
+    `Classes/`, `Data/`, `Tests/`. Dot-source private functions in module. Use
+    `#Requires` statements for dependencies and minimum PowerShell version. Keep
+    scripts under 500 lines - split large scripts into modules or multiple files.
+
+- name: powershell-formatting
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, architect]
+  apply-to:
+    - "**"
+  text: |
+    Use 4-space indentation consistently. Place opening braces on same line as
+    statement. Use PascalCase for functions, variables, and parameters. Use spaces
+    around operators and after commas. Break long lines at logical points (after
+    operators, before parameters). Use consistent quoting - prefer single quotes
+    unless interpolation is needed. Format with `Invoke-Formatter` from PSScriptAnalyzer.
+
+- name: powershell-modules
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Create module manifests (`.psd1`) with proper metadata: `ModuleVersion`, `GUID`,
+    `Author`, `Description`, `PowerShellVersion`. Export only public functions with
+    `FunctionsToExport`. Use semantic versioning for modules. Import modules explicitly
+    with `Import-Module`. Use `$PSScriptRoot` for relative paths within modules.
+    Publish to PowerShell Gallery with proper licensing and tags.
+
+- name: powershell-naming-conventions
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use PascalCase for all identifiers (functions, variables, parameters). Use
+    descriptive names that clearly indicate purpose. Prefix boolean variables
+    with `Is`, `Has`, `Can`, `Should`. Use full parameter names in scripts (not
+    aliases) for readability. Avoid abbreviations unless they're widely understood.
+    Use consistent naming across related functions and modules.
+
+- name: powershell-object-output
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Return objects, not formatted text. Use `[PSCustomObject]` for structured output.
+    Include `TypeName` property for custom object types. Use `Write-Output` explicitly
+    for pipeline objects. Avoid `Write-Host` except for user interaction - use
+    `Write-Information`, `Write-Verbose`, `Write-Debug` instead. Format output with
+    custom `Format.ps1xml` files for complex objects.
+
+- name: powershell-parameters
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use strongly-typed parameters with appropriate .NET types. Use `[string[]]` for
+    multiple string values, `[switch]` for boolean flags. Provide default values
+    where appropriate. Use parameter validation attributes extensively. Make mandatory
+    parameters obvious with `[Parameter(Mandatory)]`. Use `[Alias()]` sparingly and
+    document alternative names. Support tab completion with `[ArgumentCompleter()]`.
+
+- name: powershell-performance
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use `Measure-Command` for performance testing. Avoid `ForEach-Object` in favor
+    of `.ForEach()` method for large collections. Use `Where()` method instead of
+    `Where-Object` for filtering. Minimize object creation in loops. Use `StringBuilder`
+    for string concatenation in loops. Cache expensive operations and cmdlet results.
+    Use `Get-ChildItem -File` instead of filtering with `Where-Object`.
+
+- name: powershell-pipeline
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Design functions to work well in pipelines. Use `Process` block for pipeline
+    input processing. Support pipeline input with `ValueFromPipeline` parameter
+    attribute. Pass objects through pipeline, not strings. Use `ForEach-Object`
+    and `Where-Object` for pipeline operations. Avoid breaking pipeline with
+    assignments - use `Tee-Object` when needed. Test pipeline behavior with
+    different input types and quantities.
+
+- name: powershell-release-management
+  scope: user
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [plan, act]
+    - name: roo
+      modes: [architect, code]
+  apply-to:
+    - "**"
+  text: |
+    Use semantic versioning for modules and scripts. Tag releases in version control.
+    Publish modules to PowerShell Gallery with `Publish-Module`. Create release
+    notes documenting breaking changes, new features, and bug fixes. Use `Update-ModuleManifest`
+    for version bumping. Sign scripts for production deployment. Automate releases
+    with CI/CD pipelines and PowerShell Gallery API keys.
+
+- name: powershell-remoting
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use `Invoke-Command` for remote execution. Create persistent sessions with
+    `New-PSSession` for multiple operations. Use `Import-PSSession` to bring remote
+    commands local. Handle serialization limitations - complex objects become
+    property bags. Use `Register-PSSessionConfiguration` for custom endpoints.
+    Implement proper credential handling with `Get-Credential` or certificate authentication.
+
+- name: powershell-security
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Never store credentials in scripts - use `Get-Credential`, Windows Credential
+    Manager, or Azure Key Vault. Use `Read-Host -AsSecureString` for password input.
+    Validate all input parameters thoroughly. Avoid `Invoke-Expression` with user
+    input. Use code signing for production scripts. Follow principle of least privilege
+    for script execution. Sanitize output to prevent information disclosure.
+
+- name: powershell-testing
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, test, debug]
+  apply-to:
+    - "**"
+  text: |
+    Use Pester 5.x for testing with `Describe`, `Context`, `It` blocks. Use `BeforeAll`,
+    `BeforeEach`, `AfterAll`, `AfterEach` for setup/teardown. Mock external dependencies
+    with `Mock` command. Test both success and failure scenarios. Use `Should` assertions
+    with descriptive messages. Test parameter validation and pipeline behavior.
+    Include code coverage reporting with `Invoke-Pester -CodeCoverage`.
+
+- name: powershell-variables
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use strongly-typed variables when possible: `[string]$Name`, `[int]$Count`.
+    Initialize variables before use. Use `$PSBoundParameters` to check if optional
+    parameters were provided. Understand variable scopes: Global, Script, Local,
+    Private. Use `Set-StrictMode -Version Latest` to catch undefined variables.
+    Avoid automatic variables like `$_` outside pipeline contexts where they're undefined.
+
+- name: powershell-workflows
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    Use PowerShell Jobs (`Start-Job`) for background processing. Use `ForEach-Object -Parallel`
+    in PowerShell 7+ for parallel processing. Implement proper job cleanup with
+    `Remove-Job`. Use `Receive-Job` to get job results. Consider thread jobs (`Start-ThreadJob`)
+    for lightweight parallelism. Handle job errors and timeouts appropriately.
+    Use `Wait-Job` with timeout for job synchronization.
