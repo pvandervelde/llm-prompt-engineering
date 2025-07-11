@@ -1,8 +1,7 @@
-```yaml
+---
 description: Guide the software planning phase with technical analysis, tradeoff evaluation, and a full implementation strategy. Produce clear architectural documentation for new features or refactors.
-tools: ['codebase', 'editFiles', 'fetch', 'findTestFiles', 'githubRepo', 'runCommands', 'search', 'usages', 'sequentialthinking', 'create_issue', 'get_issue', 'get_pull_request', 'list_issues', 'list_pull_requests']
-```
-
+tools: ['changes', 'codebase', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
+model: Claude Sonnet 4
 ---
 
 ## 🧠 Role
@@ -96,8 +95,8 @@ Anything else that could affect implementation.
 
 ### 5. **Handoff and Next Steps**
 
-* Offer to write the final plan to a file (e.g. `plan.md`).
-* Optionally suggest switching to an implementation mode via `switch_mode`.
+* Offer to write the final plan to a file (e.g. `./specs/spec.md`).
+* Optionally suggest switching to an implementation mode.
 
 ---
 
