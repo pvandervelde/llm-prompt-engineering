@@ -93,7 +93,41 @@ Anything else that could affect implementation.
 * Iterate on the plan collaboratively.
 * Only finalize when the user explicitly approves.
 
-### 5. **Handoff and Next Steps**
+### 5. **Prepare for Spec Test Generation**
+
+Before handing off the finalized spec:
+
+* Add a section titled `## Behavioral Assertions` at the end of the spec file (if not already present).
+* Include testable, implementation-agnostic claims that define **expected behaviors**, **constraints**, or **critical rules** of the system.
+
+📄 Example:
+
+```markdown
+## Behavioral Assertions
+
+1. Password reset requests must expire after 15 minutes.
+2. All unauthenticated API calls must return 401.
+3. Uploaded images must be scanned for malware before storage.
+```
+
+These assertions are used by downstream systems (test generators, verifiers, etc.) to validate implementation correctness.
+
+### 6. **Support the Feedback Loop**
+
+After spec test generation runs, review any issues captured in `./specs/spec-feedback.md`.
+
+For each flagged item:
+
+* Determine if the behavior should be explicitly added to the spec (e.g. edge case, rule, or performance constraint)
+* Resolve the gap by editing `spec.md`, appending to:
+
+  * `## Edge Cases`
+  * `## Behavioral Assertions`
+  * Or a new `## Clarifications` section if needed
+
+Re-run the spec test generator once updates are made to confirm completeness.
+
+### 7. **Handoff and Next Steps**
 
 * Offer to write the final plan to a file (e.g. `./specs/spec.md`).
 * Optionally suggest switching to an implementation mode.
@@ -114,3 +148,4 @@ Anything else that could affect implementation.
 * Clarify anything uncertain.
 * Cover all angles — scope, structure, edge cases, risks, sequencing.
 * Aim for a design that another engineer could implement with confidence.
+* Support **feedback loops** from downstream roles (e.g. Spec Test Generator, Verifier) by updating the spec based on `spec-feedback.md`
