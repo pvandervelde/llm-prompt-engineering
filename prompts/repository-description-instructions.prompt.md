@@ -1,4 +1,6 @@
-# Repository Analysis & Instruction Generation Prompt
+---
+mode: agent
+---
 
 ## 🎯 Task
 

@@ -1,3 +1,7 @@
+---
+mode: agent
+---
+
 I would like you to summarize the current conversation I’ve been having with you.
 The summary should include:
 * A clear overview of the main topics discussed.

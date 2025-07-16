@@ -1,4 +1,6 @@
-# Copilot Setup Workflow Generation Prompt
+---
+mode: agent
+---
 
 ## 🎯 Task
 
