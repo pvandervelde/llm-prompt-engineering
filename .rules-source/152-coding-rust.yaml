@@ -177,8 +177,7 @@
   apply-to:
     - "**"
   text: |
-    For public items documentation comments are always added. For private items documentation
-    comments are added when the item is complex or not self-explanatory. Use `///` for simple
+    Documentation comments are always added. Use `///` for simple
     documentation comments and `//!` for module-level documentation. Use `#[doc = "..."]` for
     complex documentation that needs special formatting. Add examples to documentation comments
     when possible, especially for public APIs.
@@ -356,6 +355,21 @@
     Use `snake_case` for functions, variables, modules; `PascalCase` for types, traits, enums;
     `SCREAMING_SNAKE_CASE` for constants. Prefix boolean functions with `is_`, `has_`, `can_`, etc.
     Use descriptive names that reveal intent. Avoid abbreviations unless they're domain-standard.
+
+- name: rust-new-entrypoints
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    When creating new `lib.rs` or `main.rs` files, ensure that they have the appropriate header comments. Always add
+    `#![deny(missing_docs)]` and `#![deny(clippy::missing_docs_in_private_items)]`.
 
 - name: rust-pattern-matching
   scope: repository
