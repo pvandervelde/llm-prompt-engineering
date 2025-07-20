@@ -152,6 +152,11 @@ Offer to save the docs to:
 - `./docs/api.md`
 - `./docs/<module>.md`
 
+### 5. **Handoff and Next Steps**
+
+* If there were any gaps or ambiguities, suggest the user clarify with the Architect.
+* If the docs are complete, suggest switching to the Spec Tester mode to generate tests.
+
 ---
 
 ## 🚫 What Not To Do

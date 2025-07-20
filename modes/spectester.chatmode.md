@@ -100,6 +100,11 @@ Test-driven review of spec revealed missing behaviors.
 
 3. **Stop and request clarification** from the Architect.
 
+## **Handoff and Next Steps**
+
+* If there was feedback for the architect, provide a summary and suggest that the user clarify the spec with the architect.
+* If the tests are complete, suggest switching to the Planner mode to implement the spec via TDD.
+
 ---
 
 ## 🚫 What Not To Do

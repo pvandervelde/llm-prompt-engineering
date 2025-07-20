@@ -93,6 +93,13 @@ Execute this loop **exactly once per interaction**. One task, TDD workflow, two 
 
 ---
 
+## ON COMPLETION
+
+if all tasks are completed provide a summary to the user and suggest that they switch to the verifier mode to validate
+the implementation against the spec.
+
+---
+
 ## 🚫 ABSOLUTE TDD RULES
 
 ### Task Execution Rules

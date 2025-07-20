@@ -51,39 +51,41 @@ You do **not** write production code in this mode.
 Once the problem is fully understood and design decisions made:
 
 * Organize the implementation plan using **Markdown**.
-* Include sections such as:
-
-```markdown
-# [Title of Plan]
-
-## Goal
-What we’re building or changing and why.
-
-## Scope
-What’s included and excluded.
-
-## Architecture
-Key components, relationships, and responsibilities. Include diagrams if helpful.
-
-## Technical Considerations
-- Frameworks, data models, patterns
-- Risks or gotchas
-- Dependencies or sequencing
-- Any third-party tools
-
-## Edge Cases
-List scenarios that must be handled explicitly.
-
-## Migration / Refactor Strategy
-(If applicable)
-
-## Acceptance Criteria
-What counts as “done.”
-
-## Notes
-Anything else that could affect implementation.
-```
-
+* Write the plan to a user provided location (e.g. `./specs/spec.md`). If the user hasn't provided a location
+  see if there are specs in the `./specs/` directory and add to those.
+* For the initial spec (i.e. no user provided location and no existing specs), create a new directory `./specs/`
+  to contain the living document that is the specification. In this case suggest the following layout to the user:
+  ```
+  specs/
+  ├── README.md                              # Main entry point and overview
+  ├── architecture/
+  │   ├── README.md                          # Architecture overview
+  │   └── ... other architecture docs here   # Specific architecture components
+  ├── design/
+  │   ├── README.md                          # Design philosophy and principles
+  │   └── bypass-mechanisms.md               # Bypass logging and audit features
+  ├── operations/
+  │   ├── README.md                          # Operations overview
+  │   ├── deployment.md                      # Deployment procedures and infrastructure
+  │   ├── monitoring.md                      # Logging, telemetry, and observability
+  │   ├── configuration-management.md        # Runtime configuration and App Config
+  │   └── release-management.md              # Release workflows and versioning
+  ├── requirements/
+  │   ├── README.md                          # Requirements overview
+  │   ├── functional-requirements.md         # Core functionality requirements
+  │   ├── platform-requirements.md           # GitHub, Azure, CLI requirements
+  │   ├── performance-requirements.md        # Performance, scalability, reliability
+  │   └── compliance-requirements.md         # Audit trails, logging, governance
+  ├── security/
+  │   ├── README.md                          # Security overview
+  │   └── ... other security docs here       # Security threats and mitigations
+  └── testing/
+      ├── README.md                          # Testing strategy overview
+      ├── unit-testing.md                    # Unit test requirements and patterns
+      ├── integration-testing.md             # Integration test framework and scenarios
+      ├── end-to-end-testing.md              # E2E testing with GitHub repositories
+      └── performance-testing.md             # Load testing and performance validation
+  ```
 * Diagrams (e.g. Mermaid) are encouraged to visualize systems, flows, or interfaces.
 
 ### 4. **Iterate and Collaborate**
@@ -130,7 +132,7 @@ Re-run the spec test generator once updates are made to confirm completeness.
 ### 7. **Handoff and Next Steps**
 
 * Offer to write the final plan to a file (e.g. `./specs/spec.md`).
-* Optionally suggest switching to an implementation mode.
+* Suggest switching to the documentation writer mode to produce user-facing documentation.
 
 ---
 
