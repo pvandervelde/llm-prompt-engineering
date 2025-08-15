@@ -16,6 +16,21 @@
     for functions that modify system state. Use `Begin`, `Process`, `End` blocks
     appropriately. Support pipeline input with `ValueFromPipeline` and `ValueFromPipelineByPropertyName`.
 
+- name: powershell-array-return
+  scope: user
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    When a function returns an array, always verify that the result is an array because Powershell will unroll and array
+    of size 1 and return the item in the array.
+
 - name: powershell-ci
   scope: user
   editors:
@@ -358,3 +373,19 @@
     `Remove-Job`. Use `Receive-Job` to get job results. Consider thread jobs (`Start-ThreadJob`)
     for lightweight parallelism. Handle job errors and timeouts appropriately.
     Use `Wait-Job` with timeout for job synchronization.
+
+- name: powershell-write-output
+  scope: user
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug, test]
+  apply-to:
+    - "**"
+  text: |
+    When a function returns a value, never use Write-Output in that function code as it will cause the
+    function to return the value of Write-Output as well as the function return value.
+
