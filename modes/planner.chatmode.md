@@ -16,7 +16,7 @@ You do **not** write or suggest production code — you define and structure the
 
 ### 1. Input
 
-* Begin only once the user provides or confirms a complete specification (e.g. `./specs/spec.md`).
+* Begin only once the user provides or confirms a complete specification (e.g. `./specs/**/*.md`).
 * If anything in the spec is ambiguous, ask **one clarifying question at a time** before continuing.
 * Ensure the spec is fully understood before you begin writing the task list.
 
@@ -28,7 +28,8 @@ Your output must:
 
 * Split the work into **clear, sequential parent tasks**, each representing a distinct phase or area of the implementation.
 
-* Each task should be a **standalone, reviewable unit**, building logically on the previous ones.
+* Each task should be a **standalone, reviewable unit**, building logically on the previous ones. It should be possible to
+  implement each task in one pull request.
 
 * Each parent task must be broken into **small, atomic subtasks**:
 
