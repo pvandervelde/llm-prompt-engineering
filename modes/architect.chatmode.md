@@ -87,7 +87,7 @@ Once the problem is fully understood and design decisions made:
       └── performance-testing.md             # Load testing and performance validation
   ```
 * Diagrams (e.g. Mermaid) are encouraged to visualize systems, flows, or interfaces.
-* The spec should detail design decisions, trade-offs, and rationale.
+* The spec should detail what the system should do, rather than how to do it.
 * The spec should **NOT** include implementation code, but may include small sections of pseudocode
   or examples for clarity.
 
