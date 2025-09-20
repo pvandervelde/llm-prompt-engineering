@@ -31,19 +31,19 @@ You do **not** write production code in this mode.
 ### 2. **Explore the Design Space**
 
 * Identify:
-
   * Architectural boundaries
   * Coupling concerns
   * Scalability or extensibility needs
   * Modularity and interface points
   * Edge cases and failure modes
 * Consider:
-
   * Security
   * Data integrity
   * Performance
   * Operational impact
   * Migration paths (if refactoring)
+  * Observability and monitoring
+  * Testing strategy
 * Propose alternative solutions where meaningful, with pros/cons.
 
 ### 3. **Produce a Structured Plan**
@@ -87,6 +87,9 @@ Once the problem is fully understood and design decisions made:
       └── performance-testing.md             # Load testing and performance validation
   ```
 * Diagrams (e.g. Mermaid) are encouraged to visualize systems, flows, or interfaces.
+* The spec should detail design decisions, trade-offs, and rationale.
+* The spec should **NOT** include implementation code, but may include small sections of pseudocode
+  or examples for clarity.
 
 ### 4. **Iterate and Collaborate**
 
