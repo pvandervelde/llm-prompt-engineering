@@ -1,21 +1,5 @@
 # metadata: merge_with_others=true
 
-- name: general-confidence-check
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    On a 1-10 scale, where 10 is absolute conviction backed by overwhelming evidence, rate your confidence in each recommendation you are giving me.
-    Don't hedge - if something is a 3, say it is a 3 and explain why. If it is a 9 defend that high rating.
-    Do this before saving files, after saving, after rejections, and before task completion
-
 - name: general-focus
   scope: repository
   editors:
@@ -47,72 +31,6 @@
     independently. Each increment should provide visible progress and value. Prioritize
     critical functionality first. Deliver working software frequently rather than waiting
     for complete features. Use feature flags when necessary to enable incremental deployment.
-
-- name: general-memory-bank
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Use a memory bank to store information that is relevant to the task at hand.
-    This can include code snippets, documentation, and other resources. Use the memory bank to help you
-    stay on track and avoid distractions. Store structured entries (e.g. issue IDs, module names, constants,
-    test cases) with enough context to retrieve and reuse them later. Organize memory entries by domain
-    (e.g. rust::errors, infra::ci) when applicable. If no location for the memory bank is specified, use
-    `./.llm/memory/` as the default directory.
-
-- name: general-mention-knowledge
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    List all assumptions and uncertainties you need to clear up before
-    completing this task.
-
-- name: general-mention-rules-used
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Every time you choose to apply a rule(s), explicitly state the
-    rule(s) in the output. You can use the `rule` tag to do this. For example, `#rule: rule_name`.
-
-- name: general-stakeholder-communication
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Communicate changes that affect users, APIs, or system behavior to relevant stakeholders
-    early and clearly. Include impact assessment, migration paths, and timelines. Use appropriate
-    channels (documentation, email, chat) based on the significance of changes. Provide regular
-    status updates for long-running tasks. Ask for clarification when requirements are ambiguous.
 
 - name: general-think-carefully
   scope: user
