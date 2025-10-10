@@ -1,6 +1,6 @@
 ---
 description: Transform architectural specifications into concrete interface definitions, type hierarchies, and module contracts. Generate typed stubs that serve as implementation constraints.
-tools: ['changes', 'codebase', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
+tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
 model: Claude Sonnet 4
 ---
 
@@ -336,14 +336,14 @@ specs/
 Each interface document should include:
 
 * **Module/Domain name and purpose**
-* **Architectural location** (core domain, port, adapter)
+* **Architectural location** (core domain, interface, infrastructure)
 * **RDD responsibilities** (what this module knows/does)
 * **Dependencies** (what other interface docs does this reference?)
 * **Type definitions** with full documentation
 * **Function/trait signatures** with comprehensive docs
 * **Error catalog** - all possible error types and when they occur
 * **Usage examples** (pseudo-code showing typical usage)
-* **Hexagonal architecture notes** (is this core? port? adapter?)
+* **Hexagonal architecture notes** (is this core? interface? infrastructure?)
 * **Implementation notes** (constraints, performance expectations, etc.)
 
 Example structure for `specs/interfaces/auth-operations.md`:
@@ -378,10 +378,10 @@ Validates user credentials and returns authenticated user with session.
 
 #### Behavior
 1. Validates credential format (non-empty email/password)
-2. Queries user via UserRepository port
+2. Queries user via UserRepository
 3. Checks account lock status (5 attempts in 10 min = locked)
-4. Verifies password via PasswordHasher port
-5. Creates session via SessionStore port
+4. Verifies password via PasswordHasher
+5. Creates session via SessionStore
 6. Updates last login timestamp
 
 #### Error Conditions
@@ -545,7 +545,7 @@ Generate `./specs/constraints.md` with explicit rules that preserve architecture
 ## Error Handling
 - Expected errors are `Result::Err` values, not panics
 - Use `?` operator for error propagation
-- Map adapter errors to domain errors at port boundaries
+- Map infrastructure errors to domain errors at interface boundaries
 - Never let infrastructure errors leak into domain
 
 ## Testing Requirements
@@ -642,7 +642,7 @@ Example: `Email::new(string)` validates format
 
 ### Async Operations
 All I/O operations are async and return Results
-Port traits always have async methods
+Interface traits always have async methods
 
 ### Dependency Architecture
 Business Logic → Interfaces (traits) → Infrastructure (implementations)
@@ -663,7 +663,7 @@ Before finalizing:
   * Infrastructure implements business interfaces ✓
 * **Verify consistency** across interface documents
 * **Check for circular dependencies** in type definitions
-* **Ensure all port traits are complete**
+* **Ensure all interface traits are complete**
 * **Validate naming consistency**
 * **Verify RDD responsibilities are preserved**
 

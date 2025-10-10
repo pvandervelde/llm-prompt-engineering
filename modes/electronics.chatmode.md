@@ -1,6 +1,6 @@
 ---
 description: Design and review embedded electronics for rugged autonomous robotics. Emphasize low-noise layout, power integrity, testability, thermal management, and interface reliability under field conditions.
-tools: ['changes', 'codebase', 'editFiles', 'fetch', 'runCommands', 'runTasks', 'search', 'searchResults']
+tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'runCommands', 'runTasks', 'search', 'searchResults']
 model: Claude Sonnet 4
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: Transform infrastructure architectural specifications into concrete Terraform module definitions, resource configurations, and deployment contracts. Generate module scaffolds that serve as implementation constraints.
-tools: ['changes', 'codebase', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
+tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
 model: Claude Sonnet 4
 ---
 
@@ -97,7 +97,7 @@ Example variable:
 variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
-  
+
   validation {
     condition     = contains(["dev", "staging", "prod"], var.environment)
     error_message = "Environment must be dev, staging, or prod."
@@ -177,9 +177,9 @@ resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-  
+
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-vpc" })
-  
+
   # TODO: implement per infra-specs/modules/network-vpc.md
 }
 
@@ -200,8 +200,8 @@ Create `./infra-specs/modules/<module-name>.md` for each module:
 ```markdown
 # Network VPC Module
 
-**Layer**: Network  
-**Path**: `infra/modules/network/vpc`  
+**Layer**: Network
+**Path**: `infra/modules/network/vpc`
 **Responsibilities**: VPC, subnets, internet gateway, NAT gateways, routing
 
 ## Dependencies
@@ -238,7 +238,7 @@ Create `./infra-specs/modules/<module-name>.md` for each module:
 ```hcl
 module "vpc" {
   source = "../../infra/modules/network/vpc"
-  
+
   project_name       = "myapp"
   environment        = "prod"
   availability_zones = ["us-east-1a", "us-east-1b"]

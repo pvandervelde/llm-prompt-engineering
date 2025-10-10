@@ -1,6 +1,6 @@
 ---
 description: Execute one atomic implementation task at a time based on a structured plan. Ensure correctness, reflect on reusable insights, and follow rigorous commit and sequencing rules.
-tools: ['changes', 'codebase', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
+tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
 model: Claude Sonnet 4
 ---
 
@@ -140,7 +140,7 @@ export async function authenticate(
   * Interface specification documentation
   * Behavioral assertions from `specs/assertions.md`
   * Error conditions documented in interface spec
-  
+
 * Cover all scenarios from the interface spec:
   * Happy path with typical inputs
   * Edge cases and boundary conditions
@@ -160,14 +160,14 @@ Example test structure:
 describe('authenticate', () => {
   it('returns success with user when credentials are valid', async () => {
     // Arrange: Setup from assertion
-    const credentials = { 
-      email: validEmail, 
-      password: correctPassword 
+    const credentials = {
+      email: validEmail,
+      password: correctPassword
     };
-    
+
     // Act: Call function
     const result = await authenticate(credentials);
-    
+
     // Assert: Expected outcome from assertion
     expect(result.success).toBe(true);
     if (result.success) {
@@ -179,13 +179,13 @@ describe('authenticate', () => {
   // From specs/assertions.md assertion #2:
   // "Invalid password must return InvalidCredentials error"
   it('returns InvalidCredentials error when password is wrong', async () => {
-    const credentials = { 
-      email: validEmail, 
-      password: wrongPassword 
+    const credentials = {
+      email: validEmail,
+      password: wrongPassword
     };
-    
+
     const result = await authenticate(credentials);
-    
+
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.type).toBe('InvalidCredentials');
@@ -235,29 +235,29 @@ export async function authenticate(
 
   // Delegate to port (as per architecture)
   const userResult = await userRepository.findByEmail(credentials.email);
-  
+
   if (!userResult.success) {
     // Map infrastructure error to domain error
     return failure({ type: 'InvalidCredentials' });
   }
 
   const user = userResult.value;
-  
+
   if (!user) {
     return failure({ type: 'InvalidCredentials' });
   }
 
   // Check account lock from specs/security.md
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    return failure({ 
-      type: 'AccountLocked', 
-      unlockAt: user.lockedUntil 
+    return failure({
+      type: 'AccountLocked',
+      unlockAt: user.lockedUntil
     });
   }
 
   // Verify password (delegate to port)
   const isValid = await passwordHasher.verify(
-    credentials.password, 
+    credentials.password,
     user.hashedPassword
   );
 
@@ -267,7 +267,7 @@ export async function authenticate(
 
   // Create session and return success
   const session = await sessionStore.create(user.id);
-  
+
   // Side effect from interface spec
   await userRepository.updateLastLogin(user.id);
 
@@ -560,7 +560,7 @@ Design Phase:
 
 Test Phase (from specs/assertions.md):
 - test('returns success with user when credentials valid') // Assertion #1
-- test('returns InvalidCredentials when password wrong') // Assertion #2  
+- test('returns InvalidCredentials when password wrong') // Assertion #2
 - test('returns AccountLocked with unlock time when locked') // Assertion #3
 - test('returns ValidationError when email malformed') // Assertion #4
 - test('updates lastLoginAt on successful auth') // Assertion #5
