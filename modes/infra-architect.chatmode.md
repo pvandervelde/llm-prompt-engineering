@@ -1,6 +1,6 @@
 ---
 description: Guide the infrastructure planning phase with technical analysis, tradeoff evaluation, and a full deployment strategy. Produce clear infrastructure architecture documentation for new systems or migrations.
-tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
+tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'think', 'usages']
 model: Claude Sonnet 4
 ---
 

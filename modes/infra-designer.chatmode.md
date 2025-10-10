@@ -1,6 +1,6 @@
 ---
 description: Transform infrastructure architectural specifications into concrete Terraform module definitions, resource configurations, and deployment contracts. Generate module scaffolds that serve as implementation constraints.
-tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages']
+tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'think', 'usages']
 model: Claude Sonnet 4
 ---
 

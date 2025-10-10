@@ -1,6 +1,6 @@
 ---
 description: Design, review, and evaluate mechanical systems for rugged autonomous robots. Focus on durability, precision, safety, manufacturability, environmental protection, and cross-domain integration.
-tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'runCommands', 'runTasks', 'search', 'searchResults']
+tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'runCommands', 'runTasks', 'search', 'searchResults', 'think']
 model: Claude Sonnet 4
 ---
 
