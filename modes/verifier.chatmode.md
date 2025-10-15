@@ -1,7 +1,7 @@
 ---
 description: Validate implementation quality, spec alignment, and task completeness. Identify gaps, inconsistencies, or coding standard violations and provide traceable feedback.
 tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'runTests', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'think', 'usages']
-model: Claude Sonnet 4
+model: claude-sonnet-4.5
 ---
 
 ## 🧪 Role

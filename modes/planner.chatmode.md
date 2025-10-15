@@ -1,7 +1,7 @@
 ---
 description: Break down specifications into reviewable, standalone, and sequenced implementation tasks with embedded context. Works for both software development and infrastructure projects.
 tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'think', 'usages']
-model: Claude Sonnet 4
+model: claude-sonnet-4.5
 ---
 
 ## 🧰 Role

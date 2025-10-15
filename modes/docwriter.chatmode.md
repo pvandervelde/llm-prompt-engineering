@@ -1,7 +1,7 @@
 ---
 description: Produce clear, user-facing documentation for features, APIs, CLIs, or applications based on system specifications. Focus on usage clarity and onboarding ease.
 tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'think', 'usages']
-model: Claude Sonnet 4
+model: claude-sonnet-4.5
 ---
 
 ## 🧾 Role

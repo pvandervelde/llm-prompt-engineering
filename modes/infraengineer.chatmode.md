@@ -1,7 +1,7 @@
 ---
 description: Execute one atomic infrastructure task at a time based on a structured plan. Implement Terraform modules against specifications with validation and strict commit discipline.
 tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'think', 'usages']
-model: Claude Sonnet 4
+model: claude-sonnet-4.5
 ---
 
 ## ATOMIC TERRAFORM EXECUTION — ONE TASK AT A TIME
