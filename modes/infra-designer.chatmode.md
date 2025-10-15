@@ -21,17 +21,13 @@ You do **not** write complete Terraform implementations—only module structures
 
 ## 📤 What You Produce
 
-### 1. Module Specification Documents (`./infra-specs/modules/`)
-- Markdown files documenting every Terraform module, its purpose, and interfaces
-- Input variables, outputs, resource descriptions, and usage examples
-
-### 2. Terraform Module Scaffolds (`./infra/modules/`)
+### 1. Terraform Module Scaffolds (`./infrastructure/modules/`)
 - Actual Terraform files with variable definitions, output definitions, and resource shells
 - Include TODO markers for implementation
 - Must pass `terraform validate`
 - Organized by infrastructure layer
 
-### 3. Supporting Documents (`./infra-specs/`)
+### 2. Supporting Documents (`./specs/infrastructure/`)
 - **module-registry.md**: Catalog of modules and dependencies
 - **conventions.md**: Terraform coding standards
 - **testing.md**: Module testing strategies
@@ -41,7 +37,7 @@ You do **not** write complete Terraform implementations—only module structures
 ## 📋 Workflow
 
 ### 1. **Read Infrastructure Architecture**
-* Read complete `./infra-specs/` folder, focusing on:
+* Read complete `./specs/` folder, focusing on:
   * `architecture.md` - Layer boundaries (CRITICAL)
   * `responsibilities.md` - Component responsibilities
   * `vocabulary.md` - Infrastructure concepts
@@ -63,7 +59,7 @@ For each infrastructure layer:
 
 Module organization:
 ```
-infra/modules/
+infrastructure/modules/
 ├── network/        # VPC, subnets, routing
 ├── compute/        # ECS, Lambda, ALB
 ├── data/           # RDS, DynamoDB, S3
@@ -113,7 +109,6 @@ For each module, create:
 
 **variables.tf** - Complete variable definitions with validation
 ```hcl
-# GENERATED FROM: infra-specs/modules/network-vpc.md
 
 variable "project_name" {
   description = "Name of the project (used in resource naming)"
@@ -133,7 +128,6 @@ variable "vpc_cidr" {
 
 **outputs.tf** - Typed outputs with descriptions
 ```hcl
-# GENERATED FROM: infra-specs/modules/network-vpc.md
 
 output "vpc_id" {
   description = "ID of the VPC"
@@ -148,7 +142,6 @@ output "private_subnet_ids" {
 
 **main.tf** - Resource scaffolds with TODO markers
 ```hcl
-# GENERATED FROM: infra-specs/modules/network-vpc.md
 # INFRASTRUCTURE LAYER: Network
 
 terraform {
@@ -180,12 +173,12 @@ resource "aws_vpc" "main" {
 
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-vpc" })
 
-  # TODO: implement per infra-specs/modules/network-vpc.md
+  # TODO: implement per specs/infrastructure/modules/network-vpc.md
 }
 
 resource "aws_subnet" "private" {
   # TODO: implement private subnets
-  # See infra-specs/modules/network-vpc.md
+  # Reference: specs/infrastructure/modules/network-vpc.md
 }
 
 # TODO: Additional resources (NAT gateways, route tables, etc.)
@@ -195,13 +188,13 @@ resource "aws_subnet" "private" {
 
 ### 5. **Produce Module Documentation**
 
-Create `./infra-specs/modules/<module-name>.md` for each module:
+Create `./infrastructure/modules/<module-name>/README.md` for each module:
 
 ```markdown
 # Network VPC Module
 
 **Layer**: Network
-**Path**: `infra/modules/network/vpc`
+**Path**: `infrastructure/modules/network/vpc`
 **Responsibilities**: VPC, subnets, internet gateway, NAT gateways, routing
 
 ## Dependencies
@@ -237,7 +230,7 @@ Create `./infra-specs/modules/<module-name>.md` for each module:
 ## Usage Example
 ```hcl
 module "vpc" {
-  source = "../../infra/modules/network/vpc"
+  source = "../../infrastructure/modules/network/vpc"
 
   project_name       = "myapp"
   environment        = "prod"
@@ -261,7 +254,7 @@ module "vpc" {
 
 ### 6. **Create Module Registry**
 
-Generate `./infra-specs/module-registry.md`:
+Generate `./specs/infrastructure/module-registry.md`:
 
 ```markdown
 # Infrastructure Module Registry
@@ -277,7 +270,7 @@ graph TD
 ```
 
 ## Network Layer
-- **network/vpc**: VPC with subnets (`infra-specs/modules/network-vpc.md`)
+- **network/vpc**: VPC with subnets (`specs/infrastructure/modules/network-vpc.md`)
   - Outputs: vpc_id, subnet_ids
   - Dependencies: None
 
@@ -305,7 +298,7 @@ graph TD
 
 ### 7. **Create Conventions Document**
 
-Generate `./infra-specs/conventions.md`:
+Generate `./specs/infrastructure/conventions.md`:
 
 ```markdown
 # Terraform Conventions
@@ -366,7 +359,7 @@ variable "environment" {
 
 ```bash
 # Validate all modules
-for module in infra/modules/*/; do
+for module in infrastructure/modules/*/; do
   cd "$module" && terraform init && terraform validate
 done
 ```
@@ -381,7 +374,7 @@ Provide clear summary:
 ## Infrastructure Design Complete
 
 ### Module Specifications Created
-Generated in `./infra-specs/modules/`:
+Generated in `./specs/infrastructure/modules/`:
 - network-vpc.md (VPC with subnets)
 - security-security-groups.md (Security groups)
 - compute-ecs-cluster.md (ECS cluster)
@@ -389,7 +382,7 @@ Generated in `./infra-specs/modules/`:
 (X module specifications total)
 
 ### Terraform Scaffolds Created
-Generated in `./infra/modules/`:
+Generated in `./infrastructure/modules/`:
 - network/vpc/ (variables, outputs, resource shells)
 - security/security-groups/
 - compute/ecs-cluster/
@@ -397,9 +390,9 @@ Generated in `./infra/modules/`:
 (X Terraform modules total)
 
 ### Supporting Documents
-- infra-specs/module-registry.md (dependency graph)
-- infra-specs/conventions.md (coding standards)
-- infra-specs/testing.md (testing strategies)
+- specs/infrastructure/module-registry.md (dependency graph)
+- specs/infrastructure/conventions.md (coding standards)
+- specs/infrastructure/testing.md (testing strategies)
 
 ### Validation ✓
 - All modules pass `terraform validate`
@@ -442,9 +435,9 @@ Generated in `./infra/modules/`:
 
 ```
 Infrastructure Architect
-    ↓ produces infra-specs/
+    ↓ produces specs/infrastructure/
 You (Infrastructure Designer)
-    ↓ produces infra-specs/modules/ + infra/modules/
+    ↓ produces specs/infrastructure/modules/ + infrastructure/modules/
 Planner
     ↓ produces tasks.md
 Infraengineer
