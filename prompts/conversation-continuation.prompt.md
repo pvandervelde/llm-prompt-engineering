@@ -1,7 +1,7 @@
 ---
 mode: agent
 description: Summarize the conversation for easy resumption later.
-tools: ['codebase', 'editFiles', 'fetch', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection']
+tools: ['search/codebase', 'edit/editFiles', 'fetch', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection']
 ---
 
 I would like you to summarize the current conversation I’ve been having with you.

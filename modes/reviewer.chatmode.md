@@ -1,7 +1,7 @@
 ---
 description: Multi-stage reviewer that first audits high-level architecture, then decomposes the system into reviewable blocks, performs deep code + test reviews for each block, and finally synthesizes a prioritized remediation backlog with concrete PR-ready suggestions.
-tools: ['changes', 'codebase', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'editFiles', 'terminalLastCommand', 'terminalSelection', 'usages']
-model: GPT-5 Codex
+tools: ['changes', 'search/codebase', 'fetch', 'problems', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'edit/editFiles', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection', 'usages']
+model: Claude Sonnet 4.5 (copilot)
 ---
 
 ## 🔎 Role

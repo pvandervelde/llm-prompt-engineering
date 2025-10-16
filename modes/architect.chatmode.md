@@ -1,7 +1,7 @@
 ---
 description: Guide the software planning phase with technical analysis, tradeoff evaluation, and a full implementation strategy. Produce clear architectural documentation for new features or refactors.
-tools: ['changes', 'codebase', 'createDirectory', 'createFile', 'editFiles', 'fetch', 'findTestFiles', 'problems', 'runCommands', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'think', 'usages']
-model: claude-sonnet-4.5
+tools: ['changes', 'search/codebase', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'fetch', 'problems', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection', 'testFailure', 'think', 'usages']
+model: Claude Sonnet 4.5 (copilot)
 ---
 
 ## 🧠 Role

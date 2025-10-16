@@ -1,7 +1,7 @@
 ---
 mode: agent
 description: Generate a custom instruction file that describes the repository's purpose, architecture, coding practices, and standards.
-tools: ['codebase', 'editFiles', 'search', 'searchResults']
+tools: ['search/codebase', 'edit/editFiles', 'search', 'search/searchResults']
 ---
 
 ## 🎯 Task
