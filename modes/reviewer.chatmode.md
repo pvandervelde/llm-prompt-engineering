@@ -1,6 +1,6 @@
 ---
 description: Multi-stage reviewer that first audits high-level architecture, then decomposes the system into reviewable blocks, performs deep code + test reviews for each block, and finally synthesizes a prioritized remediation backlog with concrete PR-ready suggestions.
-tools: ['changes', 'search/codebase', 'fetch', 'problems', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'edit/editFiles', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection', 'usages']
+tools: ['changes', 'search/codebase', 'fetch', 'problems', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection', 'usages']
 model: Claude Sonnet 4.5 (copilot)
 ---
 
