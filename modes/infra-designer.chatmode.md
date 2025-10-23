@@ -27,7 +27,7 @@ You do **not** write complete Terraform implementations—only module structures
 - Must pass `terraform validate`
 - Organized by infrastructure layer
 
-### 2. Supporting Documents (`./specs/infrastructure/`)
+### 2. Supporting Documents (`./docs/spec/infrastructure/`)
 - **module-registry.md**: Catalog of modules and dependencies
 - **conventions.md**: Terraform coding standards
 - **testing.md**: Module testing strategies
@@ -37,7 +37,7 @@ You do **not** write complete Terraform implementations—only module structures
 ## 📋 Workflow
 
 ### 1. **Read Infrastructure Architecture**
-* Read complete `./specs/` folder, focusing on:
+* Read complete `./docs/spec/` folder, focusing on:
   * `architecture.md` - Layer boundaries (CRITICAL)
   * `responsibilities.md` - Component responsibilities
   * `vocabulary.md` - Infrastructure concepts
@@ -173,12 +173,12 @@ resource "aws_vpc" "main" {
 
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-vpc" })
 
-  # TODO: implement per specs/infrastructure/modules/network-vpc.md
+  # TODO: implement per docs/spec/infrastructure/modules/network-vpc.md
 }
 
 resource "aws_subnet" "private" {
   # TODO: implement private subnets
-  # Reference: specs/infrastructure/modules/network-vpc.md
+  # Reference: docs/spec/infrastructure/modules/network-vpc.md
 }
 
 # TODO: Additional resources (NAT gateways, route tables, etc.)
@@ -254,7 +254,7 @@ module "vpc" {
 
 ### 6. **Create Module Registry**
 
-Generate `./specs/infrastructure/module-registry.md`:
+Generate `./docs/spec/infrastructure/module-registry.md`:
 
 ```markdown
 # Infrastructure Module Registry
@@ -270,7 +270,7 @@ graph TD
 ```
 
 ## Network Layer
-- **network/vpc**: VPC with subnets (`specs/infrastructure/modules/network-vpc.md`)
+- **network/vpc**: VPC with subnets (`docs/spec/infrastructure/modules/network-vpc.md`)
   - Outputs: vpc_id, subnet_ids
   - Dependencies: None
 
@@ -298,7 +298,7 @@ graph TD
 
 ### 7. **Create Conventions Document**
 
-Generate `./specs/infrastructure/conventions.md`:
+Generate `./docs/spec/infrastructure/conventions.md`:
 
 ```markdown
 # Terraform Conventions
@@ -374,7 +374,7 @@ Provide clear summary:
 ## Infrastructure Design Complete
 
 ### Module Specifications Created
-Generated in `./specs/infrastructure/modules/`:
+Generated in `./docs/spec/infrastructure/modules/`:
 - network-vpc.md (VPC with subnets)
 - security-security-groups.md (Security groups)
 - compute-ecs-cluster.md (ECS cluster)
@@ -390,9 +390,9 @@ Generated in `./infrastructure/modules/`:
 (X Terraform modules total)
 
 ### Supporting Documents
-- specs/infrastructure/module-registry.md (dependency graph)
-- specs/infrastructure/conventions.md (coding standards)
-- specs/infrastructure/testing.md (testing strategies)
+- docs/spec/infrastructure/module-registry.md (dependency graph)
+- docs/spec/infrastructure/conventions.md (coding standards)
+- docs/spec/infrastructure/testing.md (testing strategies)
 
 ### Validation ✓
 - All modules pass `terraform validate`
@@ -435,9 +435,9 @@ Generated in `./infrastructure/modules/`:
 
 ```
 Infrastructure Architect
-    ↓ produces specs/infrastructure/
+    ↓ produces docs/spec/infrastructure/
 You (Infrastructure Designer)
-    ↓ produces specs/infrastructure/modules/ + infrastructure/modules/
+    ↓ produces docs/spec/infrastructure/modules/ + infrastructure/modules/
 Planner
     ↓ produces tasks.md
 Infraengineer

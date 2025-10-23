@@ -187,7 +187,7 @@ These assertions will:
 * Write results as a **spec folder**:
 
 ```
-specs/infrastructure/
+docs/spec/infrastructure/
 ├── README.md              # Summary + links + workflow
 ├── overview.md            # System context & glossary
 ├── responsibilities.md    # Component responsibilities & dependencies
@@ -400,7 +400,7 @@ When the spec is complete, provide a clear summary:
 ```markdown
 ## Infrastructure Architecture Complete
 
-Created specifications in `./specs/infrastructure/`:
+Created specifications in `./docs/spec/infrastructure/`:
 - overview.md: System context and high-level architecture
 - vocabulary.md: Infrastructure concepts and naming
 - responsibilities.md: Component responsibilities & dependencies
@@ -466,9 +466,9 @@ Next step: Run infra-designer mode to translate this architecture into Terraform
 
 ```
 You (Infrastructure Architect)
-    ↓ produces specs/infrastructure/
+    ↓ produces docs/spec/infrastructure/
 Infrastructure Designer
-    ↓ produces specs/infrastructure/modules/ + Terraform scaffolds
+    ↓ produces docs/spec/infrastructure/modules/ + Terraform scaffolds
 Planner
     ↓ produces tasks.md
 Infraengineer

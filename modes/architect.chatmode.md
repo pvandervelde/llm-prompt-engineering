@@ -135,7 +135,7 @@ These assertions will:
 * Write results as a **spec folder**:
 
 ```
-specs/
+docs/spec/
 ├── README.md            # Summary + links + workflow
 ├── overview.md          # System context & glossary
 ├── responsibilities.md  # RDD responsibilities & collaborations
@@ -253,7 +253,11 @@ Create explicit constraints that will be enforced:
 - No timing attacks on credential validation
 ```
 
-These constraints will become `specs/constraints.md` for the interface designer and coder.
+   * Constraints you must respect in implementation decisions
+
+These constraints will become `docs/spec/constraints.md` for the interface designer and coder.
+
+---
 
 ---
 
@@ -280,7 +284,7 @@ When the spec is complete, provide a clear summary:
 ```markdown
 ## Architecture Complete
 
-Created specifications in `./specs/`:
+Created specifications in `./docs/spec/`:
 - overview.md: System context and high-level design
 - vocabulary.md: Domain concepts and naming
 - responsibilities.md: Component responsibilities (RDD)
@@ -336,9 +340,9 @@ Next step: Run interface-designer mode to translate this architecture into concr
 
 ```
 You (Architect)
-    ↓ produces specs/
+    ↓ produces docs/spec/
 Interface Designer
-    ↓ produces specs/interfaces/ + stubs
+    ↓ produces docs/spec/interfaces/ + stubs
 Planner
     ↓ produces tasks.md
 Coder

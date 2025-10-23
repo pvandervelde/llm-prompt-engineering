@@ -30,20 +30,20 @@ Execute this loop **exactly once per interaction**. One task, TDD workflow, two 
 
 Before identifying the next task, load architectural guardrails:
 
-* **Read `./specs/constraints.md`** for implementation rules
+* **Read `./docs/spec/constraints.md`** for implementation rules
   * Type system requirements
   * Module organization
   * Naming conventions
   * Error handling patterns
   * Testing requirements
 
-* **Read `./specs/shared-registry.md`** to identify reusable types
+* **Read `./docs/spec/shared-registry.md`** to identify reusable types
   * Core types (Result, branded types, etc.)
   * Domain types by area
   * Port interfaces
   * Common patterns
 
-* **Scan `./specs/interfaces/README.md`** for module overview
+* **Scan `./docs/spec/interfaces/README.md`** for module overview
   * Dependency relationships
   * Interface organization
   * Key conventions
@@ -87,7 +87,11 @@ If you find partial implementations:
 
 Read the specific interface document referenced in the task's Context block:
 
-Example: If task says "Interface: specs/interfaces/auth-operations.md", read that file completely.
+---
+
+Example: If task says "Interface: docs/spec/interfaces/auth-operations.md", read that file completely.
+
+---
 
 Extract from the interface spec:
 * **Exact type definitions** to implement
@@ -138,7 +142,7 @@ export async function authenticate(
 * **Write unit tests BEFORE implementing any function bodies**
 * Base tests directly on:
   * Interface specification documentation
-  * Behavioral assertions from `specs/assertions.md`
+  * Behavioral assertions from `docs/spec/assertions.md`
   * Error conditions documented in interface spec
 
 * Cover all scenarios from the interface spec:
@@ -154,7 +158,7 @@ export async function authenticate(
 
 Example test structure:
 ```typescript
-// From specs/assertions.md assertion #1:
+// From docs/spec/assertions.md assertion #1:
 // "Valid credentials must return authenticated user"
 
 describe('authenticate', () => {
@@ -176,7 +180,7 @@ describe('authenticate', () => {
     }
   });
 
-  // From specs/assertions.md assertion #2:
+  // From docs/spec/assertions.md assertion #2:
   // "Invalid password must return InvalidCredentials error"
   it('returns InvalidCredentials error when password is wrong', async () => {
     const credentials = {
@@ -211,7 +215,7 @@ describe('authenticate', () => {
 
 * **Now implement the actual function bodies** to make all tests pass
 * Follow the interface specification's documented behavior exactly
-* Use the patterns and constraints from `specs/constraints.md`
+* Use the patterns and constraints from `docs/spec/constraints.md`
 * Delegate to port interfaces (don't implement infrastructure)
 * Handle all error conditions as documented
 * Run tests frequently during implementation
@@ -247,7 +251,7 @@ export async function authenticate(
     return failure({ type: 'InvalidCredentials' });
   }
 
-  // Check account lock from specs/security.md
+  // Check account lock from docs/spec/security.md
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     return failure({
       type: 'AccountLocked',
@@ -303,13 +307,13 @@ Update the **Shared Types Registry** section in `./.llm/tasks.md`:
 ## Shared Types Registry
 
 ### Core Types
-- `Result<T, E>`: Success/failure union (src/core/result.ts) - specs/interfaces/shared-types.md
-- `Email`: Branded string type (src/core/types.ts) - specs/interfaces/shared-types.md
+- `Result<T, E>`: Success/failure union (src/core/result.ts) - docs/spec/interfaces/shared-types.md
+- `Email`: Branded string type (src/core/types.ts) - docs/spec/interfaces/shared-types.md
 
 ### Domain Types
-- `UserCredentials`: Auth input type (src/auth/domain/types.ts) - specs/interfaces/auth-types.md
-- `AuthError`: Auth failure reasons (src/auth/domain/types.ts) - specs/interfaces/auth-types.md
-- `AuthResult`: Auth operation result (src/auth/domain/types.ts) - specs/interfaces/auth-types.md
+- `UserCredentials`: Auth input type (src/auth/domain/types.ts) - docs/spec/interfaces/auth-types.md
+- `AuthError`: Auth failure reasons (src/auth/domain/types.ts) - docs/spec/interfaces/auth-types.md
+- `AuthResult`: Auth operation result (src/auth/domain/types.ts) - docs/spec/interfaces/auth-types.md
 
 ### Patterns
 - Error handling: All domain ops return Result<T, E>
@@ -359,7 +363,7 @@ Example entries:
 - Include context in error types for debugging
 
 ### TDD Workflow
-- Write assertion-based tests first (from specs/assertions.md)
+- Write assertion-based tests first (from docs/spec/assertions.md)
 - One test per documented behavior
 - Test error paths as thoroughly as happy paths
 ```
@@ -373,7 +377,7 @@ Example entries:
 - Wait for the next interaction to continue work
 - Provide brief summary:
   * "Completed task X.Y: <description>"
-  * "Implemented against: specs/interfaces/<spec-file>.md"
+  * "Implemented against: docs/spec/interfaces/<spec-file>.md"
   * "Reused types: <list>"
   * "Added <N> tests covering all documented behaviors"
   * "Made 2 commits (design+tests, implementation)"
@@ -396,8 +400,8 @@ If all tasks are completed provide a summary to the user and suggest that they s
 - **Always implement against interface specifications** - never invent your own contracts
 
 ### Context Loading Rules
-- Always read specs/constraints.md before starting
-- Always check specs/shared-registry.md for reusable types
+- Always read docs/spec/constraints.md before starting
+- Always check docs/spec/shared-registry.md for reusable types
 - Always read the specific interface spec for the task
 - Always verify no duplicate types exist before creating new ones
 
@@ -427,7 +431,7 @@ If all tasks are completed provide a summary to the user and suggest that they s
 
 ### Testing Rules
 - Write tests that validate interface spec behavior exactly
-- Base tests on behavioral assertions from specs/assertions.md
+- Base tests on behavioral assertions from docs/spec/assertions.md
 - Include both positive and negative test cases
 - Test all error conditions and edge cases
 - Use the testing patterns established in Rules & Tips
@@ -488,7 +492,7 @@ Expected `./.llm/tasks.md` structure:
 
 - [ ] 1.0 Implement Core Shared Types
   - Context:
-    - Interface: specs/interfaces/shared-types.md
+    - Interface: docs/spec/interfaces/shared-types.md
     - File: src/core/result.ts, src/core/types.ts
     - Foundation for all other tasks
   - [ ] 1.1 Implement Result<T, E> type and helpers
@@ -523,7 +527,7 @@ Expected `./.llm/tasks.md` structure:
 
 ### Implementation Phase Quality
 - Code is minimal - only what's needed to pass tests
-- Follows patterns from specs/constraints.md
+- Follows patterns from docs/spec/constraints.md
 - Delegates to ports (doesn't implement infrastructure)
 - Error handling matches documented error types
 - Implementation doesn't exceed documented scope
@@ -540,12 +544,12 @@ Expected `./.llm/tasks.md` structure:
 ## 📖 Example TDD Workflow
 
 ```markdown
-Task: "4.1 Implement authenticate() function signature matching specs/interfaces/auth-operations.md"
+Task: "4.1 Implement authenticate() function signature matching docs/spec/interfaces/auth-operations.md"
 
 Context Loading:
-- Read specs/constraints.md → Result pattern, no exceptions
-- Read specs/shared-registry.md → Email and Result types exist
-- Read specs/interfaces/auth-operations.md → Complete signature and behavior
+- Read docs/spec/constraints.md → Result pattern, no exceptions
+- Read docs/spec/shared-registry.md → Email and Result types exist
+- Read docs/spec/interfaces/auth-operations.md → Complete signature and behavior
 - Check codebase → Stub exists in src/auth/domain/operations.ts
 
 Pre-Task Verification:
@@ -558,7 +562,7 @@ Design Phase:
 - Verify signature matches spec exactly ✓
 - Keep placeholder: throw new Error("Not implemented")
 
-Test Phase (from specs/assertions.md):
+Test Phase (from docs/spec/assertions.md):
 - test('returns success with user when credentials valid') // Assertion #1
 - test('returns InvalidCredentials when password wrong') // Assertion #2
 - test('returns AccountLocked with unlock time when locked') // Assertion #3

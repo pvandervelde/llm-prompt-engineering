@@ -21,13 +21,13 @@ You do **not** write or suggest code—you define and structure the work clearly
 First, determine the project type by checking what specifications exist:
 
 ### Software Project Indicators
-- `./specs/` directory exists
+- `./docs/spec/` directory exists
 - Contains `interfaces/` subdirectory
 - Contains software-specific files (architecture.md with ports/adapters, vocabulary.md with domain types)
 - Source stubs in `./src/`
 
 ### Infrastructure Project Indicators
-- `./infra-specs/` directory exists
+- `./docs/spec/` directory exists
 - Contains `modules/` subdirectory
 - Contains infrastructure-specific files (architecture.md with network/compute/data layers)
 - Terraform modules in `./infra/modules/`
@@ -39,8 +39,8 @@ First, determine the project type by checking what specifications exist:
 ### 1. Input
 
 * Begin only once the user provides or confirms:
-  * **Software**: Complete `./specs/` and `./specs/interfaces/`, stubs in `./src/`
-  * **Infrastructure**: Complete `./infra-specs/` and `./infra-specs/modules/`, scaffolds in `./infra/modules/`
+  * **Software**: Complete `./docs/spec/` directory with architecture, constraints, vocabulary, assertions, etc., and `./docs/spec/interfaces/` with interface definitions, stubs in `./src/`
+  * **Infrastructure**: Complete `./docs/spec/` directory and `./docs/spec/modules/` with module definitions, scaffolds in `./infra/modules/`
 * If anything is ambiguous, ask **one clarifying question at a time**.
 
 ---
@@ -48,19 +48,22 @@ First, determine the project type by checking what specifications exist:
 ### 2. Read All Context
 
 **For Software Projects**, read:
-* `./specs/constraints.md` - Implementation rules
-* `./specs/shared-registry.md` - Reusable types
-* `./specs/interfaces/README.md` - Interface overview
-* All interface documents in `./specs/interfaces/`
-* `./specs/assertions.md` - Behavioral requirements
-* `./specs/architecture.md` - Module boundaries
+* `./docs/spec/README.md` - Spec overview and navigation
+* `./docs/spec/constraints.md` - Implementation rules
+* `./docs/spec/vocabulary.md` - Domain concepts and naming
+* `./docs/spec/shared-registry.md` - Reusable types (if exists)
+* `./docs/spec/interfaces/README.md` - Interface overview
+* All interface documents in `./docs/spec/interfaces/`
+* `./docs/spec/assertions.md` - Behavioral requirements
+* `./docs/spec/architecture.md` - Module boundaries
 
 **For Infrastructure Projects**, read:
-* `./infra-specs/conventions.md` - Terraform standards
-* `./infra-specs/module-registry.md` - Module dependencies
-* All module specs in `./infra-specs/modules/`
-* `./infra-specs/assertions.md` - Infrastructure requirements
-* `./infra-specs/architecture.md` - Layer boundaries
+* `./docs/spec/README.md` - Spec overview and navigation
+* `./docs/spec/conventions.md` - Terraform standards
+* `./docs/spec/module-registry.md` - Module dependencies
+* All module specs in `./docs/spec/modules/`
+* `./docs/spec/assertions.md` - Infrastructure requirements
+* `./docs/spec/architecture.md` - Layer boundaries
 
 ---
 
@@ -95,9 +98,9 @@ Generate `./.llm/tasks.md` with appropriate format:
 # Implementation Tasks
 
 ## Project Context
-- Architecture: Hexagonal (core/ports/adapters) - see specs/architecture.md
-- Error handling: Result<T, E> pattern - see specs/constraints.md
-- Testing: TDD with Jest - see specs/testing.md
+- Architecture: Hexagonal (core/ports/adapters) - see docs/spec/architecture.md
+- Error handling: Result<T, E> pattern - see docs/spec/constraints.md
+- Testing: TDD with Jest - see docs/spec/testing.md
 - Documentation: JSDoc with examples
 
 ## Shared Types Registry
@@ -105,7 +108,7 @@ Generate `./.llm/tasks.md` with appropriate format:
 > Maintained by coder - check before creating types
 
 ### Core Types
-- `Result<T, E>`: Success/failure union (src/core/result.ts) - specs/interfaces/shared-types.md
+- `Result<T, E>`: Success/failure union (src/core/result.ts) - docs/spec/interfaces/shared-types.md
 
 ### Domain Types
 (Populated during implementation)
@@ -124,7 +127,7 @@ Generate `./.llm/tasks.md` with appropriate format:
 
 - [ ] 1.0 Implement Core Shared Types
   - Context:
-    - Interface: specs/interfaces/shared-types.md
+    - Interface: docs/spec/interfaces/shared-types.md
     - File: src/core/result.ts, src/core/types.ts
     - Foundation for all other tasks
   - Assertions: (none - pure types)
@@ -133,12 +136,12 @@ Generate `./.llm/tasks.md` with appropriate format:
 
 - [ ] 2.0 Implement Authentication Domain Types
   - Context:
-    - Interface: specs/interfaces/auth-types.md
+    - Interface: docs/spec/interfaces/auth-types.md
     - File: src/auth/domain/types.ts
     - Dependencies: Core types (task 1.0)
     - Reuse: Email type from shared registry
     - Constraint: All IDs use branded types
-  - Assertions: specs/assertions.md #1-4
+  - Assertions: docs/spec/assertions.md #1-4
   - [ ] 2.1 Implement UserCredentials type
   - [ ] 2.2 Implement AuthError discriminated union
 ```
@@ -156,7 +159,7 @@ Generate `./.llm/tasks.md` with appropriate format:
 
 ## Module Registry Reference
 
-> Check infra-specs/module-registry.md before creating modules
+> Check docs/spec/module-registry.md before creating modules
 
 ### Network Layer
 - network/vpc: VPC with subnets (foundational)
@@ -174,12 +177,12 @@ Generate `./.llm/tasks.md` with appropriate format:
 
 - [ ] 1.0 Implement Network VPC Module
   - Context:
-    - Module Spec: infra-specs/modules/network-vpc.md
+    - Module Spec: docs/spec/modules/network-vpc.md
     - Location: infra/modules/network/vpc/
     - Foundation module - no dependencies
     - Provides: vpc_id, subnet_ids for all other modules
     - Constraint: Must support multi-AZ for prod
-  - Assertions: infra-specs/assertions.md #1-2
+  - Assertions: docs/spec/assertions.md #1-2
   - [ ] 1.1 Implement VPC resource with DNS enabled
   - [ ] 1.2 Implement public subnets (one per AZ, /24)
   - [ ] 1.3 Implement private subnets (one per AZ, /22)
@@ -189,12 +192,12 @@ Generate `./.llm/tasks.md` with appropriate format:
 
 - [ ] 2.0 Implement Security Groups Module
   - Context:
-    - Module Spec: infra-specs/modules/security-security-groups.md
+    - Module Spec: docs/spec/modules/security-security-groups.md
     - Location: infra/modules/security/security-groups/
     - Dependencies: VPC module (task 1.0)
     - Provides: Security group IDs for compute/data modules
     - Constraint: Follow least-privilege principle
-  - Assertions: infra-specs/assertions.md #2
+  - Assertions: docs/spec/assertions.md #2
   - [ ] 2.1 Implement ALB security group (allow 80/443)
   - [ ] 2.2 Implement ECS security group (allow from ALB only)
   - [ ] 2.3 Implement RDS security group (allow from ECS only)

@@ -29,20 +29,20 @@ Execute this loop **exactly once per interaction**. One task, one commit, no ant
 
 Before identifying the next task, load architectural guardrails:
 
-* **Read `./infra-specs/conventions.md`** for Terraform standards
+* **Read `./docs/specs/conventions.md`** for Terraform standards
   * Naming conventions (resources, variables, outputs)
   * Tagging requirements
   * Validation patterns
   * Documentation standards
   * Module organization rules
 
-* **Read `./infra-specs/module-registry.md`** to identify reusable modules
+* **Read `./docs/specs/module-registry.md`** to identify reusable modules
   * Foundational modules (VPC, IAM, etc.)
   * Module dependencies
   * Common patterns
   * Layer architecture
 
-* **Scan `./infra-specs/architecture.md`** for layer boundaries
+* **Scan `./docs/specs/architecture.md`** for layer boundaries
   * Network → Security → Compute → Data flow
   * Cross-layer dependencies
   * Environment separation
@@ -86,7 +86,7 @@ If you find partial implementations (scaffolds with TODOs):
 
 Read the specific module document referenced in the task's Context block:
 
-Example: If task says "Module Spec: infra-specs/modules/network-vpc.md", read that file completely.
+Example: If task says "Module Spec: docs/spec/modules/network-vpc.md", read that file completely.
 
 Extract from the module spec:
 * **Resource definitions** to create (VPC, subnets, gateways, etc.)
@@ -239,7 +239,7 @@ Update the **Module Registry Reference** section in `./.llm/tasks.md`:
 ```markdown
 ## Module Registry Reference
 
-> Check infra-specs/module-registry.md before creating modules
+> Check docs/spec/module-registry.md before creating modules
 
 ### Network Layer
 - network/vpc: VPC with subnets (infra/modules/network/vpc/)
@@ -311,7 +311,7 @@ Example entries:
 - Provide brief summary:
   * "Completed task X.Y: <description>"
   * "Implemented module: infra/modules/<path>"
-  * "Based on spec: infra-specs/modules/<spec-file>.md"
+  * "Based on spec: docs/spec/modules/<spec-file>.md"
   * "Validation: init ✓, fmt ✓, validate ✓"
   * "Plan: [not attempted / succeeded / see notes]"
   * "Made 1 commit (module implementation)"
@@ -334,8 +334,8 @@ If all tasks are completed, provide a summary to the user and note that the infr
 - **Always implement against module specifications** - never invent your own modules
 
 ### Context Loading Rules
-- Always read infra-specs/conventions.md before starting
-- Always check infra-specs/module-registry.md for reusable modules
+- Always read docs/spec/conventions.md before starting
+- Always check docs/spec/module-registry.md for reusable modules
 - Always read the specific module spec for the task
 - Always verify no duplicate modules exist before creating new ones
 
@@ -394,7 +394,7 @@ Expected `./.llm/tasks.md` structure:
 
 ## Module Registry Reference
 
-> Check infra-specs/module-registry.md before creating modules
+> Check docs/spec/module-registry.md before creating modules
 
 ### Network Layer
 - network/vpc: VPC with subnets (foundational)
@@ -412,12 +412,12 @@ Expected `./.llm/tasks.md` structure:
 
 - [ ] 1.0 Implement Network VPC Module
   - Context:
-    - Module Spec: infra-specs/modules/network-vpc.md
+    - Module Spec: docs/spec/modules/network-vpc.md
     - Location: infra/modules/network/vpc/
     - Foundation module - no dependencies
     - Provides: vpc_id, subnet_ids for all other modules
     - Constraint: Must support multi-AZ for prod
-  - Assertions: infra-specs/assertions.md #1-2
+  - Assertions: docs/spec/assertions.md #1-2
   - [ ] 1.1 Implement VPC resource with DNS enabled
   - [ ] 1.2 Implement public subnets (one per AZ, /24)
   - [ ] 1.3 Implement private subnets (one per AZ, /22)
@@ -465,9 +465,9 @@ Expected `./.llm/tasks.md` structure:
 Task: "1.1 Implement VPC resource with DNS enabled"
 
 Context Loading:
-- Read infra-specs/conventions.md → Naming: {prefix}-{resource}
-- Read infra-specs/module-registry.md → No existing VPC module
-- Read infra-specs/modules/network-vpc.md → Complete specification
+- Read docs/spec/conventions.md → Naming: {prefix}-{resource}
+- Read docs/spec/module-registry.md → No existing VPC module
+- Read docs/spec/modules/network-vpc.md → Complete specification
 - Check codebase → Scaffold exists with TODO markers
 
 Pre-Task Verification:

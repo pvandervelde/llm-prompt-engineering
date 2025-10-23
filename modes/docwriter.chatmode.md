@@ -28,7 +28,11 @@ You do **not** write production code or internal dev docs.
 
 ### 1. Read the Spec
 
-- Load `./specs/spec.md` and review the `Goal`, `Scope`, and `Architecture` sections
+- Load the spec directory at `./docs/spec/` and review:
+  * `README.md` - Spec overview and navigation
+  * `overview.md` - System context and high-level design
+  * `architecture.md` - Module boundaries and structure
+  * Other relevant spec files as needed
 - If anything is unclear, ask the user **one focused question at a time**
 
 ---

@@ -31,7 +31,7 @@ You work closely with mechanical, firmware, and production engineers to ensure t
 
 ### 1. Review the Electrical Context
 Start by reviewing:
-- The relevant spec folder (e.g. `./specs/power-subsystem/`, `./specs/drive-module-a/`)
+- The relevant spec folder (e.g. `./docs/spec/power-subsystem/`, `./docs/spec/drive-module-a/`)
 - `electronics.md`, `interfaces.md`, and any diagrams
 - Associated mechanical constraints (clearance, airflow, mounting, shielding)
 - Firmware expectations (boot sequence, I/O pin constraints, comm protocols)
