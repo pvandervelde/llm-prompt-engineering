@@ -20,9 +20,10 @@ Every mode works on specific inputs, produces outputs, and feeds the next mode i
 ## 🧩 Available Modes
 
 ### `architect.chatmode.md` — **The Planner of Truth**
-**Role:** Software Architect  
-**Responsibility:** Defines a complete, unambiguous spec based on user goals.  
-**Output:** `./specs/spec.md`
+
+**Role:** Software Architect
+**Responsibility:** Defines a complete, unambiguous spec based on user goals.
+**Output:** `./docs/spec/spec.md`
 
 - Clarifies requirements and tradeoffs
 - Designs modular, secure architecture
@@ -32,8 +33,9 @@ Every mode works on specific inputs, produces outputs, and feeds the next mode i
 ---
 
 ### `docwriter.chatmode.md` — **The UX Clarifier**
-**Role:** Technical Documentation Writer  
-**Responsibility:** Writes user-facing docs before implementation.  
+
+**Role:** Technical Documentation Writer
+**Responsibility:** Writes user-facing docs before implementation.
 **Output:** `./docs/README.md`, `api.md`, or module docs
 
 - Helps validate system behavior and usage
@@ -43,10 +45,11 @@ Every mode works on specific inputs, produces outputs, and feeds the next mode i
 ---
 
 ### `spectester.chatmode.md` — **The Spec-to-Test Translator**
-**Role:** Spec Test Generator  
-**Responsibility:** Converts the finalized spec into automated, runnable behavioral tests.  
-**Output:** `./tests/spec_tests/*.spec.ts` or equivalent  
-**Feedback:** `./specs/spec-feedback.md` if any gaps are found
+
+**Role:** Spec Test Generator
+**Responsibility:** Converts the finalized spec into automated, runnable behavioral tests.
+**Output:** `./tests/spec_tests/*.spec.ts` or equivalent
+**Feedback:** `./docs/spec/spec-feedback.md` if any gaps are found
 
 - Covers acceptance criteria, edge cases, and error handling
 - Fails early if the spec is incomplete or ambiguous
@@ -55,8 +58,9 @@ Every mode works on specific inputs, produces outputs, and feeds the next mode i
 ---
 
 ### `planner.chatmode.md` — **The Task Scaffolder**
-**Role:** Technical Task Planner  
-**Responsibility:** Breaks the spec into sequenced, atomic implementation tasks.  
+
+**Role:** Technical Task Planner
+**Responsibility:** Breaks the spec into sequenced, atomic implementation tasks.
 **Output:** `./.llm/tasks.md`
 
 - Defines parent/subtasks with rationale
@@ -66,8 +70,9 @@ Every mode works on specific inputs, produces outputs, and feeds the next mode i
 ---
 
 ### `infraengineer.chatmode.md` — **The Infrastructure Builder**
-**Role:** Infrastructure-as-Code Engineer  
-**Responsibility:** Implements the infrastructure needed for the system.  
+
+**Role:** Infrastructure-as-Code Engineer
+**Responsibility:** Implements the infrastructure needed for the system.
 **Output:** `./infra/`, `.github/workflows/`, `secrets.md`
 
 - Provisions resources using Terraform or other IaC tools
@@ -77,8 +82,9 @@ Every mode works on specific inputs, produces outputs, and feeds the next mode i
 ---
 
 ### `coder.chatmode.md` — **The TDD Executor**
-**Role:** Test-Driven Development Implementer  
-**Responsibility:** Executes one task at a time using strict TDD discipline.  
+
+**Role:** Test-Driven Development Implementer
+**Responsibility:** Executes one task at a time using strict TDD discipline.
 **Output:** Codebase changes, following `./.llm/tasks.md`
 
 - Always writes docs and tests before implementation
@@ -89,9 +95,10 @@ Every mode works on specific inputs, produces outputs, and feeds the next mode i
 ---
 
 ### `verifier.chatmode.md` — **The Code Auditor**
-**Role:** Verifier  
-**Responsibility:** Validates that implementation matches the spec, task list, and tests.  
-**Output:** `./specs/spec-feedback.md` if issues are found
+
+**Role:** Verifier
+**Responsibility:** Validates that implementation matches the spec, task list, and tests.
+**Output:** `./docs/spec/spec-feedback.md` if issues are found
 
 - Reviews code quality, task completeness, and spec coverage
 - Uses behavioral and task-derived tests to confirm correctness
@@ -125,7 +132,7 @@ Verifier (final QA + spec alignment)
 
 Any role encountering ambiguity or incompleteness in the spec must:
 
-1. Log findings in `./specs/spec-feedback.md`
+1. Log findings in `./docs/spec/spec-feedback.md`
 2. Notify the Architect
 3. Await spec update before continuing
 

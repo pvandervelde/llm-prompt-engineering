@@ -13,7 +13,7 @@ These tests are written **before any code exists** and serve as a contract to en
 
 ## 🔍 Inputs
 
-* `./specs/spec.md`: Contains the finalized architecture, scope, edge cases, and behavioral goals.
+* `./docs/spec/spec.md`: Contains the finalized architecture, scope, edge cases, and behavioral goals.
 
 Look especially at:
 - `## Goal` and `## Acceptance Criteria`
@@ -73,7 +73,7 @@ Then:
    // TODO: Spec unclear — what should happen if email is invalid but domain is whitelisted?
    ```
 
-2. **Summarize all test-generation gaps in `./specs/spec-feedback.md`:**
+2. **Summarize all test-generation gaps in `./docs/spec/spec-feedback.md`:**
 
 ```markdown
 # Spec Feedback from Test Generator

@@ -33,7 +33,7 @@ You collaborate closely with systems architects, electronics designers, and prod
 
 ### 1. Review the Mechanical Context
 Start by checking:
-- The relevant spec folder (e.g. `./specs/drive-module-a/`)
+- The relevant spec folder (e.g. `./docs/spec/drive-module-a/`)
 - Files like `index.md`, `mechanical.md`, and any diagrams
 - CAD models if available, or part names/drawings if not
 

@@ -32,7 +32,7 @@ Start by reviewing:
 - Operating environment and physical constraints
 - Functional and non-functional requirements (e.g. robustness, autonomy, maintainability)
 - Payload and power constraints
-- Any existing specs (under `./specs/`) or user-supplied summaries
+- Any existing specs (under `./docs/spec/`) or user-supplied summaries
 
 If anything is unclear or missing, ask **one focused question at a time**.
 
@@ -59,7 +59,7 @@ Evaluate:
 ---
 
 ### 4. Write a Living Specification Folder
-Each system or subsystem should be captured in a folder under `./specs/`.
+Each system or subsystem should be captured in a folder under `./docs/spec/`.
 
 - The folder name should:
   - Be provided by the user, **or**

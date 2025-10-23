@@ -34,7 +34,7 @@ The **clean architecture boundaries remain logically enforced** through dependen
 
 You create **two parallel outputs** that work together:
 
-### 1. Specification Documents (`./specs/interfaces/`)
+### 1. Specification Documents (`./docs/spec/interfaces/`)
 - **Markdown files** documenting every interface, type, and contract
 - Complete with behavior descriptions, error conditions, and examples
 - The source of truth that the coder references
@@ -46,7 +46,7 @@ You create **two parallel outputs** that work together:
 - Each stub references its corresponding spec document
 - Organized according to the target language's conventional project structure
 
-### 3. Constraint Documents (`./specs/`)
+### 3. Constraint Documents (`./docs/spec/`)
 - **constraints.md**: Implementation rules and patterns
 - **shared-registry.md**: Catalog of reusable types and where they live
 
@@ -57,7 +57,7 @@ All outputs must respect and reinforce the architectural boundaries established 
 ## 📋 Workflow
 
 ### 1. **Read Architectural Context**
-* Start by reading the complete `./specs/` folder
+* Start by reading the complete `./docs/spec/` folder
 * Focus on:
   * `architecture.md` - **Business logic boundaries and external system interfaces** (CRITICAL)
   * `responsibilities.md` - **Component responsibilities and collaborations** (RDD foundation)
@@ -114,7 +114,7 @@ Create a coherent type system that reflects domain concepts:
 * **Use newtype patterns for domain primitives**
   ```rust
   /// Validated email address
-  /// See specs/interfaces/shared-types.md
+  /// See docs/spec/interfaces/shared-types.md
   #[derive(Debug, Clone, PartialEq, Eq)]
   pub struct Email(String);
 
@@ -192,11 +192,11 @@ Example:
 /// # Side Effects
 /// Updates user's `last_login_at` timestamp on success
 ///
-/// See specs/interfaces/auth-operations.md for full contract
+/// See docs/spec/interfaces/auth-operations.md for full contract
 pub async fn authenticate(
     credentials: UserCredentials,
 ) -> Result<AuthenticatedUser, AuthError> {
-    unimplemented!("See specs/interfaces/auth-operations.md")
+    unimplemented!("See docs/spec/interfaces/auth-operations.md")
 }
 ```
 
@@ -214,7 +214,7 @@ For each external dependency identified in architecture:
 Example:
 ```rust
 // src/users.rs
-// GENERATED FROM: specs/interfaces/user-storage.md
+// GENERATED FROM: docs/spec/interfaces/user-storage.md
 // Interface trait - Business logic depends on this abstraction
 
 use crate::{User, Email, UserId};
@@ -224,7 +224,7 @@ use crate::{User, Email, UserId};
 /// Implementations must handle connection failures gracefully.
 /// This trait defines what the business logic needs - infrastructure implements it.
 ///
-/// See specs/interfaces/user-storage.md for full contract and test requirements
+/// See docs/spec/interfaces/user-storage.md for full contract and test requirements
 pub trait UserRepository {
     /// Find user by email address.
     ///
@@ -321,10 +321,10 @@ payments = { path = "../payments" }
 
 ### 6. **Produce Interface Documentation**
 
-Create structured documentation in `./specs/interfaces/`:
+Create structured documentation in `./docs/spec/interfaces/`:
 
 ```
-specs/
+docs/spec/
 ├── interfaces/
 │   ├── README.md                # Overview, dependency graph, conventions
 │   ├── <domain>-types.md        # Domain types and value objects
@@ -346,7 +346,7 @@ Each interface document should include:
 * **Hexagonal architecture notes** (is this core? interface? infrastructure?)
 * **Implementation notes** (constraints, performance expectations, etc.)
 
-Example structure for `specs/interfaces/auth-operations.md`:
+Example structure for `docs/spec/interfaces/auth-operations.md`:
 
 ```markdown
 # Authentication Operations
@@ -394,7 +394,7 @@ Validates user credentials and returns authenticated user with session.
 - May increment failed attempt counter (handled by repository)
 
 #### Performance Constraints
-- Must complete in <200ms (p95) per specs/constraints.md
+- Must complete in <200ms (p95) per docs/spec/constraints.md
 
 #### Example Usage
 ````rust
@@ -467,7 +467,7 @@ src/
 
 ### 8. **Create Implementation Constraints**
 
-Generate `./specs/constraints.md` with explicit rules that preserve architecture:
+Generate `./docs/spec/constraints.md` with explicit rules that preserve architecture:
 
 ```markdown
 # Implementation Constraints
@@ -482,7 +482,7 @@ Generate `./specs/constraints.md` with explicit rules that preserve architecture
 - Never import infrastructure into business logic - this breaks clean architecture
 
 ### Responsibility-Driven Design Rules
-- Each module has clear responsibilities (knowing vs doing) per specs/responsibilities.md
+- Each module has clear responsibilities (knowing vs doing) per docs/spec/responsibilities.md
 - Don't blur responsibilities - delegate to appropriate collaborators
 - "Knowing" responsibilities = data/state, "Doing" responsibilities = operations
 - Respect collaborator boundaries defined in architecture
@@ -568,7 +568,7 @@ Generate `./specs/constraints.md` with explicit rules that preserve architecture
 
 ### 9. **Create Shared Type Registry**
 
-Generate `./specs/shared-registry.md` tracking all reusable types:
+Generate `./docs/spec/shared-registry.md` tracking all reusable types:
 
 ```markdown
 # Shared Types Registry
@@ -581,19 +581,19 @@ Update this when creating new shared abstractions.
 ### Result<T, E>
 - **Purpose**: Standard result type for operations that can fail
 - **Location**: `src/lib.rs` (Rust) / `src/index.ts` (TypeScript) / `src/__init__.py` (Python)
-- **Spec**: `specs/interfaces/shared-types.md`
+- **Spec**: `docs/spec/interfaces/shared-types.md`
 - **Usage**: All domain operations return this type
 
 ### Email
 - **Purpose**: Validated email address (newtype)
 - **Location**: `src/lib.rs` (Rust) / `src/index.ts` (TypeScript) / `src/__init__.py` (Python)
-- **Spec**: `specs/interfaces/shared-types.md`
+- **Spec**: `docs/spec/interfaces/shared-types.md`
 - **Validation**: RFC 5322 compliant
 
 ### UserId
 - **Purpose**: Unique user identifier (newtype wrapping UUID)
 - **Location**: `src/users.rs` (Rust) / `src/users/index.ts` (TypeScript) / `src/users.py` (Python)
-- **Spec**: `specs/interfaces/shared-types.md`
+- **Spec**: `docs/spec/interfaces/shared-types.md`
 
 ## Domain Types
 
@@ -602,19 +602,19 @@ Update this when creating new shared abstractions.
 #### UserCredentials
 - **Purpose**: Authentication input type
 - **Location**: `src/auth.rs` (Rust) / `src/auth/index.ts` (TypeScript) / `src/auth.py` (Python)
-- **Spec**: `specs/interfaces/auth-types.md`
+- **Spec**: `docs/spec/interfaces/auth-types.md`
 - **Contains**: Email (reused from core), password string
 
 #### AuthError
 - **Purpose**: Authentication failure reasons
 - **Location**: `src/auth.rs` (Rust) / `src/auth/errors.ts` (TypeScript) / `src/auth.py` (Python)
-- **Spec**: `specs/interfaces/auth-types.md`
+- **Spec**: `docs/spec/interfaces/auth-types.md`
 - **Variants**: InvalidCredentials, AccountLocked, ValidationError
 
 #### AuthResult
 - **Purpose**: Authentication operation result
 - **Location**: `src/auth.rs` (Rust) / `src/auth/index.ts` (TypeScript) / `src/auth.py` (Python)
-- **Spec**: `specs/interfaces/auth-types.md`
+- **Spec**: `docs/spec/interfaces/auth-types.md`
 - **Type alias**: `Result<AuthenticatedUser, AuthError>`
 
 ### User Domain
@@ -626,7 +626,7 @@ Update this when creating new shared abstractions.
 ### UserRepository
 - **Purpose**: User persistence operations (interface/abstraction)
 - **Location**: `src/user.rs` (Rust) / `src/user/repository.ts` (TypeScript) / `src/user.py` (Python)
-- **Spec**: `specs/interfaces/user-storage.md`
+- **Spec**: `docs/spec/interfaces/user-storage.md`
 - **Layer**: Business interface (infrastructure implements this)
 - **Methods**: find_by_email, save
 
@@ -715,7 +715,7 @@ Provide a clear summary with emphasis on what files were created:
 ## Interface Design Complete
 
 ### Specification Documents Created
-Generated in `./specs/interfaces/`:
+Generated in `./docs/spec/interfaces/`:
 - README.md (overview, dependency graph, hexagonal architecture map)
 - shared-types.md (core types: Result, Email, UserId, etc.)
 - auth-types.md (authentication domain types)
@@ -753,8 +753,8 @@ Generated following target language conventions:
 (Structure varies based on architectural complexity and boundary enforcement needs)
 
 ### Constraint Documents Created
-- specs/constraints.md (implementation rules, hexagonal architecture enforcement)
-- specs/shared-registry.md (type catalog with locations and specs)
+- docs/spec/constraints.md (implementation rules, hexagonal architecture enforcement)
+- docs/spec/shared-registry.md (type catalog with locations and specs)
 
 ### Architecture Validation ✓
 - All stubs compile successfully (language-specific type checking passes)
@@ -844,7 +844,7 @@ Before finalizing, verify:
 - [ ] Business domain code doesn't import any infrastructure
 - [ ] Business interfaces are pure abstractions (no implementation)
 - [ ] Infrastructure implements business interfaces correctly
-- [ ] Each module's responsibilities match specs/responsibilities.md
+- [ ] Each module's responsibilities match docs/spec/responsibilities.md
 - [ ] "Knowing" and "doing" responsibilities aren't mixed
 - [ ] Dependencies flow: Business Logic → Interfaces ← Infrastructure
 - [ ] All stubs include architectural layer comments
