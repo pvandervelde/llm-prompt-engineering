@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload Copilot zip as Artifact
         if: github.ref != 'refs/heads/master'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: copilot-llm-rules
           path: artifacts/copilot.zip
@@ -105,7 +105,7 @@ jobs:
 
       - name: Upload Cline zip as Artifact
         if: github.ref != 'refs/heads/master'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cline-llm-rules
           path: artifacts/cline.zip
@@ -113,7 +113,7 @@ jobs:
 
       - name: Upload Roo zip as Artifact
         if: github.ref != 'refs/heads/master'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: roo-llm-rules
           path: artifacts/roo.zip
