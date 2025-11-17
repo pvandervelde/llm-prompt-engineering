@@ -1,6 +1,6 @@
 # metadata: merge_with_others=true
 
-- name: general-voice-and-tone
+- name: general-focus
   scope: repository
   editors:
     - name: copilot
@@ -12,10 +12,10 @@
   apply-to:
     - "**"
   text: |
-    Use a calm, precise, professional tone when explaining or documenting. Avoid overly casual
-    phrasing. Keep comments and responses focused, technical, and respectful.
+    Focus on the task at hand. Avoid distractions and stay on topic.
+    If you need to switch tasks, make sure to finish the current task first.
 
-- name: general-mention-rules-used
+- name: general-incremental-delivery
   scope: user
   editors:
     - name: copilot
@@ -27,23 +27,10 @@
   apply-to:
     - "**"
   text: |
-    Every time you choose to apply a rule(s), explicitly state the
-    rule(s) in the output. You can use the `rule` tag to do this. For example, `#rule: rule_name`.
-
-- name: general-mention-knowledge
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    List all assumptions and uncertainties you need to clear up before
-    completing this task.
+    Break large tasks into smaller, deliverable increments that can be completed and tested
+    independently. Each increment should provide visible progress and value. Prioritize
+    critical functionality first. Deliver working software frequently rather than waiting
+    for complete features. Use feature flags when necessary to enable incremental deployment.
 
 - name: general-think-carefully
   scope: user
@@ -61,38 +48,7 @@
     think step by step before and after each action you decide to take.
     Avoid rushing to complete tasks. If you need more time to think, say so.
 
-- name: general-confidence-check
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    On a 1-10 scale, where 10 is absolute conviction backed by overwhelming evidence, rate your confidence in each recommendation you are giving me.
-    Don't hedge - if something is a 3, say it is a 3 and explain why. If it is a 9 defend that high rating.
-    Do this before saving files, after saving, after rejections, and before task completion
-
-- name: general-grounding
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Always verify and validate information from multiple sources. Cross-reference findings from
-    different tools and document results and sources
-
-- name: general-focus
+- name: general-voice-and-tone
   scope: repository
   editors:
     - name: copilot
@@ -101,43 +57,8 @@
       modes: [plan, act]
     - name: roo
       modes: [architect, ask, code, debug, test]
-  text: |
-    Focus on the task at hand. Avoid distractions and stay on topic.
-    If you need to switch tasks, make sure to finish the current task first.
-
-- name: general-memory-bank
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
   apply-to:
     - "**"
   text: |
-    Use a memory bank to store information that is relevant to the task at hand.
-    This can include code snippets, documentation, and other resources. Use the memory bank to help you
-    stay on track and avoid distractions. Store structured entries (e.g. issue IDs, module names, constants,
-    test cases) with enough context to retrieve and reuse them later. Organize memory entries by domain
-    (e.g. rust::errors, infra::ci) when applicable. If no location for the memory bank is specified, use
-    `./.llm/memory/` as the default directory.
-
-- name: general-memory-bank-files
-  scope: user
-  editors:
-    - name: copilot
-      modes: [ask, edit]
-    - name: cline
-      modes: [plan, act]
-    - name: roo
-      modes: [architect, ask, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    In your memory bank, store at least the following files:
-    - `./.llm/memory/current-state.md`: This file should contain the current state of the project,
-      including any ongoing tasks, issues, and relevant context.
-    - `./.llm/memory/issues-to-file.md`: This file should contain todo items, technical debt, and
-      other issues that need to be addressed in the project.
+    Use a calm, precise, professional tone when explaining or documenting. Avoid overly casual
+    phrasing. Keep comments and responses focused, technical, and respectful.

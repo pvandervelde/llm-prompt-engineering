@@ -99,7 +99,7 @@ You can customize the rule generation by modifying parameters:
    ```markdown
    ---
    description: Your mode description here
-   tools: ['codebase', 'editFiles', 'search']
+   tools: ['search/codebase', 'edit/editFiles', 'search']
    ---
 
    You are an expert [YOUR SPECIALIZATION HERE]...

@@ -1,4 +1,8 @@
-# Copilot Setup Workflow Generation Prompt
+---
+mode: agent
+description: Generate a GitHub Actions workflow for setting up a development environment for the Copilot Coding Agent.
+tools: ['search/codebase', 'edit/editFiles', 'runCommands', 'search', 'search/searchResults', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection']
+---
 
 ## 🎯 Task
 

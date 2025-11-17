@@ -1,3 +1,9 @@
+---
+mode: agent
+description: Summarize the conversation for easy resumption later.
+tools: ['search/codebase', 'edit/editFiles', 'fetch', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection']
+---
+
 I would like you to summarize the current conversation I’ve been having with you.
 The summary should include:
 * A clear overview of the main topics discussed.

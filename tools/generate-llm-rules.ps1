@@ -220,7 +220,7 @@ function New-RooRules
 
     Write-Host "Generating Roo rules files..."
 
-    # Collect all unique Roo modes
+    # Get unique Roo modes
     $rooModes = @()
     foreach ($rule in $AllRules)
     {
@@ -238,23 +238,95 @@ function New-RooRules
     $rooModes = $rooModes | Select-Object -Unique
     Write-Host "  Found Roo modes: $($rooModes -join ', ')"
 
-    # Generate rules file for each mode
     foreach ($mode in $rooModes)
     {
         $modeDir = Join-Path "output/.roo" "rules-$mode"
         if (-not (Test-Path $modeDir))
         {
-            New-Item -ItemType Directory -Path $modeDir | Out-Null
+            New-Item -ItemType Directory -Path $modeDir -Force | Out-Null
         }
 
-        $modeRules = $AllRules | Where-Object { Test-RuleAppliesTo $_ "roo" $mode } | Group-Object -Property group
-        Write-Host "  Mode '$mode': $($modeRules.Count) rule groups"
+        # Filter rules for this mode
+        $modeRules = $AllRules | Where-Object { Test-RuleAppliesTo $_ "roo" $mode }
 
-        Write-RuleFile `
-            -FilePath (Join-Path $modeDir "$mode.md") `
-            -Header "Roo Instructions - $mode" `
-            -Rules $modeRules
+        # Separate mergeable and individual rules
+        $mergeableRules = $modeRules | Where-Object { $_.mergeWithOthers -eq $true }
+        $individualRules = $modeRules | Where-Object { $_.mergeWithOthers -ne $true }
+
+        # Write merged general file if any mergeable rules
+        if ($mergeableRules.Count -gt 0)
+        {
+            Write-RooModeFile -FilePath (Join-Path $modeDir "general.md") -Mode $mode -Rules $mergeableRules -FileType "General"
+        }
+
+        # Write individual files for each technology/language
+        $individualGroups = $individualRules | Group-Object sourceFileName
+        foreach ($group in $individualGroups)
+        {
+            $fileName = Get-RooFileName -SourceFileName $group.Name
+            Write-RooModeFile -FilePath (Join-Path $modeDir "$fileName.md") -Mode $mode -Rules $group.Group -FileType $fileName
+        }
     }
+}
+
+# Helper: Extracts technology/language name from source file name
+function Get-RooFileName
+{
+    param([string]$SourceFileName)
+    if ($SourceFileName -match "^\d+-coding-(.+)$")
+    {
+        return $Matches[1]
+    }
+    elseif ($SourceFileName -match "^\d+-(.+)$")
+    {
+        return $Matches[1]
+    }
+    else
+    {
+        return $SourceFileName
+    }
+}
+
+# Helper: Writes a Roo mode rules file (general or technology-specific)
+function Write-RooModeFile
+{
+    param(
+        [string]$FilePath,
+        [string]$Mode,
+        [PSCustomObject[]]$Rules,
+        [string]$FileType
+    )
+
+    $content = @()
+    $content += "# Roo Instructions - $Mode"
+    $content += ""
+
+    if ($FileType -ne "General")
+    {
+        $content += "## $FileType"
+        $content += ""
+    }
+
+    # Group rules by source file for organization within merged files
+    $rulesBySource = $Rules | Group-Object sourceFileName
+
+    foreach ($group in $rulesBySource)
+    {
+        if ($rulesBySource.Count -gt 1)
+        {
+            $groupName = Get-RooFileName -SourceFileName $group.Name
+            $content += "## $groupName"
+            $content += ""
+        }
+
+        foreach ($rule in $group.Group)
+        {
+            $content += "**$($rule.name):** $($rule.text)"
+        }
+        $content += ""
+    }
+
+    Set-Content -Path $FilePath -Value ($content -join [Environment]::NewLine) -Encoding UTF8
 }
 
 # Loads and processes all YAML rule files

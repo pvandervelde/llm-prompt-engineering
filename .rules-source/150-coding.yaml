@@ -1,65 +1,5 @@
 # metadata: merge_with_others=true
 
-- name: coding-design-architecture
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [architect, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Design modular, maintainable system components using appropriate technologies and frameworks. Ensure that integration
-    points are clearly defined and documented.
-
-- name: coding-design-pseudo-code
-  scope: user
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [architect, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Use pseudo-code to outline the logic and structure of the code before implementation. This helps to clarify the
-    design and identify potential issues early in the development process.
-
-- name: coding-whitespace
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [architect, code, debug, test]
-  apply-to:
-    - "**"
-  text: |
-    Always leave a whitespace between a line of code and a comment. This improves readability and helps to distinguish
-    between code and comments.
-
-- name: coding-style
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [architect, code, debug]
-  apply-to:
-    - "**"
-  text: |
-    Follow the style guides for the language. Use the appropriate formatters to format your code. This will
-    help ensure that the code is consistent and easy to read.
-
 - name: coding-comments
   scope: repository
   editors:
@@ -76,51 +16,6 @@
     this way — for example, domain-specific constraints, algorithmic trade-offs, or error handling strategy.
     Avoid commenting obvious control flow or syntax.
 
-- name: coding-tests-always
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [code, debug, architect]
-  apply-to:
-    - "**"
-  text: |
-    After implementing any logic, immediately write unit tests that verify its correctness.
-    Include realistic inputs, edge cases, and error conditions. Use the naming convention rules for test files.
-
-- name: coding-test-granularity
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [code, debug, architect]
-  apply-to:
-    - "**"
-  text: |
-    Each test should verify one behavior or input class. Use descriptive names like `test_parse_empty_string_fails`.
-    Prefer many small, specific tests over a few broad ones.
-
-- name: coding-test-execution
-  scope: repository
-  editors:
-    - name: copilot
-      modes: [edit, agent]
-    - name: cline
-      modes: [act]
-    - name: roo
-      modes: [code, debug, architect]
-  apply-to:
-    - "**"
-  text: |
-    Always assume tests should be executed. If tests cannot be run, clearly state this and provide expected output or
-    status. Use `cargo test` as the default unless a better method is available.
-
 - name: coding-explain-before-code
   scope: user
   editors:
@@ -133,7 +28,7 @@
   apply-to:
     - "**"
   text: |
-    Before producing Rust code, describe what the code will do, any assumptions, and possible areas of uncertainty.
+    Before producing code, describe what the code will do, any assumptions, and possible areas of uncertainty.
     Use pseudocode or step-by-step outlines when helpful.
 
 - name: coding-reflect-on-failure
@@ -151,7 +46,22 @@
     If previous code suggestions failed to compile or pass tests, analyze why they failed. Do not repeat the same logic.
     Explain what went wrong, and describe how the new solution avoids the same problem.
 
-- name: coding-review-before-commit
+- name: coding-style
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [architect, code, debug]
+  apply-to:
+    - "**"
+  text: |
+    Follow the style guides for the language. Use the appropriate formatters to format your code. This will
+    help ensure that the code is consistent and easy to read.
+
+- name: coding-test-granularity
   scope: repository
   editors:
     - name: copilot
@@ -163,6 +73,20 @@
   apply-to:
     - "**"
   text: |
-    Before committing code, review it for correctness, style, and test coverage. Ensure that **all** rules are followed,
-    that the code is as simple as it could be, and that the code is ready for production use. Now is the time to refactor
-    or simplify the code if needed.
+    Each test should verify one behavior or input class. Use descriptive names that explain what is being tested.
+    Prefer many small, specific tests over a few broad ones.
+
+- name: coding-tests-always
+  scope: repository
+  editors:
+    - name: copilot
+      modes: [edit, agent]
+    - name: cline
+      modes: [act]
+    - name: roo
+      modes: [code, debug, architect]
+  apply-to:
+    - "**"
+  text: |
+    After implementing any logic, immediately write unit tests that verify its correctness.
+    Include realistic inputs, edge cases, and error conditions. Use the naming convention rules for test files.
