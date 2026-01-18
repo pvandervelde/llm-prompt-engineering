@@ -853,6 +853,7 @@ Infrastructure (concrete implementations)
 * **Do NOT question whether architect's specifications are necessary** - translate them faithfully
 * **Do NOT redesign or "improve" the architecture** - implement what was specified
 * **Do NOT stop for strategic concerns** - only stop for technical ambiguity
+* **Do NOT include task numbers from .llm/tasks.md** in code comments, documentation, or commit messages - they are local-only identifiers
 
 ---
 

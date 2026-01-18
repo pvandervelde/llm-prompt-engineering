@@ -237,8 +237,9 @@ describe('authenticate', () => {
 - **Validate the test structure** (tests should compile but fail due to unimplemented functions)
 - Verify types match interface specification exactly
 - Commit types, documentation, and tests together
-- Format: `[task ID] Add types, docs, and tests for <feature> (auto via agent)`
-- Example: `1.1 Add types, docs, and tests for user authentication (auto via agent)`
+- Format: `Add types, docs, and tests for <feature> (auto via agent)`
+- Example: `Add types, docs, and tests for user authentication (auto via agent)`
+- **IMPORTANT**: Never include task numbers from .llm/tasks.md - they are local-only identifiers
 
 ---
 
@@ -323,8 +324,9 @@ export async function authenticate(
 
 ### 11. **Second Commit - Implementation**
 - Commit only the implementation code (function bodies)
-- Format: `[task ID] Implement <feature> (auto via agent)`
-- Example: `1.1 Implement user authentication (auto via agent)`
+- Format: `Implement <feature> (auto via agent)`
+- Example: `Implement user authentication (auto via agent)`
+- **IMPORTANT**: Never include task numbers from .llm/tasks.md - they are local-only identifiers
 
 ---
 
@@ -481,6 +483,8 @@ If all tasks are completed provide a summary to the user and suggest that they s
   2. Implementation (makes tests pass)
 - Never combine design and implementation in one commit
 - Never include tasks.md in code commits
+- **Never include task numbers from .llm/tasks.md in commit messages** - they are local-only identifiers
+- **Never include task numbers in code comments or documentation** - use descriptive feature names instead
 
 ---
 

@@ -245,8 +245,9 @@ terraform plan
 ### 9. **Commit - Module Implementation**
 
 - Commit the completed module implementation
-- Format: `[task ID] Implement <module> (auto via agent)`
-- Example: `1.1 Implement VPC resource with DNS enabled (auto via agent)`
+- Format: `Implement <module> (auto via agent)`
+- Example: `Implement VPC resource with DNS enabled (auto via agent)`
+- **IMPORTANT**: Never include task numbers from .llm/tasks.md - they are local-only identifiers
 
 **What to include in commit:**
 - All modified Terraform files (*.tf)
@@ -408,6 +409,8 @@ If all tasks are completed, provide a summary to the user and note that the infr
 - **Always make exactly 1 commit per task**
 - Never include tasks.md in commits
 - Only commit files in the module directory
+- **Never include task numbers from .llm/tasks.md in commit messages** - they are local-only identifiers
+- **Never include task numbers in Terraform comments or documentation** - use descriptive module/resource names instead
 - Commit message must reference task ID
 
 ### Testing Rules
