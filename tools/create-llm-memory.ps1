@@ -16,17 +16,21 @@ Set-StrictMode -Version Latest
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
-function Ensure-Dir {
+function Ensure-Dir
+{
     param([string]$Path)
-    if (-not (Test-Path -LiteralPath $Path)) {
+    if (-not (Test-Path -LiteralPath $Path))
+    {
         New-Item -ItemType Directory -Path $Path | Out-Null
         Write-Host "Created directory: $Path"
     }
 }
 
-function Write-FileIfNeeded {
+function Write-FileIfNeeded
+{
     param([string]$Path, [string]$Content)
-    if ((Test-Path -LiteralPath $Path) -and (-not $Force)) {
+    if ((Test-Path -LiteralPath $Path) -and (-not $Force))
+    {
         Write-Host "Skipping existing file: $Path (use -Force to overwrite)"
         return
     }
@@ -41,12 +45,12 @@ $dirs = @(
     "$root/docs",
     "$root/docs/adr",
     "$root/docs/standards",
-    "$root/modules",
-    "$root/tools",
-    "$root/.llm"
 )
 
-foreach ($d in $dirs) { Ensure-Dir -Path $d }
+foreach ($d in $dirs)
+{
+    Ensure-Dir -Path $d
+}
 
 # File contents (from provided templates)
 $agents = @'
@@ -126,8 +130,7 @@ When adding a constraint:
 1. Keep it under 20 words
 2. State the rule + the alternative
 3. Link to the source of truth (ADR/standard/catalog)
-4. Use ⚠️ for "don't do this" and ✅ for "do this"
-'@
+4. Use ⚠️ for "do not do this" and ✅ for "do this"
 
 ---
 
