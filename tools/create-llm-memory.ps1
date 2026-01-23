@@ -56,244 +56,182 @@ foreach ($d in $dirs)
 $agents = @'
 # Agent Instructions for Repository Context
 
-## Before Making Changes
+This repository contains conventions, constraints, and decisions that are easy to miss.
+Before proposing changes, pull the relevant repo memory docs into context.
 
-Agents working in this repository must consult the relevant memory documents before proposing changes.
+## Always do this
 
-### Items Changes
-**Triggers:** Any file in `xxx/yyy/`, `xxx/yyy/`, or mentioning `aaa`, `bbb`, `ccc`
+1) Read `docs/constraints.md` (tripwires + hard rules)
+2) Read `docs/catalog.md` (what already exists to reuse)
+3) Read relevant standards in `docs/standards/` (language/domain specific)
 
-**Required reading:**
-1. `docs/constraints.md` - Check constraints
-2. Any ADRs tagged with `#aaa` or `#bbb`
-3. `docs/standards/language.md` - standards
+## When to consult ADRs (mandatory triggers)
 
-### Adding New Modules/Helpers
-**Triggers:** Creating new files in `crates/`, `modules/`, `lib/`, `utils/`, `shared/`
+If your change touches any of the following, read the linked ADR(s) referenced from `docs/constraints.md`
+and/or search `docs/adr/` by keyword:
 
-**Required reading:**
-1. `docs/catalog.md` - Check if something similar exists
-2. `docs/standards/language.md` or relevant language standards
+### Architecture / boundaries
 
-### XXXX Layer Changes
-**Triggers:** Files in `xxx/yyy/`, `aa/`, or mentioning `aaa`, `bbbb`, `ccc`
+- cross-boundary integration (services, accounts, networks, tenants)
+- auth, identity, permissions
+- data storage, encryption, PII
+- multi-region/multi-environment behavior
+- performance or latency-sensitive paths
 
-**Required reading:**
-1. `docs/constraints.md` - Check data layer constraints
-2. ADRs tagged with `#aaa`
+### Interfaces
 
-## General Rules
+- public API changes
+- database schema changes
+- message/event contracts
+- CLI flags / config formats
 
-1. **Always check `docs/constraints.md` first** - It's the index of things we keep relearning
-2. **Follow linked ADRs** - They contain the "why" and approved patterns
-3. **Check the catalog** before creating new utilities/modules
-4. **Reference ADRs in commit messages** when implementing a decision
+### Risky domains
 
-## When These Docs Conflict
+- networking, security, secrets, payments
+- build/release pipelines
+- migrations and backwards compatibility
 
-If an ADR contradicts a constraint or standard, the ADR wins (it's more recent). Flag the conflict for human review.
+## Contribution expectations
+
+- Prefer small diffs
+- Reuse existing helpers/modules before adding new ones
+- If you introduce a new pattern or constraint, add an ADR and a `docs/constraints.md` entry
+- When summarizing changes, link the ADR(s) / standards you relied on
+
+## What to include in responses
+
+When generating code or plans:
+
+- cite which constraints apply
+- name the standards followed (formatting, naming, error handling, etc.)
+- mention existing modules/helpers used (from `docs/catalog.md`)
 '@
 
 $constraints = @'
-# Repository Constraints - Things We Keep Relearning
+# Repository constraints (read this first)
 
-**Purpose:** Quick reference for non-obvious constraints and decisions. Each item links to the full explanation (ADR/standard/catalog).
+This file is the quick index of non-obvious rules and “things we keep relearning”.
+Each item links to a source of truth (ADR, standards, or a guide).
 
-Last updated: 2026-01-16
+Keep this file SHORT (10–30 items). Prefer links over long explanations.
 
----
+## Hard constraints (must follow)
 
-## Code Standards
+- **[Constraint title]**: One-line rule that is unambiguous.
+  Do instead: one-line preferred approach.
+  Source: `docs/adr/ADR-XXXX-...md`
 
-### TypeScript
+  - **[Constraint title]**: One-line rule.
+  Do instead: one-line approach.
+  Source: `docs/standards/<topic>.md`
 
-- ✅ **Use existing retry utility** - Don't write your own. Use `src/shared/utils/async.retry()` → [Catalog](catalog.md#shared-utilities)
+## Defaults (strong preferences)
 
-- ✅ **Custom error classes already exist** - Check `src/shared/errors/` before creating new ones → [Catalog](catalog.md#error-handling)
+- **Prefer [X] over [Y]** for [reason in 5–10 words].
+  Source: `docs/adr/ADR-XXXX-...md`
 
-### Testing
+## “Check before you build”
 
-- ⚠️ **Don't mock internal functions** - Only mock external dependencies (APIs, databases) → [TypeScript Standards](standards/typescript.md#testing)
+- **New shared helper/module?** Read: `docs/catalog.md`
+- **Changing public API?** Read: `docs/standards/api.md` and relevant ADRs
+- **Changing data model?** Read: `docs/standards/data.md` and relevant ADRs
 
----
+## Keywords (for quick search)
 
-## How to Use This File
-
-1. **Before implementing** - Scan for relevant constraints
-2. **When stuck** - Check if we've solved this before
-3. **When onboarding** - Read all constraints to avoid common mistakes
-4. **Keep updated** - Add new constraints as discovered (with ADR links)
-
-## Adding New Constraints
-
-When adding a constraint:
-1. Keep it under 20 words
-2. State the rule + the alternative
-3. Link to the source of truth (ADR/standard/catalog)
-4. Use ⚠️ for "do not do this" and ✅ for "do this"
-
----
-
-## Decision
-
-TBD
-
-## Context
-
-TBD
-
-### What Doesn't Work
-
-```code
-func stuff() {
-    // This approach fails because...
-}
-```
-
-Error: `This code does not work`
-
-## Approved Pattern
-
-### Use this approach instead
-
-```code
-func do_other_stuff() {
-    // This works because...
-}
-```
-
-## Consequences
-
-### Positive
-- Clear, documented pattern that works
-- Prevents hours of debugging
-
-### Negative
-- ??
-
-### Mitigation
-- ??
-
-## Alternatives Considered
-
-### Option 1: ??
-- **Pro:** ?
-- **Con:** ?
-- **Decision:** ?
-
-## References
-
-- [Link to related ADR or doc](url)
-
-## Review
-
-**Next review:** 2025-01-15
+Suggested keywords for searching ADRs:
+`security`, `auth`, `api`, `data`, `migration`, `network`, `performance`, `build`, `release`, `observability`
 '@
 
 $catalog = @'
-# Repository Catalog - What Already Exists
+# Catalog (what exists / reuse map)
 
-**Purpose:** Prevent reinventing wheels. Check here before creating new modules, helpers, or utilities.
+Purpose: prevent reinventing utilities, modules, patterns, and “hidden” features.
 
-Last updated: 2024-01-16
+Add to this whenever a reusable component becomes “the standard way”.
 
----
+## Common building blocks
 
-## Modules (`modules/`)
+- **`<path/to/component>`** — What it does (1 line)
+  Use when: scenario (1 line)
+  Key entry points: `foo()`, `bar()`, config keys, or main exports
+  Notes: constraints or gotchas (optional, 1–2 lines)
 
-### `modules/a/`
-**What:** Does A
-**When to use:** Anytime you need A
-**Key inputs:** `ab`, `ac`
-**Key outputs:** `a`
-**Docs:** `modules/a/README.md`
+- **`<path/to/component>`** — What it does
+  Use when: ...
+  Key entry points: ...
 
----
+## Cross-cutting helpers
 
-## Shared Utilities (`src/shared/utils/`)
+- Logging: `<path>` (how to use)
+- Error handling: `<path>` (how to wrap/return errors)
+- Configuration: `<path>` (how config is loaded/validated)
+- Testing utilities: `<path>`
 
-### `async.ts`
-**Functions:**
-- `retry(fn, options)` - Retry with exponential backoff
-- `timeout(promise, ms)` - Add timeout to any promise
-- `parallel(tasks, concurrency)` - Run tasks with concurrency limit
+## Where to add new stuff
 
-**When to use:** Don't write your own retry/timeout logic
+- “Reusable”: goes in `<shared path>`
+- “Repo-specific”: goes in `<app path>`
+- “Experimental”: goes in `<experimental path>` (and must not be depended on)
 
-**Example:**
-```typescript
-import { retry } from '@/shared/utils/async';
+## Search keywords
 
-const result = await retry(
-  () => fetchFromAPI(id),
-  { maxAttempts: 3, delayMs: 1000 }
-);
-```
+`logging`, `config`, `http client`, `db`, `cache`, `retry`, `auth`, `metrics`, `tracing`, `cli`, `validation`
+'@
 
-### `validation.ts`
-**Functions:**
-- `isEmail(str)` - RFC 5322 email validation
-- `isUUID(str)` - UUID v4 validation
-- `sanitize(str)` - HTML/SQL injection prevention
+$standards_readme = @'
+# Standards
 
-**When to use:** Input validation in API handlers
+These are stable conventions that keep the repo consistent.
 
----
+If a rule changes often, it probably belongs in an ADR or a short guide instead.
 
-## Error Handling (`src/shared/errors/`)
+## Recommended standards files (create what applies)
 
-**Existing error classes:**
-- `NotFoundError` - Resource not found (404)
-- `ValidationError` - Input validation failed (400)
-- `UnauthorizedError` - Authentication required (401)
-- `ForbiddenError` - Insufficient permissions (403)
-- `ConflictError` - Resource conflict (409)
-- `InternalError` - Unexpected server error (500)
-
-**When to use:** Don't create new error classes without checking here first
-
-**Example:**
-```typescript
-import { NotFoundError } from '@/shared/errors';
-
-if (!user) {
-  throw new NotFoundError(`User ${id} not found`);
-}
-```
-
----
-
-## How to Use This Catalog
-
-**Before creating anything:**
-1. Search this file for similar functionality
-2. Check the linked README/docs for usage
-3. If similar exists, use or extend it (don't duplicate)
-4. If creating something new, add it here
-
-**Keeping this updated:**
-- When adding a module: Document it here
-- When adding a utility: Document it here
-- Review quarterly to remove deprecated items
+- `coding.md` — naming, structure, error handling, testing expectations
+- `api.md` — versioning, backwards compatibility, deprecation policy
+- `data.md` — schema changes, migrations, privacy, retention
+- `security.md` — secrets, auth, permissions, threat model basics
+- `observability.md` — logs/metrics/tracing, required fields, sampling
+- `build-release.md` — CI, artifact versioning, release process
+- `style-<lang>.md` — language-specific conventions (go/rust/python/ts/etc.)
 '@
 
 $standards_code = @'
-# Code Standards
+# Coding standards
 
----
+## Structure
 
-## File Organization
+- Keep modules small and focused
+- Prefer clear boundaries (domain vs infra vs adapters)
+- Avoid circular dependencies
 
-Put the file organization rules here.
+## Naming
 
----
+- Use consistent naming for types, functions, and files
+- Prefer explicit names over abbreviations
 
-## Naming Conventions
+## Error handling
 
-Put the naming conventions here.
+- Errors must include actionable context
+- Don’t swallow errors; propagate or handle intentionally
+- Prefer typed errors / error codes where supported
 
----
+## Testing
 
+- New logic requires tests
+- Prefer unit tests for logic, integration tests for boundaries
+- Tests must be deterministic (no real network/time without fakes)
+
+## Backwards compatibility
+
+- Public interfaces must be compatible or versioned
+- Deprecations must include migration notes
+
+## Security basics
+
+- Never log secrets or tokens
+- Use approved secret/config mechanisms
+- Validate inputs at boundaries
 '@
 
 # Write files
@@ -301,6 +239,7 @@ Write-FileIfNeeded -Path (Join-Path $root "AGENTS.md") -Content $agents
 Write-FileIfNeeded -Path (Join-Path $root "docs/constraints.md") -Content $constraints
 # Note: ADR example files are intentionally not created by this script.
 Write-FileIfNeeded -Path (Join-Path $root "docs/catalog.md") -Content $catalog
+Write-FileIfNeeded -Path (Join-Path $root "docs/standards/README.md") -Content $standards_readme
 Write-FileIfNeeded -Path (Join-Path $root "docs/standards/code.md") -Content $standards_code
 
 # ADR folder README and template (no example ADRs)
@@ -315,24 +254,44 @@ Do not add example ADRs automatically. Use the ADR template to create new ADRs.
 '@
 
 $adrTemplate = @'
-# ADR Template
+# ADR-XXXX: <Decision title>
 
-Title:
-Status: Proposed / Accepted / Deprecated
+Status: Proposed | Accepted | Deprecated | Superseded
 Date: YYYY-MM-DD
-Tags: #tag1 #tag2
+Owners: <team or handle>
 
 ## Context
 
-Describe the problem and why it matters.
+What problem are we solving? What constraints matter? What did we try?
+Keep this short and concrete.
 
 ## Decision
 
-What decision was made.
+One paragraph with the decision stated clearly and unambiguously.
+Include “do / don’t” if needed.
 
 ## Consequences
 
-Positive/negative consequences and tradeoffs.
+- What this enables
+- What this forbids
+- What trade-offs we accept
+
+## Alternatives considered
+
+- Option A: why not
+- Option B: why not
+
+## Implementation notes
+
+Practical guidance, sharp edges, rollout notes.
+
+## Examples
+
+Minimal code/config snippets that demonstrate the preferred approach.
+
+## References
+
+Links to docs, incidents, PRs, RFCs.
 '@
 
 Write-FileIfNeeded -Path (Join-Path $root "docs/adr/README.md") -Content $adrReadme
