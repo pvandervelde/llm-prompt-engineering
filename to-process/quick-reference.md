@@ -60,6 +60,73 @@ A one-page reference for using the AI-assisted development framework.
 
 ---
 
+## 🎯 Task Tracking with Beads (Optional)
+
+### Why Beads?
+- **AI-friendly** - JSON output, semantic queries
+- **Git-versioned** - No external services needed
+- **Dependency-aware** - Knows what's blocking what
+- **Multi-agent safe** - Hash-based IDs prevent collisions
+
+### Installation
+```bash
+# Install Beads
+curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash
+
+# Initialize in your repo
+bd init
+```
+
+### Daily Workflow
+```bash
+# See what's ready to work on
+bd ready
+
+# Create a task
+bd create "Add user authentication" -p 1 -t feature
+
+# Start working on it
+bd update bd-abc working
+
+# Commit with task ID
+git commit -m "Implement JWT auth (bd-abc)"
+
+# Close when done
+bd close bd-abc --reason "Completed"
+```
+
+### Task Dependencies
+```bash
+# Create dependent tasks
+bd create "Database schema" -p 1 -t task
+bd create "API endpoints" -p 2 -t feature --blocks-on bd-abc
+
+# bd ready will show bd-abc first, bd-xyz after bd-abc is closed
+```
+
+### Integration with Framework
+- **ADRs**: Reference in task descriptions: "See ADR-0005 for auth approach"
+- **Constraints**: Check docs/constraints.md before closing tasks
+- **Catalog**: Update when task creates reusable component
+- **Commits**: Include task ID: `git commit -m "message (bd-abc)"`
+
+### For AI Agents
+```bash
+# Get tasks as JSON for parsing
+bd ready --json
+
+# Show task details
+bd show bd-abc --json
+
+# Search for related work
+bd search "authentication" --json
+
+# Check for orphaned work
+bd doctor --orphans --json
+```
+
+---
+
 ## ✅ Automated Checks
 
 ### Pre-Commit (Fast)
@@ -112,42 +179,6 @@ cp docs/adr/ADR_TEMPLATE.md docs/adr/ADR-0001-my-decision.md
 - Use sequential numbers: ADR-0001, ADR-0002, etc.
 - Don't reuse numbers
 - Mark superseded ADRs as "Status: Superseded by ADR-XXXX"
-
----
-
-## 🎯 Task Tracking with Beads
-
-### Daily Workflow
-```bash
-# See what's ready to work on
-bd ready
-
-# Create a task
-bd create "Add user authentication" -p 1 -t feature
-
-# Start working on it
-bd update bd-abc working
-
-# Commit with task ID
-git commit -m "Implement JWT auth (bd-abc)"
-
-# Close when done
-bd close bd-abc --reason "Completed"
-```
-
-### Task Dependencies
-```bash
-# Create dependent tasks
-bd create "Database schema" -p 1 -t task
-bd create "API endpoints" -p 2 -t feature --blocks-on bd-abc
-
-# bd ready will show bd-abc first, bd-xyz after bd-abc is closed
-```
-
-### Integration with Framework
-- **ADRs**: Reference in task descriptions
-- **Constraints**: Check before closing tasks
-- **Catalog**: Update when task creates reusable component
 
 ---
 
