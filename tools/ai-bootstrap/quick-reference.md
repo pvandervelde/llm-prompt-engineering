@@ -5,6 +5,7 @@ A one-page reference for using the AI-assisted development framework.
 ## 🚀 Quick Start
 
 **First time setup:**
+
 ```bash
 # Windows
 .\scripts\bootstrap-ai-repo.ps1
@@ -14,6 +15,7 @@ A one-page reference for using the AI-assisted development framework.
 ```
 
 **Add to existing repo:**
+
 ```bash
 # 1. Copy framework files to your repo
 # 2. Run bootstrap script
@@ -53,6 +55,7 @@ A one-page reference for using the AI-assisted development framework.
    - Infrastructure
 
 **When committing:**
+
 - Reference ADRs for architectural changes
 - Follow constraints from `.tech-decisions.yml`
 - Explain "why" in commit message
@@ -63,12 +66,14 @@ A one-page reference for using the AI-assisted development framework.
 ## 🎯 Task Tracking with Beads (Optional)
 
 ### Why Beads?
+
 - **AI-friendly** - JSON output, semantic queries
 - **Git-versioned** - No external services needed
 - **Dependency-aware** - Knows what's blocking what
 - **Multi-agent safe** - Hash-based IDs prevent collisions
 
 ### Installation
+
 ```bash
 # Install Beads
 curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash
@@ -78,6 +83,7 @@ bd init
 ```
 
 ### Daily Workflow
+
 ```bash
 # See what's ready to work on
 bd ready
@@ -96,6 +102,7 @@ bd close bd-abc --reason "Completed"
 ```
 
 ### Task Dependencies
+
 ```bash
 # Create dependent tasks
 bd create "Database schema" -p 1 -t task
@@ -105,12 +112,14 @@ bd create "API endpoints" -p 2 -t feature --blocks-on bd-abc
 ```
 
 ### Integration with Framework
+
 - **ADRs**: Reference in task descriptions: "See ADR-0005 for auth approach"
 - **Constraints**: Check docs/constraints.md before closing tasks
 - **Catalog**: Update when task creates reusable component
 - **Commits**: Include task ID: `git commit -m "message (bd-abc)"`
 
 ### For AI Agents
+
 ```bash
 # Get tasks as JSON for parsing
 bd ready --json
@@ -127,10 +136,59 @@ bd doctor --orphans --json
 
 ---
 
+## 📋 Fallback Task Tracking (.llm/tasks.md)
+
+**When Beads is not available**, tasks are stored in `.llm/tasks.md` as Markdown:
+
+### Format
+
+```markdown
+# Implementation Tasks
+
+## Task List
+
+- [ ] 1.0 Parent Task
+  - Context:
+    - Background information
+    - File locations
+  - [ ] 1.1 Subtask one
+  - [ ] 1.2 Subtask two
+
+- [x] 2.0 Completed Task
+```
+
+### Helper Scripts
+
+```bash
+# Export tasks from .llm/tasks.md to JSON
+./scripts/tasks-export.ps1      # PowerShell
+./scripts/tasks-export.sh       # Bash
+
+# Import .llm/tasks.md into Beads
+./scripts/tasks-import.ps1      # PowerShell
+./scripts/tasks-import.sh       # Bash
+```
+
+### Auto-Detection (AI Modes)
+
+AI modes automatically:
+
+1. Check if Beads CLI is available
+2. If yes → use Beads JSON export
+3. If no → read `.llm/tasks.md`
+4. Find first unchecked `- [ ]` task
+5. Execute that task
+
+No configuration needed—modes just work with whichever format is available.
+
+---
+
 ## ✅ Automated Checks
 
 ### Pre-Commit (Fast)
+
 Runs automatically before each commit:
+
 - ✓ Secrets detection
 - ✓ Format check
 - ✓ Quick linting
@@ -140,14 +198,18 @@ Runs automatically before each commit:
 **Bypass:** `git commit --no-verify` (not recommended)
 
 ### Commit Message
+
 Validates commit message:
+
 - ✓ Minimum length
 - ✓ Not too vague
 - ⚠ ADR reference for infrastructure changes
 - ℹ Suggests adding "why" for single-line commits
 
 ### CI Pipeline (Comprehensive)
+
 Runs on push/PR:
+
 - ✓ All pre-commit checks (enforced)
 - ✓ Full test suite + coverage
 - ✓ Integration tests
@@ -176,6 +238,7 @@ cp docs/adr/ADR_TEMPLATE.md docs/adr/ADR-0001-my-decision.md
 ```
 
 **ADR numbering:**
+
 - Use sequential numbers: ADR-0001, ADR-0002, etc.
 - Don't reuse numbers
 - Mark superseded ADRs as "Status: Superseded by ADR-XXXX"
@@ -185,6 +248,7 @@ cp docs/adr/ADR_TEMPLATE.md docs/adr/ADR-0001-my-decision.md
 ## 🔧 Common Tasks
 
 ### Add a new standard
+
 ```bash
 # 1. Create/update docs/standards/TOPIC.md
 # 2. Reference in docs/constraints.md if it's a hard rule
@@ -193,6 +257,7 @@ cp docs/adr/ADR_TEMPLATE.md docs/adr/ADR-0001-my-decision.md
 ```
 
 ### Add a reusable component
+
 ```bash
 # 1. Build and test the component
 # 2. Add entry to docs/catalog.md
@@ -200,6 +265,7 @@ cp docs/adr/ADR_TEMPLATE.md docs/adr/ADR-0001-my-decision.md
 ```
 
 ### Update tech stack
+
 ```bash
 # 1. Document decision in ADR
 # 2. Update .tech-decisions.yml
@@ -209,6 +275,7 @@ cp docs/adr/ADR_TEMPLATE.md docs/adr/ADR-0001-my-decision.md
 ```
 
 ### Run all checks locally
+
 ```bash
 # Before pushing, validate everything:
 ./scripts/validate-local.sh   # Linux/Mac
@@ -222,6 +289,7 @@ cp docs/adr/ADR_TEMPLATE.md docs/adr/ADR-0001-my-decision.md
 ## 🚨 Troubleshooting
 
 ### Hooks not running
+
 ```bash
 # Check hook configuration
 git config core.hooksPath
@@ -236,6 +304,7 @@ chmod +x .githooks/*
 ```
 
 ### Pre-commit failing
+
 ```bash
 # See what failed and fix it
 # Common issues:
@@ -249,6 +318,7 @@ git commit --no-verify
 ```
 
 ### CI failing but local passed
+
 ```bash
 # CI is more comprehensive than pre-commit
 # Run full local validation:
@@ -261,6 +331,7 @@ git commit --no-verify
 ```
 
 ### Can't find right ADR
+
 ```bash
 # Search ADRs by keyword
 grep -r "keyword" docs/adr/
@@ -278,18 +349,22 @@ grep -r "keyword" docs/adr/
 ## 📊 Metrics and Health
 
 ### Coverage Requirements
+
 - **Unit tests:** 80% minimum (configurable in `.tech-decisions.yml`)
 - **Mutation score:** 70% minimum
 - Check in CI output or coverage reports
 
 ### Quality Thresholds
+
 All configurable in `.tech-decisions.yml`:
+
 - Max function length: 50 lines
 - Max file length: 500 lines
 - Max complexity: 10
 - No duplicate blocks
 
 ### Security Scanning
+
 - Dependency vulnerabilities: Fail on HIGH or CRITICAL
 - Secrets: Always fail if detected
 - Code scanning: CodeQL or equivalent
@@ -299,6 +374,7 @@ All configurable in `.tech-decisions.yml`:
 ## 🎯 Best Practices
 
 ### For Developers
+
 1. **Read before writing** — Check catalog and standards first
 2. **Small commits** — Easier to review and revert
 3. **Meaningful messages** — Future you will thank you
@@ -306,6 +382,7 @@ All configurable in `.tech-decisions.yml`:
 5. **Update docs** — Keep memory fresh
 
 ### For AI Agents
+
 1. **Always read AGENTS.md first** — Saves back-and-forth
 2. **Reference constraints** — Show which rules apply
 3. **Cite ADRs** — Explain why this approach
@@ -313,6 +390,7 @@ All configurable in `.tech-decisions.yml`:
 5. **Explain trade-offs** — Help humans understand choices
 
 ### For Teams
+
 1. **Review ADRs regularly** — Retire obsolete ones
 2. **Keep constraints.md short** — 10-30 items max
 3. **Update catalog promptly** — As soon as component stabilizes
@@ -336,21 +414,25 @@ All configurable in `.tech-decisions.yml`:
 ## 💡 Tips
 
 **Speeding up pre-commit:**
+
 - Pre-commit runs fast checks only (< 10s)
 - If slower, move checks to CI
 - Use `--no-verify` sparingly
 
 **Making checks useful:**
+
 - Check failure = actionable message
 - Include "how to fix" in error output
 - Link to relevant docs
 
 **Keeping docs current:**
+
 - Review monthly: Are constraints still relevant?
 - Review quarterly: Update .tech-decisions.yml
 - Review on incidents: What could have prevented this?
 
 **Evolving the framework:**
+
 ```bash
 # AI can help improve the framework itself:
 # "Review recent failed builds and suggest new checks"

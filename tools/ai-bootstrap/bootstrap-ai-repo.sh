@@ -71,12 +71,12 @@ if [ -f "$MEMORY_SCRIPT" ]; then
     print_success "AI memory structure created"
 else
     print_warning "create-llm-memory.sh not found, creating minimal structure..."
-    
+
     # Create minimal structure
     mkdir -p "$ROOT/docs/adr"
     mkdir -p "$ROOT/docs/standards"
     mkdir -p "$ROOT/.githooks"
-    
+
     print_success "Minimal directory structure created"
 fi
 
@@ -159,7 +159,7 @@ if [ -f "Cargo.toml" ]; then
         echo "    ✗ Code not formatted. Run: cargo fmt"
         FAILED=1
     fi
-    
+
     echo "  • Rust: Running clippy (fast checks)..."
     if ! cargo clippy --all-targets -- -D warnings -W clippy::all 2>/dev/null; then
         echo "    ✗ Clippy warnings found"
@@ -175,7 +175,7 @@ if [ -f "package.json" ]; then
             echo "    ✗ Code not formatted. Run: npx prettier --write ."
             FAILED=1
         fi
-        
+
         echo "  • JS/TS: Running linter..."
         if ! npx eslint . 2>/dev/null; then
             echo "    ✗ ESLint warnings found"
@@ -193,7 +193,7 @@ if [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
             FAILED=1
         fi
     fi
-    
+
     if command -v ruff >/dev/null 2>&1; then
         echo "  • Python: Running ruff..."
         if ! ruff check . 2>/dev/null; then
@@ -343,7 +343,7 @@ fi
 if [ -f "$ROOT/package.json" ]; then
     LANGUAGES+=("javascript")
     print_info "Detected: JavaScript"
-    
+
     if [ -f "$ROOT/tsconfig.json" ]; then
         LANGUAGES+=("typescript")
         print_info "Detected: TypeScript"
@@ -381,7 +381,7 @@ if [ -f "$TECH_FILE" ] && [ $FORCE -eq 0 ]; then
 else
     # Convert array to comma-separated string
     LANGS_STR=$(IFS=, ; echo "${LANGUAGES[*]}")
-    
+
     cat > "$TECH_FILE" << EOF
 # Technology Decisions and Standards
 # Generated: $(date +%Y-%m-%d)
@@ -418,7 +418,7 @@ EOF
                 ;;
         esac
     done
-    
+
     cat >> "$TECH_FILE" << 'EOF'
   rationale: "Standardized for consistency across projects"
 
@@ -457,7 +457,7 @@ infrastructure:
     - "Hard-code credentials"
     - "Use 'latest' tag in production"
 EOF
-    
+
     print_success "Created .tech-decisions.yml"
 fi
 
@@ -468,12 +468,12 @@ print_step "[5/6] Setting up Beads task tracking (optional)..."
 
 if command -v bd >/dev/null 2>&1; then
     print_info "Beads already installed"
-    
+
     # Initialize Beads in the repo
     cd "$ROOT"
     if bd init 2>/dev/null; then
         print_success "Initialized Beads task tracking"
-        
+
         # Update AGENTS.md with task tracking section
         AGENTS_FILE="$ROOT/AGENTS.md"
         if [ -f "$AGENTS_FILE" ]; then
@@ -522,7 +522,7 @@ bd doctor             # Check for orphaned work
 BEADS_SECTION
             print_success "Updated AGENTS.md with task tracking guidance"
         fi
-        
+
         # Update .tech-decisions.yml with task tracking config
         TECH_FILE="$ROOT/.tech-decisions.yml"
         if [ -f "$TECH_FILE" ]; then
@@ -533,14 +533,14 @@ task_tracking:
   tool: beads
   required_in_commit: recommended  # Recommend bd-xxx in commit messages
   auto_close_on_merge: false  # Manual close for explicit decision tracking
-  
+
   # When to create tasks
   task_required_for:
     - "New features"
     - "Bug fixes"
     - "Architectural changes"
     - "Infrastructure changes"
-  
+
   # Task types (align with your workflow)
   types:
     - feature      # New functionality
@@ -552,14 +552,14 @@ task_tracking:
 TECH_SECTION
             print_success "Updated .tech-decisions.yml with task tracking config"
         fi
-        
+
         # Create initial setup tasks
         print_info "Creating initial framework setup tasks..."
         bd create "Customize docs/constraints.md with project-specific rules" -p 1 -t docs >/dev/null 2>&1
         bd create "Fill in .tech-decisions.yml with actual tech choices" -p 1 -t docs >/dev/null 2>&1
         bd create "Create first ADR documenting initial architectural decision" -p 2 -t docs >/dev/null 2>&1
         bd create "Review and customize pre-commit hooks for project needs" -p 3 -t infrastructure >/dev/null 2>&1
-        
+
         print_info "Created 4 initial setup tasks. Run 'bd ready' to see them."
     else
         print_warning "Failed to initialize Beads"
@@ -576,6 +576,57 @@ else
     print_info "  • Dependency management (what's blocking what)"
     print_info "  • Git-versioned (no external services needed)"
     print_info "  • Multi-agent coordination safe"
+    echo ""
+    print_info "In the meantime, AI modes will use ./.llm/tasks.md for task tracking."
+fi
+
+# ============================================================================
+# Step 5b: Initialize Fallback Task Structure
+# ============================================================================
+print_step "[5b/6] Initializing fallback task structure (.llm/tasks.md)..."
+
+LLM_DIR="$ROOT/.llm"
+if [ ! -d "$LLM_DIR" ]; then
+    mkdir -p "$LLM_DIR"
+    print_success "Created .llm directory"
+fi
+
+# Create a template tasks.md if it doesn't exist
+TASKS_FILE="$LLM_DIR/tasks.md"
+if [ ! -f "$TASKS_FILE" ]; then
+    cat > "$TASKS_FILE" << 'TASKS_EOF'
+# Implementation Tasks
+
+> **Note**: This file serves as the fallback task source when Beads is not available.
+> If Beads is installed and initialized, tasks can be synced using: `scripts/tasks-export.ps1` or `scripts/tasks-export.sh`
+
+## Project Context
+
+- Framework: AI-assisted development with Beads task tracking
+- Task Format: Standard Markdown checklist
+- Integration: Modes auto-detect Beads; fall back to this file when unavailable
+
+## Shared Types Registry
+
+> Populated during implementation as reusable types are discovered
+
+## Rules & Tips
+
+> Populated during implementation as project patterns emerge
+
+## Task List
+
+- [ ] 1.0 Initialize Project
+  - Context:
+    - This is a placeholder task for project setup
+    - Customize this template with your actual implementation tasks
+  - Assertions: none
+  - [ ] 1.1 Review and customize .tech-decisions.yml
+  - [ ] 1.2 Set up initial ADRs (Architecture Decision Records)
+TASKS_EOF
+    print_success "Created .llm/tasks.md template"
+else
+    print_info ".llm/tasks.md already exists (skipped)"
 fi
 
 # ============================================================================
@@ -603,11 +654,11 @@ jobs:
     name: Fast Quality Checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       # Task tracking validation (if Beads is used)
       - name: Check task tracking
         continue-on-error: true
@@ -617,14 +668,14 @@ jobs:
             if ! git log --format=%s -1 | grep -E '\(bd-[a-z0-9]+\)'; then
               echo "::warning::No task ID in commit message. Consider: (bd-xxx)"
             fi
-            
+
             # Check for orphaned work (commits without closed tasks)
             if bd doctor --orphans --json 2>/dev/null | grep -q "orphans"; then
               echo "::warning::Found commits with task IDs but tasks not closed"
               bd doctor --orphans
             fi
           fi
-      
+
       - name: Check for secrets
         run: |
           pip install detect-secrets
@@ -638,71 +689,71 @@ EOF
         case $lang in
             rust)
                 cat >> "$CI_FILE" << 'EOF'
-      
+
       - name: Rust - Setup
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           components: rustfmt, clippy
-      
+
       - name: Rust - Format check
         run: cargo fmt -- --check
-      
+
       - name: Rust - Clippy
         run: cargo clippy --all-targets -- -D warnings
-      
+
       - name: Rust - Unit tests
         run: cargo test --lib
 EOF
                 ;;
             javascript|typescript)
                 cat >> "$CI_FILE" << 'EOF'
-      
+
       - name: Node - Setup
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
-      
+
       - name: Node - Install dependencies
         run: npm ci
-      
+
       - name: Node - Format check
         run: npx prettier --check .
-      
+
       - name: Node - Lint
         run: npx eslint .
-      
+
       - name: Node - Unit tests
         run: npm test
 EOF
                 ;;
             python)
                 cat >> "$CI_FILE" << 'EOF'
-      
+
       - name: Python - Setup
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      
+
       - name: Python - Install dependencies
         run: |
           pip install black ruff pytest
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      
+
       - name: Python - Format check
         run: black --check .
-      
+
       - name: Python - Lint
         run: ruff check .
-      
+
       - name: Python - Unit tests
         run: pytest tests/
 EOF
                 ;;
         esac
     done
-    
+
     print_success "Created .github/workflows/quality.yml"
 fi
 
