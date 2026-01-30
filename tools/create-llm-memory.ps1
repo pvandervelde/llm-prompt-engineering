@@ -44,7 +44,7 @@ function Write-FileIfNeeded
 $dirs = @(
     "$root/docs",
     "$root/docs/adr",
-    "$root/docs/standards",
+    "$root/docs/standards"
 )
 
 foreach ($d in $dirs)

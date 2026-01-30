@@ -15,13 +15,22 @@ implementation by reading specifications and examining related code.
 
 ### Step 1: Read the Task List
 
-1. **Locate the tasks file**: Read `.llm/tasks.md` from the repository root
-2. **Identify the next task**: Find the first task that is marked as "not started" or "pending"
+1. **Locate the tasks source**:
+   - First, check if Beads CLI is available by running `beads --version`
+   - If Beads is available: Run `scripts/tasks-export.ps1` or `scripts/tasks-export.sh` to export current tasks in JSON format
+   - If Beads is not available: Read `.llm/tasks.md` from the repository root
+
+2. **Identify the next task**:
+   - Parse the task list to find the first task marked as "not started" or unchecked (`[ ]`)
+   - For Beads output (JSON): Look for first task with `"completed": false`
+   - For `.llm/tasks.md` (Markdown): Find first `- [ ]` task
+
 3. **Extract task details**:
    - Task title and description
    - Task priority and dependencies
    - Any associated issue or PR references
    - Expected deliverables or acceptance criteria
+   - Context block (when present in Markdown format)
 
 ### Step 2: Gather Specification Context
 
@@ -206,7 +215,8 @@ After gathering all context, create a detailed implementation plan following TDD
 
 ## 🚨 Important Notes
 
-- If `.llm/tasks.md` doesn't exist, inform the user and ask where tasks are tracked
+- If neither Beads nor `.llm/tasks.md` exists, inform the user and ask where tasks are tracked
+- If Beads is available but returns no tasks, fall back to `.llm/tasks.md`
 - If no tasks are marked as pending, report that all tasks are complete or in progress
 - If critical information is missing (specs, code context), list what's needed before proceeding
 - If the task description is unclear, ask for clarification before gathering context

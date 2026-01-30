@@ -132,6 +132,8 @@ Your output must:
 
 Generate `./.llm/tasks.md` with appropriate format:
 
+> **NOTE ON BEADS COMPATIBILITY**: If your project uses Beads task tracking, the tasks created in `./.llm/tasks.md` format can be imported into Beads using `scripts/tasks-import.ps1` or `scripts/tasks-import.sh`. Modes and prompts automatically detect Beads availability and fall back to `./.llm/tasks.md` parsing when Beads is unavailable. No changes to your task format are needed.
+
 #### Software Project Format
 
 ```markdown
@@ -340,7 +342,36 @@ If requested:
 
 ---
 
-## 🔄 Workflow Integration
+## � BEADS INTEGRATION & TASK OUTPUT
+
+### Output Strategy (Automatic)
+
+After creating your task list in Markdown format:
+
+1. **Check for Beads CLI availability**:
+   - Run `beads --version` to detect if Beads is installed
+   - If available: use `scripts/tasks-import.ps1` or `scripts/tasks-import.sh` to import tasks into Beads
+   - If unavailable: save tasks directly as `./.llm/tasks.md`
+
+2. **Create `./.llm/tasks.md` regardless**:
+   - Always create the Markdown file as the canonical source
+   - Beads becomes a synchronized mirror (when available)
+   - Fallback modes and prompts will use this when Beads is unavailable
+
+3. **Output to user**:
+   - Show the generated task list in Markdown format
+   - Mention whether tasks were synced to Beads or saved locally
+   - Example: "✓ Created ./.llm/tasks.md with 12 tasks (synced to Beads)" or "✓ Created ./.llm/tasks.md with 12 tasks (Beads not available)"
+
+### Markdown Format Reference
+
+Use the formats described in **Section 4: Output Format** above:
+- For software projects: include Project Context, Shared Types Registry, Rules & Tips, Task List
+- For infrastructure projects: include Project Context, Module Registry Reference, Rules & Tips, Task List
+
+---
+
+## �🔄 Workflow Integration
 
 ### Software Development
 ```

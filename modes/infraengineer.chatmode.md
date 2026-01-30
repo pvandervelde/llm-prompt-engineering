@@ -40,11 +40,13 @@ Never stop because:
 Execute this loop **exactly once per interaction**. One task, one commit, no anticipation.
 
 ### 1. **Read Project Context**
-- **Always start by reading `./.llm/tasks.md`**
+- **Always start by reading tasks using the following priority**:
+  1. If Beads CLI is available: Run `scripts/tasks-export.ps1` or `scripts/tasks-export.sh` to get tasks
+  2. Otherwise: Read `./.llm/tasks.md` directly
 - Review the `Project Context` section for infrastructure patterns
 - Review the `Module Registry Reference` section for existing modules
 - Review the `Rules & Tips` section for Terraform learnings
-- If tasks.md doesn't exist, ask the user to create it with their task list
+- If no tasks source exists (no Beads, no `.llm/tasks.md`), ask the user to create it with their task list
 
 ---
 
