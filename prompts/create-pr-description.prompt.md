@@ -42,8 +42,16 @@ You are a professional software engineer writing a pull request title and descri
      - **What changed:** The technical changes made
      - **Why:** The problem or requirement that motivated the change
      - **How:** Key implementation details (if not obvious from the title)
-  4. **Keep it focused:** Avoid speculation, next steps, or future plans
-  5. **Scope appropriately:** Only describe what's in this PR
+  4. **Testing Evidence** (when applicable):
+     - **Test Coverage:** What tests were added or modified
+     - **Test Results:** Brief summary of test execution (e.g., "All tests passing", "Coverage increased from X% to Y%")
+     - **Manual Testing:** Any manual testing performed (e.g., "Verified with staging environment", "Tested with production-like data")
+  5. **Reviewer Guidance** (concise bullet points):
+     - Key areas where human review is most warranted
+     - Any breaking changes or migration steps
+     - Performance or security implications to watch for
+  6. **Keep it focused:** Avoid speculation, next steps, or future plans
+  7. **Scope appropriately:** Only describe what's in this PR
 
 **Output Format:**
 
@@ -60,14 +68,48 @@ type(scope): summary
 
 references #<ISSUE_NUMBER>
 
-<detailed description explaining what changed, why, and how>
+## What Changed
+<brief technical changes made>
+
+## Why
+<problem or requirement that motivated the change>
+
+## How
+<brief key implementation details if not obvious from title>
+
+## Testing Evidence
+- **Test Coverage:** <tests added/modified>
+- **Test Results:** <e.g., all tests passing, coverage increased>
+- **Manual Testing:** <any manual verification performed>
+
+## Reviewer Guidance
+- <key area for human review #1>
+- <key area for human review #2>
+- <any breaking changes or migration steps>
 ```
 
 If no issue number is available, omit the "references" line:
 ```
 <brief 1-2 sentence summary for quick scanning>
 
-<detailed description explaining what changed, why, and how>
+## What Changed
+<brief technical changes made>
+
+## Why
+<problem or requirement that motivated the change>
+
+## How
+<brief key implementation details if not obvious from title>
+
+## Testing Evidence
+- **Test Coverage:** <tests added/modified>
+- **Test Results:** <e.g., all tests passing, coverage increased>
+- **Manual Testing:** <any manual verification performed>
+
+## Reviewer Guidance
+- <key area for human review #1>
+- <key area for human review #2>
+- <any breaking changes or migration steps>
 ```
 
 ---
@@ -85,7 +127,24 @@ Adds token expiry validation to the refresh endpoint to prevent indefinite retri
 
 references #1234
 
-This update adds token expiry checks in the refresh endpoint. When a session token has expired, the API now returns a 401 response with an explicit error message. This prevents clients from retrying indefinitely and improves observability of authentication errors.
+## What Changed
+Token expiry checks added to the refresh endpoint to validate token status before attempting refresh.
+
+## Why
+Previously, expired tokens would cause indefinite retries with unclear error messaging. This change improves error handling and observability.
+
+## How
+Added expiry validation using the existing token parsing logic. When a token has expired, the endpoint returns a 401 response with a clear error message indicating the token has expired.
+
+## Testing Evidence
+- **Test Coverage:** Added 3 new tests covering expired token, valid token, and token validation edge cases
+- **Test Results:** All tests passing; test coverage increased from 84% to 87%
+- **Manual Testing:** Verified with staging environment using expired test tokens
+
+## Reviewer Guidance
+- Review the token expiry validation logic for correctness
+- Check error message clarity for client implementations
+- Verify backward compatibility with existing clients
 ```
 
 ---
@@ -101,5 +160,23 @@ refactor(database): migrate to connection pooling
 ```
 Replaces direct database connections with connection pooling to improve performance under high load.
 
-This change introduces a connection pool configured with a maximum of 50 connections and a 30-second timeout. All existing queries have been updated to use the pool manager. The pool automatically handles connection lifecycle, reducing overhead during high-traffic periods and preventing connection exhaustion.
+## What Changed
+Introduced a connection pool with maximum of 50 connections and 30-second timeout. All existing queries updated to use the pool manager.
+
+## Why
+Direct connections cause bottlenecks during high traffic and waste resources. Connection pooling reuses connections and prevents exhaustion.
+
+## How
+Pool manager handles connection lifecycle automatically. Integrated via a new DataSourceManager that wraps the existing query layer.
+
+## Testing Evidence
+- **Test Coverage:** Added pool initialization, connection reuse, and timeout tests; updated 12 existing integration tests
+- **Test Results:** All tests passing; load testing shows 40% improvement in response time under high concurrency
+- **Manual Testing:** Tested with production-like dataset on staging; monitored connection usage over 2 hours
+
+## Reviewer Guidance
+- Verify pool configuration aligns with production requirements (connection count, timeout)
+- Check error handling for connection exhaustion scenarios
+- Review for any hardcoded connection assumptions in existing code
+- Note: Connection-level logging has been updated to help debugging pooling issues
 ```
