@@ -524,9 +524,140 @@ if ((Test-Path $techDecisionsPath) -and -not $Force) {
 }
 
 # ============================================================================
-# Step 5: Create CI Configuration
+# Step 5: Setup Beads (Optional Task Tracking)
 # ============================================================================
-Write-Step "[5/5] Creating CI configuration..."
+Write-Step "[5/6] Setting up Beads task tracking (optional)..."
+
+$beadsInstalled = $false
+try {
+    $null = Get-Command "bd" -ErrorAction Stop
+    $beadsInstalled = $true
+    Write-Info "Beads already installed"
+} catch {
+    $beadsInstalled = $false
+}
+
+if ($beadsInstalled) {
+    # Initialize Beads in the repo
+    try {
+        Push-Location $root
+        bd init 2>&1 | Out-Null
+        Write-Success "Initialized Beads task tracking"
+        
+        # Update AGENTS.md with task tracking section
+        $agentsFile = Join-Path $root "AGENTS.md"
+        if (Test-Path $agentsFile) {
+            $beadsSection = @"
+
+
+## Task Management
+
+This project uses Beads (bd) for AI-friendly task tracking.
+
+### Before starting work
+
+1. Check what's ready: ``bd ready --json``
+2. Pick a task: ``bd show bd-abc --json``
+3. Start work: ``bd update bd-abc working``
+
+### When creating new tasks
+
+1. Create issue: ``bd create "Task description" -p 1 -t feature``
+2. Add dependencies: ``bd update bd-xyz --blocks bd-abc``
+3. The task will auto-appear in ``bd ready`` when blockers are done
+
+### When finishing work
+
+1. Commit with issue ID: ``git commit -m "Fix auth bug (bd-abc)"``
+2. Close issue: ``bd close bd-abc --reason "Completed"``
+3. Sync: ``bd sync`` (usually automatic)
+
+### Integration with ADRs
+
+- Link ADRs in task descriptions: "See ADR-0005 for context"
+- Create tasks for implementing ADR decisions
+- Reference task IDs in ADR implementation notes
+
+### Quick reference
+
+````bash
+bd ready              # Show tasks ready to work on
+bd create "desc" -p 1 # Create new task (priority 1-5)
+bd show bd-xyz        # Show task details
+bd update bd-xyz working  # Mark task in progress
+bd close bd-xyz       # Close completed task
+bd search "keyword"   # Search tasks
+bd doctor             # Check for orphaned work
+````
+"@
+            Add-Content -Path $agentsFile -Value $beadsSection
+            Write-Success "Updated AGENTS.md with task tracking guidance"
+        }
+        
+        # Update .tech-decisions.yml with task tracking config
+        $techFile = Join-Path $root ".tech-decisions.yml"
+        if (Test-Path $techFile) {
+            $taskTrackingConfig = @"
+
+# Task tracking configuration
+task_tracking:
+  tool: beads
+  required_in_commit: recommended  # Recommend bd-xxx in commit messages
+  auto_close_on_merge: false  # Manual close for explicit decision tracking
+  
+  # When to create tasks
+  task_required_for:
+    - "New features"
+    - "Bug fixes"
+    - "Architectural changes"
+    - "Infrastructure changes"
+  
+  # Task types (align with your workflow)
+  types:
+    - feature      # New functionality
+    - bug          # Bug fixes
+    - refactor     # Code improvements
+    - docs         # Documentation
+    - infrastructure  # Build, deploy, tooling
+    - security     # Security fixes/improvements
+"@
+            Add-Content -Path $techFile -Value $taskTrackingConfig
+            Write-Success "Updated .tech-decisions.yml with task tracking config"
+        }
+        
+        # Create initial setup tasks
+        Write-Info "Creating initial framework setup tasks..."
+        bd create "Customize docs/constraints.md with project-specific rules" -p 1 -t docs 2>&1 | Out-Null
+        bd create "Fill in .tech-decisions.yml with actual tech choices" -p 1 -t docs 2>&1 | Out-Null
+        bd create "Create first ADR documenting initial architectural decision" -p 2 -t docs 2>&1 | Out-Null
+        bd create "Review and customize pre-commit hooks for project needs" -p 3 -t infrastructure 2>&1 | Out-Null
+        
+        Write-Info "Created 4 initial setup tasks. Run 'bd ready' to see them."
+        
+    } catch {
+        Write-Warning "Failed to initialize Beads: $_"
+    } finally {
+        Pop-Location
+    }
+} else {
+    Write-Warning "Beads not installed. Task tracking is optional but recommended."
+    Write-Info ""
+    Write-Info "To install Beads and enable task tracking:"
+    Write-Info "  Windows (WSL or Git Bash):"
+    Write-Info "    curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash"
+    Write-Info "  Then run: bd init"
+    Write-Info ""
+    Write-Info "Benefits of Beads:"
+    Write-Info "  • AI-friendly task tracking with JSON output"
+    Write-Info "  • Dependency management (what's blocking what)"
+    Write-Info "  • Git-versioned (no external services needed)"
+    Write-Info "  • Multi-agent coordination safe"
+}
+
+# ============================================================================
+# Step 6: Create CI Configuration
+# ============================================================================
+Write-Step "[6/6] Creating CI configuration..."
 
 $githubDir = Join-Path $root ".github/workflows"
 if (-not (Test-Path $githubDir)) {
@@ -552,6 +683,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      
+      # Task tracking validation (if Beads is used)
+      - name: Check task tracking
+        continue-on-error: true
+        run: |
+          if command -v bd >/dev/null 2>&1; then
+            # Check if commit has task ID
+            if ! git log --format=%s -1 | grep -E '\(bd-[a-z0-9]+\)'; then
+              echo "::warning::No task ID in commit message. Consider: (bd-xxx)"
+            fi
+            
+            # Check for orphaned work (commits without closed tasks)
+            if bd doctor --orphans --json 2>/dev/null | grep -q "orphans"; then
+              echo "::warning::Found commits with task IDs but tasks not closed"
+              bd doctor --orphans
+            fi
+          fi
       
       # Re-run all pre-commit checks (in case bypassed locally)
       - name: Check for secrets
