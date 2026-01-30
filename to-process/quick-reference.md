@@ -115,6 +115,42 @@ cp docs/adr/ADR_TEMPLATE.md docs/adr/ADR-0001-my-decision.md
 
 ---
 
+## 🎯 Task Tracking with Beads
+
+### Daily Workflow
+```bash
+# See what's ready to work on
+bd ready
+
+# Create a task
+bd create "Add user authentication" -p 1 -t feature
+
+# Start working on it
+bd update bd-abc working
+
+# Commit with task ID
+git commit -m "Implement JWT auth (bd-abc)"
+
+# Close when done
+bd close bd-abc --reason "Completed"
+```
+
+### Task Dependencies
+```bash
+# Create dependent tasks
+bd create "Database schema" -p 1 -t task
+bd create "API endpoints" -p 2 -t feature --blocks-on bd-abc
+
+# bd ready will show bd-abc first, bd-xyz after bd-abc is closed
+```
+
+### Integration with Framework
+- **ADRs**: Reference in task descriptions
+- **Constraints**: Check before closing tasks
+- **Catalog**: Update when task creates reusable component
+
+---
+
 ## 🔧 Common Tasks
 
 ### Add a new standard
