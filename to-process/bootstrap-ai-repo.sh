@@ -462,9 +462,126 @@ EOF
 fi
 
 # ============================================================================
-# Step 5: Create CI Configuration
+# Step 5: Setup Beads (Optional Task Tracking)
 # ============================================================================
-print_step "[5/5] Creating CI configuration..."
+print_step "[5/6] Setting up Beads task tracking (optional)..."
+
+if command -v bd >/dev/null 2>&1; then
+    print_info "Beads already installed"
+    
+    # Initialize Beads in the repo
+    cd "$ROOT"
+    if bd init 2>/dev/null; then
+        print_success "Initialized Beads task tracking"
+        
+        # Update AGENTS.md with task tracking section
+        AGENTS_FILE="$ROOT/AGENTS.md"
+        if [ -f "$AGENTS_FILE" ]; then
+            cat >> "$AGENTS_FILE" << 'BEADS_SECTION'
+
+
+## Task Management
+
+This project uses Beads (bd) for AI-friendly task tracking.
+
+### Before starting work
+
+1. Check what's ready: `bd ready --json`
+2. Pick a task: `bd show bd-abc --json`
+3. Start work: `bd update bd-abc working`
+
+### When creating new tasks
+
+1. Create issue: `bd create "Task description" -p 1 -t feature`
+2. Add dependencies: `bd update bd-xyz --blocks bd-abc`
+3. The task will auto-appear in `bd ready` when blockers are done
+
+### When finishing work
+
+1. Commit with issue ID: `git commit -m "Fix auth bug (bd-abc)"`
+2. Close issue: `bd close bd-abc --reason "Completed"`
+3. Sync: `bd sync` (usually automatic)
+
+### Integration with ADRs
+
+- Link ADRs in task descriptions: "See ADR-0005 for context"
+- Create tasks for implementing ADR decisions
+- Reference task IDs in ADR implementation notes
+
+### Quick reference
+
+```bash
+bd ready              # Show tasks ready to work on
+bd create "desc" -p 1 # Create new task (priority 1-5)
+bd show bd-xyz        # Show task details
+bd update bd-xyz working  # Mark task in progress
+bd close bd-xyz       # Close completed task
+bd search "keyword"   # Search tasks
+bd doctor             # Check for orphaned work
+```
+BEADS_SECTION
+            print_success "Updated AGENTS.md with task tracking guidance"
+        fi
+        
+        # Update .tech-decisions.yml with task tracking config
+        TECH_FILE="$ROOT/.tech-decisions.yml"
+        if [ -f "$TECH_FILE" ]; then
+            cat >> "$TECH_FILE" << 'TECH_SECTION'
+
+# Task tracking configuration
+task_tracking:
+  tool: beads
+  required_in_commit: recommended  # Recommend bd-xxx in commit messages
+  auto_close_on_merge: false  # Manual close for explicit decision tracking
+  
+  # When to create tasks
+  task_required_for:
+    - "New features"
+    - "Bug fixes"
+    - "Architectural changes"
+    - "Infrastructure changes"
+  
+  # Task types (align with your workflow)
+  types:
+    - feature      # New functionality
+    - bug          # Bug fixes
+    - refactor     # Code improvements
+    - docs         # Documentation
+    - infrastructure  # Build, deploy, tooling
+    - security     # Security fixes/improvements
+TECH_SECTION
+            print_success "Updated .tech-decisions.yml with task tracking config"
+        fi
+        
+        # Create initial setup tasks
+        print_info "Creating initial framework setup tasks..."
+        bd create "Customize docs/constraints.md with project-specific rules" -p 1 -t docs >/dev/null 2>&1
+        bd create "Fill in .tech-decisions.yml with actual tech choices" -p 1 -t docs >/dev/null 2>&1
+        bd create "Create first ADR documenting initial architectural decision" -p 2 -t docs >/dev/null 2>&1
+        bd create "Review and customize pre-commit hooks for project needs" -p 3 -t infrastructure >/dev/null 2>&1
+        
+        print_info "Created 4 initial setup tasks. Run 'bd ready' to see them."
+    else
+        print_warning "Failed to initialize Beads"
+    fi
+else
+    print_warning "Beads not installed. Task tracking is optional but recommended."
+    echo ""
+    print_info "To install Beads and enable task tracking:"
+    print_info "  curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash"
+    print_info "  Then run: bd init"
+    echo ""
+    print_info "Benefits of Beads:"
+    print_info "  • AI-friendly task tracking with JSON output"
+    print_info "  • Dependency management (what's blocking what)"
+    print_info "  • Git-versioned (no external services needed)"
+    print_info "  • Multi-agent coordination safe"
+fi
+
+# ============================================================================
+# Step 6: Create CI Configuration
+# ============================================================================
+print_step "[6/6] Creating CI configuration..."
 
 mkdir -p "$ROOT/.github/workflows"
 CI_FILE="$ROOT/.github/workflows/quality.yml"
@@ -490,6 +607,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      
+      # Task tracking validation (if Beads is used)
+      - name: Check task tracking
+        continue-on-error: true
+        run: |
+          if command -v bd >/dev/null 2>&1; then
+            # Check if commit has task ID
+            if ! git log --format=%s -1 | grep -E '\(bd-[a-z0-9]+\)'; then
+              echo "::warning::No task ID in commit message. Consider: (bd-xxx)"
+            fi
+            
+            # Check for orphaned work (commits without closed tasks)
+            if bd doctor --orphans --json 2>/dev/null | grep -q "orphans"; then
+              echo "::warning::Found commits with task IDs but tasks not closed"
+              bd doctor --orphans
+            fi
+          fi
       
       - name: Check for secrets
         run: |
