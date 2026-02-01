@@ -1,0 +1,305 @@
+{
+  "version": "1.0",
+  "source": "markdown-export",
+  "exportedAt": "2026-01-30T15:00:00Z",
+  "projectContext": {
+    "architecture": "Hexagonal (core/ports/adapters)",
+    "language": "TypeScript/Node.js",
+    "framework": "Express",
+    "database": "PostgreSQL with TypeORM",
+    "testing": "Jest with TDD",
+    "errorHandling": "Result<T, E> pattern"
+  },
+  "sharedTypes": [
+    {
+      "name": "Result<T, E>",
+      "file": "src/core/result.ts",
+      "usage": "Success/failure union for explicit error types",
+      "usedBy": [
+        "All domain operations"
+      ]
+    },
+    {
+      "name": "ApiError",
+      "file": "src/api/errors.ts",
+      "usage": "Discriminated union of API-specific errors",
+      "usedBy": [
+        "All HTTP handlers"
+      ]
+    },
+    {
+      "name": "Email",
+      "file": "src/core/types.ts",
+      "usage": "Branded type for validated email addresses",
+      "usedBy": [
+        "Auth domain"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "pattern": "TDD Workflow",
+      "description": "Write failing test first, then implementation. Each commit includes both test and implementation.",
+      "discovered": true
+    },
+    {
+      "pattern": "Error Handling",
+      "description": "Never use generic Error - always use typed ApiError. Wrap external errors with proper type.",
+      "discovered": true
+    },
+    {
+      "pattern": "API Patterns",
+      "description": "All endpoints return { data?: T, error?: ApiError } structure. Use proper HTTP status codes.",
+      "discovered": true
+    }
+  ],
+  "tasks": [
+    {
+      "id": "1.0",
+      "title": "Implement Core Type System",
+      "completed": false,
+      "priority": 1,
+      "context": {
+        "description": "Defines foundational types used by all other modules",
+        "files": [
+          "src/core/result.ts",
+          "src/core/types.ts"
+        ],
+        "dependencies": [],
+        "note": "Must complete before any domain work"
+      },
+      "assertions": [
+        "Ok<T> creates success result",
+        "Err<E> creates failure result",
+        ".map() chains success operations",
+        ".mapErr() chains error operations",
+        ".getOrElse() extracts value with default"
+      ],
+      "subtasks": [
+        {
+          "id": "1.1",
+          "title": "Implement Result<T, E> type and helpers",
+          "completed": false,
+          "description": "Create union type with helper functions and methods"
+        },
+        {
+          "id": "1.2",
+          "title": "Implement branded types for validation",
+          "completed": false,
+          "description": "Create Email and UserId branded types with parsing"
+        },
+        {
+          "id": "1.3",
+          "title": "Write comprehensive tests for type utilities",
+          "completed": false,
+          "description": "Test Result monad laws and type narrowing"
+        }
+      ]
+    },
+    {
+      "id": "2.0",
+      "title": "Implement Authentication Domain",
+      "completed": false,
+      "priority": 1,
+      "context": {
+        "description": "Auth types and repositories",
+        "files": [
+          "src/auth/"
+        ],
+        "dependencies": [
+          "1.0"
+        ],
+        "reuses": [
+          "Result<T, E>",
+          "Email",
+          "UserId"
+        ],
+        "constraint": "All operations return explicit error types"
+      },
+      "assertions": [
+        "InvalidCredentials error for wrong password",
+        "TokenExpired error for old tokens",
+        "UserNotFound error for non-existent user"
+      ],
+      "subtasks": [
+        {
+          "id": "2.1",
+          "title": "Create auth types and port interfaces",
+          "completed": false,
+          "description": "Define Credentials, AuthToken, Principal types and ports"
+        },
+        {
+          "id": "2.2",
+          "title": "Implement in-memory credential store",
+          "completed": false,
+          "description": "Test doubles for development"
+        },
+        {
+          "id": "2.3",
+          "title": "Implement JWT token issuer",
+          "completed": false,
+          "description": "Token generation, validation, and principal extraction"
+        }
+      ]
+    },
+    {
+      "id": "3.0",
+      "title": "Implement API Layer",
+      "completed": false,
+      "priority": 2,
+      "context": {
+        "description": "HTTP endpoints and middleware",
+        "files": [
+          "src/api/"
+        ],
+        "dependencies": [
+          "2.0",
+          "1.0"
+        ],
+        "note": "Public API for clients"
+      },
+      "assertions": [
+        "Returns proper HTTP status codes",
+        "All errors serialized as JSON",
+        "Authentication required for protected endpoints"
+      ],
+      "subtasks": [
+        {
+          "id": "3.1",
+          "title": "Setup Express app with middleware",
+          "completed": false,
+          "description": "CORS, body parser, error handling, logging"
+        },
+        {
+          "id": "3.2",
+          "title": "Implement authentication endpoints",
+          "completed": false,
+          "description": "POST /auth/login, /auth/refresh, /auth/logout"
+        },
+        {
+          "id": "3.3",
+          "title": "Implement protected endpoint example",
+          "completed": false,
+          "description": "GET /api/profile requiring authentication"
+        }
+      ]
+    },
+    {
+      "id": "4.0",
+      "title": "Add Database Integration",
+      "completed": false,
+      "priority": 2,
+      "context": {
+        "description": "Persistent storage layer with TypeORM",
+        "files": [
+          "src/db/"
+        ],
+        "dependencies": [
+          "2.0"
+        ],
+        "note": "Use TypeORM migrations for schema"
+      },
+      "assertions": [
+        "Credentials persist across restarts",
+        "Concurrent access is safe (no race conditions)"
+      ],
+      "subtasks": [
+        {
+          "id": "4.1",
+          "title": "Setup TypeORM configuration",
+          "completed": false,
+          "description": "Connection, migrations, entities"
+        },
+        {
+          "id": "4.2",
+          "title": "Implement User entity and repository",
+          "completed": false,
+          "description": "Schema, password hashing, queries"
+        },
+        {
+          "id": "4.3",
+          "title": "Create and run initial migration",
+          "completed": false,
+          "description": "Create users table with sample data"
+        }
+      ]
+    },
+    {
+      "id": "5.0",
+      "title": "Add API Documentation",
+      "completed": false,
+      "priority": 3,
+      "context": {
+        "description": "OpenAPI/Swagger documentation",
+        "files": [
+          "docs/openapi.yaml"
+        ],
+        "note": "For client implementation teams"
+      },
+      "assertions": [
+        "All endpoints documented",
+        "Example requests and responses",
+        "Error cases documented"
+      ],
+      "subtasks": [
+        {
+          "id": "5.1",
+          "title": "Create OpenAPI schema",
+          "completed": false,
+          "description": "Define endpoints, models, error responses"
+        },
+        {
+          "id": "5.2",
+          "title": "Setup Swagger UI",
+          "completed": false,
+          "description": "Interactive API at /api/docs"
+        }
+      ]
+    },
+    {
+      "id": "6.0",
+      "title": "Setup CI/CD Pipeline",
+      "completed": false,
+      "priority": 3,
+      "context": {
+        "description": "Automated testing and deployment",
+        "files": [
+          ".github/workflows/"
+        ],
+        "note": "Required for production safety"
+      },
+      "assertions": [
+        "Tests run on every PR",
+        "Coverage > 80%",
+        "No secrets in code"
+      ],
+      "subtasks": [
+        {
+          "id": "6.1",
+          "title": "Create test workflow",
+          "completed": false,
+          "description": "Jest tests, coverage, enforcement"
+        },
+        {
+          "id": "6.2",
+          "title": "Create build workflow",
+          "completed": false,
+          "description": "TypeScript, linter, dead code checks"
+        },
+        {
+          "id": "6.3",
+          "title": "Create deploy workflow",
+          "completed": false,
+          "description": "Docker build and push"
+        }
+      ]
+    }
+  ],
+  "statistics": {
+    "totalTasks": 6,
+    "completedTasks": 0,
+    "totalSubtasks": 15,
+    "completedSubtasks": 0,
+    "percentComplete": 0
+  }
+}
