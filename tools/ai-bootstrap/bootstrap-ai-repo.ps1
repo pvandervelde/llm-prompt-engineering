@@ -74,7 +74,7 @@ if (Test-Path $memoryScript)
     $args = @()
     if ($Force)
     {
-        $args += "-Force" 
+        $args += "-Force"
     }
     & $memoryScript @args
     Write-Success "AI memory structure created"
@@ -97,6 +97,76 @@ else
         {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
         }
+    }
+
+    # Create AGENTS.md with basic template
+    $agentsFile = Join-Path $root "AGENTS.md"
+    if (-not (Test-Path $agentsFile))
+    {
+        $agentsTemplate = @"
+# AI Agent Guidelines
+
+This file provides guidance and context for AI coding assistants working on this project.
+
+## Project Overview
+
+> Update this section with your project's purpose and goals
+
+## Production Software Standards
+
+**This is production-grade software.** All code must meet production quality standards:
+
+- **Complete Implementation**: No TODOs, placeholders, or "demonstration" code. Every feature must be fully implemented.
+- **Comprehensive Error Handling**: All error paths must be handled properly, with clear error messages and proper error propagation.
+- **Full Test Coverage**: All functionality must have comprehensive tests covering happy paths, error cases, and edge conditions.
+- **Production-Ready Documentation**: All public APIs must have complete rustdoc with examples, error conditions, and behavioral specifications.
+- **Security First**: All security-sensitive operations must be implemented with production-grade security measures.
+- **Performance Conscious**: Code must be optimized for production workloads, not just correctness.
+- **Observability**: All operations must have appropriate logging, metrics, and tracing for production debugging.
+
+When implementing features:
+
+- Write production code from the start - no prototypes or demos
+- Think about failure scenarios and edge cases
+- Consider operational concerns (monitoring, debugging, maintenance)
+- Implement complete functionality, not partial demonstrations
+
+## Pre-Implementation Checklist
+
+Before implementing features, verify:
+
+1. **Read Specifications**: Check `docs/spec/` for relevant documentation
+2. Read `docs/constraints.md` (tripwires + hard rules)
+3. Read `docs/catalog.md` (what already exists to reuse)
+4. Read relevant standards in `docs/standards/` (language/domain specific)
+5. **Search Existing Code**: Use semantic_search to find similar implementations
+6. **Check Module Structure**: Determine if code belongs in existing module or needs new one
+7. **Security Review**: Identify sensitive data (tokens, secrets) requiring special handling
+8. **Plan Tests**: Identify test scenarios before writing implementation
+
+## Summary
+
+Following these conventions ensures:
+
+- **Consistency**: Codebase looks like one person wrote it
+- **Maintainability**: Easy to find and understand code
+- **Quality**: High test coverage and clear documentation
+- **Security**: Sensitive data handled properly
+- **Performance**: Conscious resource management
+
+When in doubt, look at existing code in the repository as examples of these patterns in practice.
+
+## Workflow
+
+1. Check for existing ADRs related to your task
+2. Follow coding standards in .tech-decisions.yml
+3. Write tests before implementation (TDD preferred)
+4. Run pre-commit hooks before committing
+5. Include context in commit messages
+
+"@
+        $agentsTemplate | Out-File -FilePath $agentsFile -Encoding UTF8
+        Write-Success "Created AGENTS.md"
     }
 
     Write-Success "Minimal directory structure created"
@@ -575,8 +645,18 @@ if ($beadsInstalled)
     try
     {
         Push-Location $root
-        bd init 2>&1 | Out-Null
-        Write-Success "Initialized Beads task tracking"
+
+        # Check if Beads is already initialized
+        $beadsDir = Join-Path $root ".beads"
+        if (-not (Test-Path $beadsDir))
+        {
+            bd init 2>&1 | Out-Null
+            Write-Success "Initialized Beads task tracking"
+        }
+        else
+        {
+            Write-Info "Beads already initialized in this repository"
+        }
 
         # Update AGENTS.md with task tracking section
         $agentsFile = Join-Path $root "AGENTS.md"
