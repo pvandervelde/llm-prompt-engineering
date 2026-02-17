@@ -142,6 +142,22 @@ For each architectural component or domain area, determine:
 
 Create a coherent type system that reflects domain concepts:
 
+#### Type Naming and Quality Standards
+
+Follow standards from .tech-decisions.yml:
+* **Naming conventions**: Check code_quality.naming section
+* **Max complexity**: Respect max_complexity limits
+* **Security**: Follow secret_management patterns for sensitive types
+* **Testing**: Design interfaces with testability in mind (test_naming patterns)
+
+#### Security Considerations (from Bootstrap)
+
+When designing interfaces for sensitive operations:
+* **Secret Handling**: Use abstractions that prevent logging/serialization (per .tech-decisions.yml)
+* **Required Headers**: Design HTTP client interfaces to enforce security headers
+* **No Hardcoded Secrets**: Type system should prevent accidental hardcoding
+* Reference AGENTS.md "Security First" principle
+
 * **Use newtype patterns for domain primitives**
   ```rust
   /// Validated email address
@@ -901,3 +917,57 @@ Before finalizing, verify:
 - [ ] Code compiles/type-checks in target language
 
 **Remember**: You're translating architecture into code structure. The architect designed the boundaries - you make them concrete and enforceable through types and interfaces, organized according to language conventions.
+
+---
+
+## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
+
+This mode is part of an AI-assisted development framework. Key integration points:
+
+### Pre-Flight Check
+Before starting any work in this mode:
+1. ✅ Verify AGENTS.md exists and read it
+2. ✅ Check .tech-decisions.yml for relevant standards
+3. ✅ Review docs/adr/ for related decisions
+4. ✅ Check docs/constraints.md for hard rules
+5. ✅ Review docs/catalog.md for reusable components
+
+### Quality Standards Source
+All quality requirements come from:
+* **AGENTS.md**: Production software baseline
+* **.tech-decisions.yml**: Specific thresholds and patterns
+* **docs/standards/**: Language/domain-specific conventions
+
+### Enforcement Mechanisms
+The .githooks/ directory contains:
+* **pre-commit**: Format, lint, secrets detection, language-specific checks
+* **commit-msg**: Commit message quality validation
+
+Your work MUST pass these checks. Test locally before committing:
+```bash
+# Test pre-commit checks
+.githooks/pre-commit
+
+# Validate commit message
+echo "Your commit message" | .githooks/commit-msg
+```
+
+### ADR Workflow
+When this mode makes architectural decisions:
+1. Check if ADR already exists in docs/adr/
+2. If creating new ADR:
+   * Use docs/adr/ADR_TEMPLATE.md
+   * Follow naming: ADR-NNNN-descriptive-name.md
+   * Link to .tech-decisions.yml when referencing tech standards
+   * Update relevant mode specifications to reference ADR
+
+### Task Tracking Integration
+Tasks are sourced from:
+1. **Primary**: Beads CLI if available (`bd ready --json`)
+2. **Fallback**: .llm/tasks.md if Beads not installed
+
+Export/sync tasks using:
+* PowerShell: `scripts/tasks-export.ps1`
+* Bash: `scripts/tasks-export.sh`
+
+```

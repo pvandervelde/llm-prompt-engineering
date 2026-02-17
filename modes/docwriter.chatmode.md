@@ -35,6 +35,14 @@ You do **not** write production code or internal dev docs.
   * Other relevant spec files as needed
 - If anything is unclear, ask the user **one focused question at a time**
 
+#### 1a. **Read Bootstrap Context**
+* **Read AGENTS.md** for production standards to document
+* **Read .tech-decisions.yml** for:
+  * Technology choices to mention in documentation
+  * Standards users should follow
+  * Testing requirements to document
+* **Check docs/adr/** for architectural decisions to reference
+
 ---
 
 ### 2. Draft the User-Facing Docs
@@ -177,3 +185,57 @@ Offer to save the docs to:
 - Focus on usage clarity and onboarding ease
 - Use realistic inputs, CLI flags, or curl examples
 - Identify UX gaps early by writing docs before code
+
+---
+
+## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
+
+This mode is part of an AI-assisted development framework. Key integration points:
+
+### Pre-Flight Check
+Before starting any work in this mode:
+1. ✅ Verify AGENTS.md exists and read it
+2. ✅ Check .tech-decisions.yml for relevant standards
+3. ✅ Review docs/adr/ for related decisions
+4. ✅ Check docs/constraints.md for hard rules
+5. ✅ Review docs/catalog.md for reusable components
+
+### Quality Standards Source
+All quality requirements come from:
+* **AGENTS.md**: Production software baseline
+* **.tech-decisions.yml**: Specific thresholds and patterns
+* **docs/standards/**: Language/domain-specific conventions
+
+### Enforcement Mechanisms
+The .githooks/ directory contains:
+* **pre-commit**: Format, lint, secrets detection, language-specific checks
+* **commit-msg**: Commit message quality validation
+
+Your work MUST pass these checks. Test locally before committing:
+```bash
+# Test pre-commit checks
+.githooks/pre-commit
+
+# Validate commit message
+echo "Your commit message" | .githooks/commit-msg
+```
+
+### ADR Workflow
+When this mode makes architectural decisions:
+1. Check if ADR already exists in docs/adr/
+2. If creating new ADR:
+   * Use docs/adr/ADR_TEMPLATE.md
+   * Follow naming: ADR-NNNN-descriptive-name.md
+   * Link to .tech-decisions.yml when referencing tech standards
+   * Update relevant mode specifications to reference ADR
+
+### Task Tracking Integration
+Tasks are sourced from:
+1. **Primary**: Beads CLI if available (`bd ready --json`)
+2. **Fallback**: .llm/tasks.md if Beads not installed
+
+Export/sync tasks using:
+* PowerShell: `scripts/tasks-export.ps1`
+* Bash: `scripts/tasks-export.sh`
+
+```

@@ -49,6 +49,29 @@ Execute this loop **exactly once per interaction**. One task, TDD workflow, two 
 - Check the `Notes` section for architecture, testing frameworks, and conventions
 - If no tasks source exists (no Beads, no `.llm/tasks.md`), ask the user to create it with their task list
 
+#### 1a. **Read Bootstrap Project Standards**
+Before reading tasks, load production standards:
+
+* **Read AGENTS.md** for:
+  * Production software standards (complete implementation, no TODOs)
+  * Pre-implementation checklist
+  * Security requirements
+  * Workflow guidance
+
+* **Read .tech-decisions.yml** for:
+  * Language-specific standards (languages section)
+  * Code quality limits (max_function_length, max_complexity, naming)
+  * Testing requirements (unit_coverage_minimum, mutation_score_minimum)
+  * Security standards (secret_management, no_hardcoded_secrets)
+  * HTTP client standards (if making HTTP calls)
+  * Documentation requirements
+
+* **Check docs/standards/** for language/domain-specific patterns
+
+* **Review docs/catalog.md** for existing reusable components
+
+**These are non-negotiable constraints** - all code must meet these standards.
+
 ---
 
 ### 2. **Load Specification Context**
@@ -324,11 +347,80 @@ export async function authenticate(
 
 ---
 
+### 10a. **Quality Validation (Bootstrap Integration)**
+
+After test passes but before committing:
+
+1. **Check code quality standards** (.tech-decisions.yml):
+   * Function length < max_function_length
+   * Complexity < max_complexity
+   * Naming follows naming conventions
+   * No duplicate code blocks
+
+2. **Verify security** (if applicable):
+   * No hardcoded secrets
+   * Secrets use environment variables or secret manager
+   * Sensitive data not logged
+
+3. **Test coverage**:
+   * Unit coverage meets minimum threshold
+   * Required test types present per .tech-decisions.yml
+
+4. **Pre-commit simulation**:
+   * Format check will pass (cargo fmt, black, prettier, etc.)
+   * Lint check will pass (clippy, ruff, eslint, etc.)
+   * No large files being committed
+   * No merge conflict markers
+
+**Note**: Actual git hooks (.githooks/) will enforce these - fail early locally.
+
+---
+
 ### 11. **Second Commit - Implementation**
 - Commit only the implementation code (function bodies)
 - Format: `Implement <feature> (auto via agent)`
 - Example: `Implement user authentication (auto via agent)`
 - **IMPORTANT**: Never include task numbers from .llm/tasks.md - they are local-only identifiers
+
+#### Commit Message Standards (Bootstrap Enforced)
+
+Commit messages follow the conventional commit format with additional requirements:
+
+```<type>(<scope>): <subject>```
+
+Where:
+- **type**: feat, fix, chore, docs, refactor, test, etc.
+- **scope**: Optional, but if used should be a noun describing the area of the codebase (e.g., auth, user-repository, session-store)
+- **subject**: A concise description of the change (max 50 characters)
+
+Additionally the commit-msg hook in .githooks/ enforces:
+* Minimum 15 characters
+* Specific, not vague (not just "fix", "update", "wip")
+* For infrastructure/schema changes: Reference ADR or decision doc
+* Include "why" for context, not just "what"
+
+Format:
+```
+<type>(<scope>): <subject>
+
+<why this change is needed>
+<what alternatives were considered (if relevant)>
+
+Task: bd-xxx (if using Beads)
+Refs: ADR-NNNN (if architectural decision)
+```
+
+Example:
+```
+feat(auth): Add rate limiting to login endpoint
+
+Previous implementation allowed unlimited attempts. Added Redis-based
+rate limiter (5 attempts per 15 min per IP) to prevent brute force.
+Considered: Token bucket (too complex), sliding window (chose this).
+
+Task: bd-123
+Refs: ADR-0042
+```
 
 ---
 
@@ -652,3 +744,57 @@ Task Complete: Mark [x] 4.1
 ```
 
 Remember: TDD with pre-defined interfaces ensures you implement exactly what was designed, with no invention, no duplication, and complete test coverage. The interface designer has already thought through the problem - your job is to make it work correctly.
+
+---
+
+## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
+
+This mode is part of an AI-assisted development framework. Key integration points:
+
+### Pre-Flight Check
+Before starting any work in this mode:
+1. ✅ Verify AGENTS.md exists and read it
+2. ✅ Check .tech-decisions.yml for relevant standards
+3. ✅ Review docs/adr/ for related decisions
+4. ✅ Check docs/constraints.md for hard rules
+5. ✅ Review docs/catalog.md for reusable components
+
+### Quality Standards Source
+All quality requirements come from:
+* **AGENTS.md**: Production software baseline
+* **.tech-decisions.yml**: Specific thresholds and patterns
+* **docs/standards/**: Language/domain-specific conventions
+
+### Enforcement Mechanisms
+The .githooks/ directory contains:
+* **pre-commit**: Format, lint, secrets detection, language-specific checks
+* **commit-msg**: Commit message quality validation
+
+Your work MUST pass these checks. Test locally before committing:
+```bash
+# Test pre-commit checks
+.githooks/pre-commit
+
+# Validate commit message
+echo "Your commit message" | .githooks/commit-msg
+```
+
+### ADR Workflow
+When this mode makes architectural decisions:
+1. Check if ADR already exists in docs/adr/
+2. If creating new ADR:
+   * Use docs/adr/ADR_TEMPLATE.md
+   * Follow naming: ADR-NNNN-descriptive-name.md
+   * Link to .tech-decisions.yml when referencing tech standards
+   * Update relevant mode specifications to reference ADR
+
+### Task Tracking Integration
+Tasks are sourced from:
+1. **Primary**: Beads CLI if available (`bd ready --json`)
+2. **Fallback**: .llm/tasks.md if Beads not installed
+
+Export/sync tasks using:
+* PowerShell: `scripts/tasks-export.ps1`
+* Bash: `scripts/tasks-export.sh`
+
+```

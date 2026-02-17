@@ -55,6 +55,21 @@ You **do not** directly change production code. You **produce** review artifacts
 - Refactoring opportunities
 - Example: Inconsistent spacing, could use const instead of let, comments could be clearer
 
+#### Bootstrap Context Examples
+
+**Critical Examples (Bootstrap Context)**
+- Hardcoded secrets (violates .tech-decisions.yml security.no_hardcoded_secrets)
+- Function length > max_function_length in .tech-decisions.yml
+- Cyclomatic complexity > max_complexity in .tech-decisions.yml
+- Violates tripwire in docs/constraints.md
+- Missing required security headers per .tech-decisions.yml
+
+**High Examples (Bootstrap Context)**
+- Unit test coverage below unit_coverage_minimum in .tech-decisions.yml
+- Missing ADR for database schema change (per .tech-decisions.yml documentation.adr_required_for)
+- Doesn't follow naming conventions in .tech-decisions.yml
+- Uses forbidden operation from .tech-decisions.yml database.forbidden_operations
+
 ### Scope Boundaries
 
 **✅ DO review:**
@@ -80,6 +95,21 @@ You **do not** directly change production code. You **produce** review artifacts
 2. Check for `docs/spec/` - if exists, use as baseline for expected behavior and requirements
 3. Check for `CONTRIBUTING.md`, style guides, or coding standards
 4. Identify documented requirements vs actual implementation
+
+#### Bootstrap-Enhanced Context
+
+**Additional context sources:**
+1. **AGENTS.md**: Production standards baseline - all code should meet these
+2. **.tech-decisions.yml**: The source of truth for quality standards
+3. **docs/adr/**: Architectural decisions - don't criticize documented choices
+4. **docs/constraints.md**: Hard rules and tripwires - violations are Critical severity
+5. **.githooks/**: Quality gates that CI will enforce - verify code passes these
+
+**Review strategy with bootstrap:**
+- **Against .tech-decisions.yml**: Check code_quality, testing, security, naming
+- **Against AGENTS.md**: Validate production software standards
+- **Against ADRs**: Don't flag design choices that are documented decisions
+- **Against constraints.md**: Any violations are Critical findings
 
 **Review Strategy:**
 - **With specs/tasks**: Validate implementation against documented intent
@@ -111,6 +141,42 @@ Keep patches small (<200 lines) and focused on one specific issue.
 - Produce a 1-paragraph **purpose statement** and list of top-level languages/frameworks detected.
 - **Identify review scope**: If `.llm/tasks.md` exists, note implemented vs planned features.
 - Output: `reviews/00-triage.md` (short, 1-2 pages max).
+
+### Stage 0b — Validate Against Bootstrap Standards (NEW)
+
+Before architectural review, validate compliance with project standards:
+
+1. **Read .tech-decisions.yml** and extract:
+   * Code quality thresholds
+   * Security requirements
+   * Testing requirements
+   * Documentation requirements
+
+2. **Run automated checks** (if available):
+   ```bash
+   # Test pre-commit hooks
+   .githooks/pre-commit --all-files
+   
+   # Check test coverage
+   # (language-specific commands from .tech-decisions.yml)
+   ```
+
+3. **Create baseline findings**:
+   * Functions exceeding max_function_length
+   * Complexity exceeding max_complexity
+   * Test coverage below minimums
+   * Missing ADRs for significant decisions
+
+4. **Document standards baseline** in review output:
+   ```markdown
+   ## Standards Compliance (from .tech-decisions.yml)
+   
+   - Code Quality: ✓ All functions < 50 lines
+   - Complexity: ⚠ 3 functions exceed max_complexity=10
+   - Test Coverage: ✗ 65% (minimum: 80%)
+   - Security: ✓ No hardcoded secrets
+   - Documentation: ⚠ Missing ADR for database choice
+   ```
 
 ### Stage 1 — High-Level Architecture Audit (30-60 minutes, deliverable: `reviews/01-architecture.md`)
 **Goal:** Describe how the system is *meant* to behave and evaluate the architecture against that intent.
@@ -259,3 +325,57 @@ Output: `reviews/99-summary.md` (10-20 pages max)
 ---
 
 ## 📦 Example minimal deliverable structure produced by the mode
+
+---
+
+## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
+
+This mode is part of an AI-assisted development framework. Key integration points:
+
+### Pre-Flight Check
+Before starting any work in this mode:
+1. ✅ Verify AGENTS.md exists and read it
+2. ✅ Check .tech-decisions.yml for relevant standards
+3. ✅ Review docs/adr/ for related decisions
+4. ✅ Check docs/constraints.md for hard rules
+5. ✅ Review docs/catalog.md for reusable components
+
+### Quality Standards Source
+All quality requirements come from:
+* **AGENTS.md**: Production software baseline
+* **.tech-decisions.yml**: Specific thresholds and patterns
+* **docs/standards/**: Language/domain-specific conventions
+
+### Enforcement Mechanisms
+The .githooks/ directory contains:
+* **pre-commit**: Format, lint, secrets detection, language-specific checks
+* **commit-msg**: Commit message quality validation
+
+Your work MUST pass these checks. Test locally before committing:
+```bash
+# Test pre-commit checks
+.githooks/pre-commit
+
+# Validate commit message
+echo "Your commit message" | .githooks/commit-msg
+```
+
+### ADR Workflow
+When this mode makes architectural decisions:
+1. Check if ADR already exists in docs/adr/
+2. If creating new ADR:
+   * Use docs/adr/ADR_TEMPLATE.md
+   * Follow naming: ADR-NNNN-descriptive-name.md
+   * Link to .tech-decisions.yml when referencing tech standards
+   * Update relevant mode specifications to reference ADR
+
+### Task Tracking Integration
+Tasks are sourced from:
+1. **Primary**: Beads CLI if available (`bd ready --json`)
+2. **Fallback**: .llm/tasks.md if Beads not installed
+
+Export/sync tasks using:
+* PowerShell: `scripts/tasks-export.ps1`
+* Bash: `scripts/tasks-export.sh`
+
+```
