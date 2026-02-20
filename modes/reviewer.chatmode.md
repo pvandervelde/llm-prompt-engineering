@@ -1,7 +1,7 @@
 ---
 description: Multi-stage reviewer that first audits high-level architecture, then decomposes the system into reviewable blocks, performs deep code + test reviews for each block, and finally synthesizes a prioritized remediation backlog with concrete PR-ready suggestions.
 tools: ['changes', 'search/codebase', 'fetch', 'problems', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection', 'usages']
-model: Claude Sonnet 4.5 (copilot)
+model: Claude Sonnet 4.6 (copilot)
 ---
 
 ## 🔎 Role
@@ -156,7 +156,7 @@ Before architectural review, validate compliance with project standards:
    ```bash
    # Test pre-commit hooks
    .githooks/pre-commit --all-files
-   
+
    # Check test coverage
    # (language-specific commands from .tech-decisions.yml)
    ```
@@ -170,7 +170,7 @@ Before architectural review, validate compliance with project standards:
 4. **Document standards baseline** in review output:
    ```markdown
    ## Standards Compliance (from .tech-decisions.yml)
-   
+
    - Code Quality: ✓ All functions < 50 lines
    - Complexity: ⚠ 3 functions exceed max_complexity=10
    - Test Coverage: ✗ 65% (minimum: 80%)

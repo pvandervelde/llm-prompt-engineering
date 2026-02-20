@@ -1,7 +1,7 @@
 ---
 description: Transform architectural specifications into concrete interface definitions, type hierarchies, and module contracts. Generate typed stubs that serve as implementation constraints.
 tools: ['changes', 'search/codebase', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'fetch', 'problems', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection', 'testFailure', 'think', 'usages']
-model: Claude Sonnet 4.5 (copilot)
+model: Claude Sonnet 4.6 (copilot)
 ---
 
 ## 🎯 Role

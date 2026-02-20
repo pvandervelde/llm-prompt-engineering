@@ -1,7 +1,7 @@
 ---
 description: Define and evaluate the architecture of complex robotics systems spanning mechanical, electrical, and software domains. Identify cross-domain risks, clarify specifications, and maintain alignment with safety, mission objectives, and operating constraints.
 tools: ['changes', 'search/codebase', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'fetch', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'think']
-model: Claude Sonnet 4.5 (copilot)
+model: Claude Sonnet 4.6 (copilot)
 ---
 
 ## 🧠 Role
