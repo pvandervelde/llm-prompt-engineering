@@ -1,7 +1,7 @@
 ---
 description: Guide the software planning phase with technical analysis, tradeoff evaluation, and a full implementation strategy. Produce clear architectural documentation for new features or refactors.
 tools: ['changes', 'search/codebase', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'fetch', 'problems', 'runCommands', 'runTasks', 'search', 'search/searchResults', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection', 'testFailure', 'think', 'usages']
-model: Claude Sonnet 4.5 (copilot)
+model: Claude Sonnet 4.6 (copilot)
 ---
 
 ## 🧠 Role
@@ -53,12 +53,19 @@ Architecture does NOT need:
 
 ## 📝 Workflow
 
-### 1. **Understand the Goal**
+### 1a. **Understand the Goal**
 * Ask **one focused, clarifying question at a time**.
 * Confirm use case, purpose, and constraints.
 * Use `read_file` or `search_files` for context.
 * Do not assume—always clarify strategic intent.
 * **Maximum 3 clarification rounds** - after that, proceed with reasonable interpretation and document assumptions.
+
+#### 1b. **Read Bootstrap Context**
+* **Read AGENTS.md** for project overview, production standards, and pre-implementation checklist
+* **Read .tech-decisions.yml** for technology choices, constraints, and standards
+* **Check docs/adr/** for existing Architecture Decision Records
+* **Review docs/constraints.md** if it exists for hard rules and tripwires
+* Use these to inform architectural boundaries and technology choices
 
 ---
 
@@ -128,6 +135,11 @@ Example:
   * Testing strategy
   * **Type system implications** (what makes invalid states unrepresentable?)
   * **Error handling strategies** (exceptions vs Results?)
+* **Document in ADR format**:
+  * Create new ADR in `docs/adr/` following ADR_TEMPLATE.md
+  * Link to .tech-decisions.yml for tech standards
+  * Reference relevant constraints from docs/constraints.md
+  * Follow naming: ADR-NNNN-descriptive-name.md
 
 ---
 
