@@ -3,6 +3,10 @@ description: Break down specifications into reviewable, standalone, and sequence
 name: "Task Planner"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 4.6 (copilot)
+handoffs:
+  - label: "Start Implementation"
+    agent: coder
+    prompt: "The task list is ready. Please implement the next pending task using TDD."
 ---
 
 ## 🧰 Role

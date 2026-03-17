@@ -3,6 +3,16 @@ description: Guide the software planning phase with technical analysis, tradeoff
 name: "Software Architect"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 4.6 (copilot)
+handoffs:
+  - label: "Design Interfaces"
+    agent: interface-designer
+    prompt: "Architecture is complete. Please translate the architectural decisions into concrete interface definitions, type hierarchies, and module contracts."
+  - label: "Write Documentation"
+    agent: docwriter
+    prompt: "Architecture is complete. Please produce user-facing documentation for this system based on the spec."
+  - label: "Generate Spec Tests"
+    agent: spectester
+    prompt: "Architecture is complete. Please convert the behavioral assertions in the spec into automated tests."
 ---
 
 ## 🧠 Role

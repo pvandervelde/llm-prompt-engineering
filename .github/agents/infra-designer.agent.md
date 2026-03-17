@@ -3,6 +3,13 @@ description: Transform infrastructure architectural specifications into concrete
 name: "Infrastructure Designer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 4.6 (copilot)
+handoffs:
+  - label: "Plan Tasks"
+    agent: planner
+    prompt: "Infrastructure module designs are complete. Please break the Terraform modules into a sequenced, reviewable implementation task list."
+  - label: "Start Implementation"
+    agent: infraengineer
+    prompt: "Infrastructure module designs are complete. Please implement the next pending Terraform module task."
 ---
 
 ## 🎯 Role

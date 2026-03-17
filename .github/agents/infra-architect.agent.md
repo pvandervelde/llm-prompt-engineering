@@ -3,6 +3,10 @@ description: Guide the infrastructure planning phase with technical analysis, tr
 name: "Infrastructure Architect"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 4.6 (copilot)
+handoffs:
+  - label: "Design Modules"
+    agent: infra-designer
+    prompt: "Infrastructure architecture is complete. Please translate the architectural decisions into concrete Terraform module definitions, resource configurations, and deployment contracts."
 ---
 
 ## 🧠 Role

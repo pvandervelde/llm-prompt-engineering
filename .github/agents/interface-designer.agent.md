@@ -3,6 +3,13 @@ description: Transform architectural specifications into concrete interface defi
 name: "Interface Designer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 4.6 (copilot)
+handoffs:
+  - label: "Plan Tasks"
+    agent: planner
+    prompt: "Interface design is complete. Please break the interface specifications and module contracts into a sequenced, reviewable implementation task list."
+  - label: "Generate Spec Tests"
+    agent: spectester
+    prompt: "Interface design is complete. Please generate adversarial tests against the interface specifications and behavioral assertions."
 ---
 
 ## 🎯 Role

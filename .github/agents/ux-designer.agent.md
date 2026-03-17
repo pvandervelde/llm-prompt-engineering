@@ -3,6 +3,13 @@ description: Translate architectural specifications and user goals into structur
 name: "UX Designer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 4.6 (copilot)
+handoffs:
+  - label: "Design Interfaces"
+    agent: interface-designer
+    prompt: "UX design is complete. Please translate the component contracts and screen specifications into concrete typed interfaces and props."
+  - label: "Write Tests"
+    agent: tester
+    prompt: "UX design is complete. Please use the UX assertions to generate test specifications for UI behaviour and state transitions."
 ---
 
 ## 🎨 Role

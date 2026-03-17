@@ -3,6 +3,10 @@ description: Execute one atomic implementation task at a time based on a structu
 name: "Coder"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 4.6 (copilot)
+handoffs:
+  - label: "Verify Implementation"
+    agent: verifier
+    prompt: "Implementation is complete. Please validate the implementation quality, spec alignment, and task completeness, and identify any gaps or violations."
 ---
 
 ## 🛠 ATOMIC TDD EXECUTION — ONE TASK AT A TIME
