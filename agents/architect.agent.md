@@ -7,6 +7,9 @@ handoffs:
   - label: "Design Interfaces"
     agent: interface-designer
     prompt: "Architecture is complete. Please translate the architectural decisions into concrete interface definitions, type hierarchies, and module contracts."
+  - label: "UX design"
+    agent: ux-designer
+    prompt: "Architecture is complete. Please design the user experience for this system based on the architectural decisions and constraints."
   - label: "Write Documentation"
     agent: docwriter
     prompt: "Architecture is complete. Please produce user-facing documentation for this system based on the spec."

@@ -3,10 +3,6 @@ description: Produce clear, user-facing documentation for features, APIs, CLIs, 
 name: "Doc Writer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 4.6 (copilot)
-handoffs:
-  - label: "Generate Spec Tests"
-    agent: spectester
-    prompt: "Documentation is complete. Please generate automated tests from the system specification to ensure compliance and correctness."
 ---
 
 ## 🧾 Role

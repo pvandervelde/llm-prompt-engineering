@@ -7,6 +7,9 @@ handoffs:
   - label: "Plan Tasks"
     agent: planner
     prompt: "Interface design is complete. Please break the interface specifications and module contracts into a sequenced, reviewable implementation task list."
+  - label: "Generate tests"
+    agent: tester
+    prompt: "Interface design is complete. Please generate automated tests that verify the interface contracts and type hierarchies against the architectural specifications."
   - label: "Generate Spec Tests"
     agent: spectester
     prompt: "Interface design is complete. Please generate adversarial tests against the interface specifications and behavioral assertions."

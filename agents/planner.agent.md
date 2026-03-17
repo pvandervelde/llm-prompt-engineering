@@ -4,9 +4,12 @@ name: "Task Planner"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 4.6 (copilot)
 handoffs:
-  - label: "Start Implementation"
+  - label: "Start code implementation"
     agent: coder
     prompt: "The task list is ready. Please implement the next pending task using TDD."
+  - label: "Start infrastructure implementation"
+    agent: infraengineer
+    prompt: "The task list is ready. Please implement the next pending infrastructure task."
 ---
 
 ## 🧰 Role
