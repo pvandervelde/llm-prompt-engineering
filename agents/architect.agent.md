@@ -16,6 +16,9 @@ handoffs:
   - label: "Generate Spec Tests"
     agent: spectester
     prompt: "Architecture is complete. Please convert the behavioral assertions in the spec into automated tests."
+  - label: "Verify security"
+    agent: security-reviewer
+    prompt: "Architecture is complete. Please perform a security review of the design, checking for hardcoded secrets, proper secret management, and adherence to security standards."
 ---
 
 ## 🧠 Role

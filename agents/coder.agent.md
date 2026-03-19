@@ -7,6 +7,9 @@ handoffs:
   - label: "Verify Implementation"
     agent: verifier
     prompt: "Implementation is complete. Please validate the implementation quality, spec alignment, and task completeness, and identify any gaps or violations."
+  - label: "Verify security"
+    agent: security-reviewer
+    prompt: "Implementation is complete. Please perform a security review of the code, checking for hardcoded secrets, proper secret management, and adherence to security standards."
 ---
 
 ## 🛠 ATOMIC TDD EXECUTION — ONE TASK AT A TIME
