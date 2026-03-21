@@ -80,6 +80,9 @@ You **do not** directly change production code. You **produce** review artifacts
 - Test coverage for existing features
 - Performance bottlenecks (with evidence)
 - Error handling and edge cases
+- Dead/unused code (unreferenced functions, types, constants, variables)
+- Duplicate or near-duplicate types and structures that could be merged
+- Architectural improvement opportunities (applicable patterns, missing abstractions, implicit domain concepts)
 
 **❌ DON'T report as issues:**
 - Missing features that weren't planned (check `.llm/tasks.md`)
@@ -187,12 +190,13 @@ Actions:
 2. Produce a **high-level diagram** (Mermaid) showing components and data flows.
 3. **If `docs/spec/architecture.md` exists, validate against it** - don't invent new requirements.
 4. Check architectural qualities: modularity, layering, dependency directions, data ownership, single source of truth, observability, security boundaries, resilience patterns.
-5. For each architectural concern, provide:
+5. **Identify improvement opportunities**: scan for applicable design patterns (Strategy, Factory, Repository, Command, Observer, etc.), implicit domain concepts that could be made explicit, cross-cutting concerns that could be better separated, and structural duplication that suggests missing abstractions.
+6. For each architectural concern or improvement opportunity, provide:
    - Finding (one-line)
    - Evidence (file paths, line ranges)
    - Severity (Critical / High / Medium / Low) - use definitions from Philosophy section
    - Suggested mitigation (short)
-6. **Limit findings to 10-15 most important architectural concerns** - focus on highest impact.
+7. **Limit findings to 10-15 most important architectural concerns and improvements** - focus on highest impact.
 
 Output format (markdown with Mermaid + table). Example files:
 - `reviews/01-architecture.md` (5-10 pages max)
@@ -238,6 +242,8 @@ Template for `reviews/blocks/<NN>-<block-name>.md`:
 
 2. **Architecture & Boundaries**
    - Ports/adapters, dependency arrows, boundary leaks (with file references).
+   - Applicable design patterns that could simplify or improve this block.
+   - Implicit domain concepts that could be made explicit as named abstractions.
 
 3. **Code Quality**
    - Readability (naming, complexity)
@@ -245,6 +251,8 @@ Template for `reviews/blocks/<NN>-<block-name>.md`:
    - Concurrency & resource use
    - Error handling and propagation
    - Performance hot spots (if detectable from code)
+   - Dead code & cleanup (unused functions, unreachable paths, unreferenced types or constants)
+   - Duplicate types (near-identical types/interfaces/structs that could be merged or unified)
 
 4. **Tests & Testability**
    - Tests present? (paths)
@@ -274,6 +282,8 @@ Output: One review file per block (5-15 pages max per block)
 ### Stage 4 — Synthesis & Prioritization (30-45 minutes, deliverable: `reviews/99-summary.md`)
 - Consolidate all block findings into a single prioritized list.
 - **Limit backlog to 20-30 most impactful items** - group similar issues.
+- Include a **Cleanup & Consolidation** section listing: dead code candidates, duplicate/mergeable types, and unused artifacts — these are fast wins that reduce maintenance burden.
+- Include an **Architectural Improvement** section listing: design pattern opportunities, missing abstractions, and domain concepts that could be introduced — ordered by estimated impact.
 - For each backlog item produce a GitHub-issue style card:
   - Title
   - Short description

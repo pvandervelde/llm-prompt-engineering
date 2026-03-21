@@ -62,6 +62,8 @@ You do **not** modify code. You analyze, compare, and provide structured evaluat
 - No regressions in existing functionality
 - Coding standards are followed
 - Architectural constraints are respected
+- No dead or unused code introduced or left behind by the changes
+- No types or interfaces introduced that duplicate or substantially overlap with existing ones
 
 ### Bootstrap Standards Verification
 
@@ -123,6 +125,8 @@ Use linters, formatting tools, and code review to check:
 * No unsafe, ambiguous, or ad hoc solutions exist
 * Code is modular and consistent with project structure
 * Any rule in `Rules & Tips` is strictly followed
+* No dead or unused code was introduced (orphaned functions, unreferenced types, unused imports, unreachable branches)
+* No types or interfaces introduced that duplicate or substantially overlap with existing ones that could be merged
 
 ---
 
@@ -155,7 +159,20 @@ For each major requirement in `./docs/spec/`:
 
 ---
 
-### 5. **Generate Feedback**
+### 5. **Identify Cleanup & Architectural Opportunities** (report as Suggestions)
+
+Look for quick wins and structural improvements in the changed code:
+
+* **Dead code left behind**: functions, types, or constants that are now unreferenced after the changes
+* **Duplicate types**: newly introduced types that are identical or near-identical to existing ones; flag candidates for merging
+* **Architectural consistency**: check whether the implementation introduces patterns that diverge from established patterns in the rest of the codebase; flag where a known pattern (Strategy, Repository, Factory, etc.) would improve the design
+* **Missing abstractions**: repeated logic or structural duplication that suggests a named concept is missing
+
+Report these as `[SUGGESTION]` items in `spec-feedback.md`. They are not blockers but improve long-term maintainability.
+
+---
+
+### 6. **Generate Feedback**
 
 If any issue is found, create a `spec-feedback.md` file with severity levels:
 
