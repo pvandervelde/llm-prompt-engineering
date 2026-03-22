@@ -146,7 +146,7 @@ Keep patches small (<200 lines) and focused on one specific issue.
 - **Identify review scope**: If `.llm/tasks.md` exists, note implemented vs planned features.
 - Output: `reviews/00-triage.md` (short, 1-2 pages max).
 
-### Stage 0b — Validate Against Bootstrap Standards (NEW)
+### Stage 0b — Validate Against Bootstrap Standards
 
 Before architectural review, validate compliance with project standards:
 
@@ -247,22 +247,34 @@ Template for `reviews/blocks/<NN>-<block-name>.md`:
 
 3. **Code Quality**
    - Readability (naming, complexity)
+   - Ubiquitous language consistency (same domain concept named differently in different layers or modules)
    - Correctness (edge cases, invariants)
    - Concurrency & resource use
    - Error handling and propagation
    - Performance hot spots (if detectable from code)
    - Dead code & cleanup (unused functions, unreachable paths, unreferenced types or constants)
    - Duplicate types (near-identical types/interfaces/structs that could be merged or unified)
+   - TODO/FIXME/HACK/TEMPORARY/NOTIMPLEMENTED markers left in production code paths
 
 4. **Tests & Testability**
    - Tests present? (paths)
    - Missing test scenarios (list specific cases)
    - Test quality (determinism, fixtures, assertions)
+   - Testable design: dependencies injected rather than constructed inline (enables test doubles)
+   - Static methods and singletons that prevent substitution in tests
+   - Side effects (I/O, time, randomness) mixed into business logic rather than isolated behind an interface
+   - Logic locked behind sealed/final/private types with no seam for test observation
 
 5. **Security & Safety**
    - Input validation, secrets, unsafe usage patterns, deserialization issues.
 
-6. **Concrete Findings** (Most important)
+6. **Observability & Logging**
+   - Errors on critical paths are logged at the appropriate severity level
+   - Correlation/trace context (request IDs, trace IDs) propagated across async and service boundaries
+   - Key domain events emit metrics or traces where the architecture specifies observability requirements
+   - Note: secrets-in-logs and PII-in-logs are in scope for the **security-reviewer**, not here
+
+7. **Concrete Findings** (Most important)
    For each finding include:
    - **Observation** — short quote / snippet (use `path:line-range`)
    - **Rationale** — why it's a problem (1–2 sentences)
@@ -273,7 +285,7 @@ Template for `reviews/blocks/<NN>-<block-name>.md`:
    - **Estimated effort** — S / M / L
    - **Confidence** — High / Medium / Low
 
-7. **Priority Backlog Items** (convert findings into discrete tickets)
+8. **Priority Backlog Items** (convert findings into discrete tickets)
 
 Also include a small **risk matrix**: probability vs impact.
 

@@ -64,6 +64,7 @@ You do **not** modify code. You analyze, compare, and provide structured evaluat
 - Architectural constraints are respected
 - No dead or unused code introduced or left behind by the changes
 - No types or interfaces introduced that duplicate or substantially overlap with existing ones
+- TODO/FIXME/HACK markers not left in completed task code paths
 
 ### Bootstrap Standards Verification
 
@@ -127,6 +128,7 @@ Use linters, formatting tools, and code review to check:
 * Any rule in `Rules & Tips` is strictly followed
 * No dead or unused code was introduced (orphaned functions, unreferenced types, unused imports, unreachable branches)
 * No types or interfaces introduced that duplicate or substantially overlap with existing ones that could be merged
+* No TODO/FIXME/HACK/TEMPORARY/NOTIMPLEMENTED markers left in code paths covered by completed tasks
 
 ---
 
@@ -167,8 +169,10 @@ Look for quick wins and structural improvements in the changed code:
 * **Duplicate types**: newly introduced types that are identical or near-identical to existing ones; flag candidates for merging
 * **Architectural consistency**: check whether the implementation introduces patterns that diverge from established patterns in the rest of the codebase; flag where a known pattern (Strategy, Repository, Factory, etc.) would improve the design
 * **Missing abstractions**: repeated logic or structural duplication that suggests a named concept is missing
+* **Documentation currency**: check whether public-facing documentation (README, API reference, module-level docs) accurately reflects changed behaviour; stale descriptions mislead future contributors
+* **Performance regression signals**: flag regressions visible from diff inspection — removal of caching layers, introduction of synchronous calls in previously async paths, O(n²) loops where the previous implementation was O(n)
 
-Report these as `[SUGGESTION]` items in `spec-feedback.md`. They are not blockers but improve long-term maintainability.
+Report these as `[SUGGESTION]` or `[MINOR]` items in `spec-feedback.md`. They are not blockers but improve long-term maintainability.
 
 ---
 
@@ -240,7 +244,7 @@ Found [X Critical], [Y Major], [Z Minor] issues, [W Suggestions]
 
 ---
 
-### 6. Optional Enhancements
+### 7. Optional Enhancements
 
 If configured, use:
 
