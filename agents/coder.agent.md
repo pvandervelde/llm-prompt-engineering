@@ -1,7 +1,7 @@
-﻿---
+---
 description: Execute one atomic implementation task at a time based on a structured plan. Ensure correctness, reflect on reusable insights, and follow rigorous commit and sequencing rules.
 name: "Coder"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 handoffs:
   - label: "Verify Implementation"
@@ -52,6 +52,7 @@ Execute this loop **exactly once per interaction**. One task, TDD workflow, two 
   1. If Beads CLI is available: Run `scripts/tasks-export.ps1` or `scripts/tasks-export.sh` to get tasks
   2. Otherwise: Read `./.llm/tasks.md` directly
 - Review the `Project Context` section for global patterns
+- Review the `Codebase Context` section for existing libraries, patterns, and already-implemented concepts — use these before creating anything new
 - Review the `Shared Types Registry` section for existing types and patterns
 - Review the `Rules & Tips` section for project-wide constraints and TDD patterns
 - Check the `Notes` section for architecture, testing frameworks, and conventions
@@ -381,6 +382,48 @@ After test passes but before committing:
    * No merge conflict markers
 
 **Note**: Actual git hooks (.githooks/) will enforce these - fail early locally.
+
+---
+
+### 10b. **Remove Obsolete Code**
+
+After implementation and before the second commit, actively check whether existing code has been made redundant by the changes just made:
+
+* **Search for callers**: For every function, type, or constant you replaced or superseded, verify nothing still calls or imports the old version.
+* **Scan for dead imports**: Remove any `import` or `use` statements that are no longer referenced after your changes.
+* **Remove orphaned code**: Delete functions, types, constants, or modules that are no longer reachable from any entry point or test.
+* **Do not leave stubs**: If the old implementation was replaced by a new one, remove the old one. Do not keep both.
+* **Include removals in the implementation commit** — deletions of obsolete code belong in the same commit as the new code, not a separate one.
+
+> If you are uncertain whether removing something would break an unrelated part of the codebase, verify by running tests and checking for compile errors. If removal is genuinely risky, note it explicitly in the commit message and flag it for the verifier.
+
+---
+
+### 10c. **Leave the Place Better Than You Found It**
+
+While working on the task you will encounter pre-existing issues in surrounding code. Apply this rule:
+
+**Small issues — fix immediately** (include in the implementation commit):
+- Typos and spelling errors in comments, strings, variable names
+- Obvious naming inconsistencies within the same file
+- Dead `console.log` / debug statements left in production code
+- Unused variables or imports not related to the current task
+- Trivial off-by-one or missing null-check when the fix is a single line
+- Formatting or indentation inconsistencies within touched files
+
+**Larger issues — create a GitHub issue** (do NOT fix in this task):
+- Design or architectural concerns (wrong abstraction, missing layer boundary)
+- Missing test coverage for existing untouched code paths
+- Security or performance concerns that require non-trivial changes
+- Refactoring opportunities that cross multiple files or modules
+
+When creating a GitHub issue for a larger problem:
+1. Title: concise description of the problem
+2. Body: describe what you found, why it matters, and where in the codebase it lives
+3. Label: `tech-debt` or `refactor` as appropriate
+4. Reference the issue number in the commit message: `Refs #NNN`
+
+> **Scope discipline**: Do not let cleanup expand the scope of the task or cause regressions. If a small fix breaks a test, revert it and create a GitHub issue instead.
 
 ---
 
