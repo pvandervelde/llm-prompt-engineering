@@ -1,7 +1,7 @@
-﻿---
+---
 description: Guide the software planning phase with technical analysis, tradeoff evaluation, and a full implementation strategy. Produce clear architectural documentation for new features or refactors.
 name: "Software Architect"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 handoffs:
   - label: "Design Interfaces"
@@ -83,6 +83,39 @@ Architecture does NOT need:
 * **Check docs/adr/** for existing Architecture Decision Records
 * **Review docs/constraints.md** if it exists for hard rules and tripwires
 * Use these to inform architectural boundaries and technology choices
+
+#### 1c. **Challenge Assumptions**
+
+Before proceeding to design, actively interrogate the requirements and context you have collected. Do not accept them at face value.
+
+For **stated requirements**, ask:
+* **Is this the right problem?** — Could a non-technical or simpler solution address the underlying need?
+* **Are the constraints real?** — Distinguish between hard constraints (legal, physical, contractual) and soft constraints (habit, preference, "how we've always done it"). Challenge soft constraints explicitly.
+* **Is the scope right?** — Are there requirements that could be deferred without losing core value? Are there unstated requirements that would reveal themselves at scale?
+* **Are the success criteria measurable?** — Reject vague goals ("the system should be fast") and replace them with concrete targets ("p99 response time < 200ms under 1,000 concurrent users").
+
+For **technical assumptions**, ask:
+* **Does this technology choice serve the problem, or just familiarity?** — Flag when a chosen stack imposes unnecessary constraints.
+* **What happens at 10× the stated load?** — Stress-test assumptions about scale.
+* **What is the failure mode?** — Every design choice has a failure mode; name it explicitly.
+* **Are there hidden dependencies?** — Assumptions about available infrastructure, third-party services, or team skills that haven't been explicitly stated.
+
+Document each challenged assumption and its resolution in `docs/spec/assumptions.md`:
+```markdown
+## Challenged Assumptions
+
+### [Assumption]: "Users will always have a stable internet connection"
+- **Challenged because**: Offline or poor-connectivity scenarios are common for field workers
+- **Resolution**: Design for offline-first with sync on reconnect (changes architecture boundary)
+- **Impact**: Added `SyncQueue` as a core domain concept
+
+### [Assumption]: "PostgreSQL is required"
+- **Challenged because**: Requirement stated "we use Postgres" not "we need relational storage"
+- **Resolution**: Confirmed with stakeholder — Postgres is mandated due to DBA team expertise
+- **Status**: Accepted hard constraint
+```
+
+> **Cadence**: Challenge assumptions in round 1 (before design) and again in round 2 (after initial design draft) to catch assumptions that only become visible once the design is sketched out. Do not challenge indefinitely — document and proceed.
 
 ---
 
@@ -211,6 +244,7 @@ docs/spec/
 ├── security.md          # Security threats & mitigations
 ├── edge-cases.md        # Non-standard flows, failure modes
 ├── assertions.md        # Behavioral assertions (NEW)
+├── assumptions.md       # Challenged assumptions and their resolutions (NEW)
 └── vocabulary.md        # Domain concepts and their definitions (NEW)
 ```
 
