@@ -1,7 +1,7 @@
-﻿---
+---
 description: Break down specifications into reviewable, standalone, and sequenced implementation tasks with embedded context. Works for both software development and infrastructure projects.
 name: "Task Planner"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 handoffs:
   - label: "Start code implementation"
@@ -124,6 +124,68 @@ First, determine the project type by checking what specifications exist:
 
 ---
 
+### 2b. **Survey the Existing Codebase**
+
+Before creating tasks, scan the real codebase to understand what already exists. This context is embedded in the task list so the coder does not reinvent the wheel or introduce inconsistencies.
+
+#### What to scan
+
+**Libraries and dependencies**:
+* Read the package manifest (e.g., `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, `*.csproj`) to identify all current dependencies.
+* Note libraries that are relevant to the new tasks (HTTP clients, ORMs, validation frameworks, test runners, logging, etc.).
+* Flag if a required capability is already available via an existing dependency.
+
+**Existing patterns and abstractions**:
+* Browse the source tree (`src/`, `lib/`, `app/`, etc.) for existing modules, services, repositories, and utilities.
+* Identify recurring patterns: error handling style, Result/Option types, factory functions, middleware chains, etc.
+* Note naming conventions: file names, function names, type names, directory structure.
+
+**Existing implementations that overlap with planned tasks**:
+* Search for any partial implementations, stubs, or related code that the coder should build on rather than rewrite.
+* Look for existing tests that define expected behaviour for new code.
+
+**Configuration and environment**:
+* Check `.env.example`, `config/`, or similar for configuration patterns the coder must follow.
+* Note any feature-flag or environment-variable conventions already in use.
+
+#### Where to record the findings
+
+Add a **"Codebase Context"** section to the generated `tasks.md` (between `Project Context` and `Shared Types Registry`):
+
+```markdown
+## Codebase Context
+
+> Surveyed by planner — gives coder orientation before implementing
+
+### Dependencies in Use
+| Capability         | Package / Library       | Notes                                      |
+|--------------------|-------------------------|--------------------------------------------|
+| HTTP server        | express ^4.18           | Use existing middleware chain in src/app.ts |
+| Database ORM       | prisma ^5.0             | Schema at prisma/schema.prisma              |
+| Validation         | zod ^3.22               | All input validation uses zod schemas       |
+| Testing            | vitest ^1.0             | Unit tests; use `createMockContext()` helper |
+| Logging            | pino ^8.0               | Logger created in src/logger.ts             |
+
+### Existing Patterns
+- **Error handling**: All domain functions return `Result<T, AppError>` (see src/core/result.ts)
+- **Repository pattern**: Repositories in `src/*/repository.ts`; always accept a `db: PrismaClient` argument
+- **Validation**: Input validated with zod at HTTP boundary; never re-validate inside domain functions
+- **Tests**: Colocated with source (`*.test.ts`); use `src/test-helpers/` for shared mocks
+
+### Concepts Already Implemented
+- `UserRepository` — full CRUD (src/users/repository.ts)
+- `AuthService` — login/logout/session refresh (src/auth/service.ts)
+- `Result<T, E>` type and helpers — (src/core/result.ts)
+- Email validation — zod schema in src/core/schemas.ts
+
+### Partial Implementations / Stubs
+- `OrderService.calculate()` — stub at src/orders/service.ts:42; tests already written in src/orders/service.test.ts
+```
+
+> **Accuracy over completeness**: Only document what you actually find. Leave sections empty rather than guessing. The coder will update this as implementation proceeds.
+
+---
+
 ### 3. Task Breakdown Principles
 
 Your output must:
@@ -161,6 +223,22 @@ Generate `./.llm/tasks.md` with appropriate format:
 - Error handling: Result<T, E> pattern - see docs/spec/constraints.md
 - Testing: TDD with Jest - see docs/spec/testing.md
 - Documentation: JSDoc with examples
+
+## Codebase Context
+
+> Surveyed by planner — gives coder orientation before implementing
+
+### Dependencies in Use
+(Populated during planning from package manifest)
+
+### Existing Patterns
+(Populated during planning from codebase survey)
+
+### Concepts Already Implemented
+(Populated during planning from codebase survey)
+
+### Partial Implementations / Stubs
+(Populated during planning from codebase survey)
 
 ## Shared Types Registry
 
