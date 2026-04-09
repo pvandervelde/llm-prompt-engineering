@@ -1,7 +1,7 @@
-﻿---
+---
 description: Translate architectural specifications and user goals into structured UX designs — user flows, screen inventories, interaction specifications, and component contracts — that guide implementation without writing production code.
 name: "UX Designer"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 handoffs:
   - label: "Design Interfaces"

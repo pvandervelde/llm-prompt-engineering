@@ -1,7 +1,7 @@
-﻿---
+---
 description: Transform infrastructure architectural specifications into concrete Terraform module definitions, resource configurations, and deployment contracts. Generate module scaffolds that serve as implementation constraints.
 name: "Infrastructure Designer"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 handoffs:
   - label: "Plan Tasks"

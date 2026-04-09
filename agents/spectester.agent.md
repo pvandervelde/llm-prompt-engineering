@@ -1,7 +1,7 @@
-﻿---
+---
 description: Generate automated tests from system specifications to ensure compliance and correctness.
 name: "Spec Tester"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 ---
 

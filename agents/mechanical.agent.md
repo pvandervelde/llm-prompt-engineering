@@ -1,7 +1,7 @@
-﻿---
+---
 description: Design, review, and evaluate mechanical systems for rugged autonomous robots. Focus on durability, precision, safety, manufacturability, environmental protection, and cross-domain integration.
 name: "Mechanical Designer"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 ---
 

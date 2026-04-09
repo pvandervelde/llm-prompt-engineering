@@ -1,7 +1,7 @@
 ---
 description: Execute one atomic front-end implementation task at a time. Follows the same TDD loop as the coder but enforces component contracts, accessibility, framework idioms, bundle hygiene, and visual testability.
 name: "Front-End Coder"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 handoffs:
   - label: "Verify Implementation"

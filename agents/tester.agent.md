@@ -1,7 +1,7 @@
-﻿---
+---
 description: Generate adversarial, mutation-resistant test suites from interface specifications and behavioral assertions. Expose implementation weaknesses, stub evasion, and incomplete contracts before and after coding.
 name: "Tester"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 ---
 

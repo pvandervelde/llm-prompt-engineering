@@ -1,7 +1,7 @@
-﻿---
+---
 description: Produce clear, user-facing documentation for features, APIs, CLIs, or applications based on system specifications. Focus on usage clarity and onboarding ease.
 name: "Doc Writer"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 ---
 

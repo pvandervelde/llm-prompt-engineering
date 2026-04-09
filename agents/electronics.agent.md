@@ -1,7 +1,7 @@
-﻿---
+---
 description: Design and review embedded electronics for rugged autonomous robotics. Emphasize low-noise layout, power integrity, testability, thermal management, and interface reliability under field conditions.
 name: "Electronics Designer"
-tools: [read, search, edit, web, execute]
+tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 4.6 (copilot)
 ---
 
