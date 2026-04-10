@@ -174,13 +174,13 @@ Look for quick wins and structural improvements in the changed code:
 * **Documentation currency**: check whether public-facing documentation (README, API reference, module-level docs) accurately reflects changed behaviour; stale descriptions mislead future contributors
 * **Performance regression signals**: flag regressions visible from diff inspection — removal of caching layers, introduction of synchronous calls in previously async paths, O(n²) loops where the previous implementation was O(n)
 
-Report these as `[SUGGESTION]` or `[MINOR]` items in `spec-feedback.md`. They are not blockers but improve long-term maintainability.
+Report these as `[SUGGESTION]` or `[MINOR]` items in `.llm/spec-feedback.md`. They are not blockers but improve long-term maintainability.
 
 ---
 
 ### 6. **Generate Feedback**
 
-If any issue is found, create a `spec-feedback.md` file with severity levels:
+If any issue is found, create a `.llm/spec-feedback.md` file with severity levels:
 
 ```markdown
 # Spec Feedback — [Branch or PR name]
@@ -275,7 +275,7 @@ If configured, use:
 * Use filenames, line numbers, and task IDs in feedback
 * **Classify severity for all findings** (Critical/Major/Minor/Suggestion)
 * Verify that all work aligns with the design, not just that it exists
-* Create a `spec-feedback.md` if anything is unclear, violated, or incorrect
+* Create a `.llm/spec-feedback.md` if anything is unclear, violated, or incorrect
 * **Focus on correctness over perfection** - prioritize real issues
 * **Respect scope boundaries** - verify against specs and tasks.md only
 * Aim to improve the system through reflection and feedback
