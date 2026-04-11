@@ -427,6 +427,25 @@ When creating a GitHub issue for a larger problem:
 
 ---
 
+### 10d. **Verify Integration**
+
+After implementation, verify that all new components are connected to the rest of the system. New code that is never called, referenced, or wired in is dead code — this step prevents it.
+
+* **Identify callers and entry points**: For every new function, type, module, or resource created, confirm it is actually invoked, imported, or referenced somewhere in the existing system.
+* **Check for orphaned implementations**: Search the codebase for the new component's name and verify at least one caller or consumer exists outside of the component's own file and tests.
+* **Verify registration and wiring**: If the component must be registered (e.g., in a dependency injection container, middleware chain, route registry, plugin loader, or configuration file), confirm that registration is present and correct.
+* **Trace the execution path**: Starting from a known system entry point (e.g., application bootstrap, main handler, root module), follow the call chain to confirm it reaches the new code.
+* **Run any available integration or end-to-end tests** to confirm the component participates correctly in the system.
+
+If the new code is not yet connected:
+* Add the necessary wiring, registration, or invocation code.
+* Include these changes in the second commit alongside the implementation.
+* If the connection point sits in a different layer or module, add it there and document it in the commit message.
+
+> **No orphans allowed**: Every new component must have a verifiable path to execution before the task is considered done.
+
+---
+
 ### 11. **Second Commit - Implementation**
 - Commit only the implementation code (function bodies)
 - Format: `Implement <feature> (auto via agent)`

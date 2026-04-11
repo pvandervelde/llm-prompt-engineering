@@ -280,6 +280,24 @@ terraform plan
 
 ---
 
+### 8a. **Verify Integration**
+
+After implementation and before committing, verify that the new module or resource is actually connected to the rest of the infrastructure. A module that is never referenced by any other module or environment configuration is dead infrastructure.
+
+* **Confirm downstream consumers exist**: For every output defined in the module, check that at least one other module or environment configuration references it (e.g., via `module.<name>.<output>`).
+* **Check for orphaned modules**: Search the environment and root configurations (`infra/envs/`, `infra/environments/`, `infra/live/`, or equivalent) to confirm the new module is instantiated somewhere.
+* **Verify dependency wiring**: If the module spec states it provides values to other modules (e.g., vpc_id, subnet_ids, security group IDs), confirm those consuming modules already reference or are updated to reference the outputs.
+* **Run `terraform plan` in a root/environment config** (if credentials are available) to confirm the module participates in the dependency graph with no "unused" warnings.
+
+If the module is not yet wired in:
+* Add the necessary `module` block, variable references, or output passing in the appropriate environment or root configuration.
+* Include these changes in the same commit as the module implementation.
+* If the consuming configuration is managed by a different team or future task, document the gap explicitly in the commit message and flag it in the task summary.
+
+> **No orphaned modules allowed**: Every new module must have a verifiable path to execution — instantiated in at least one environment configuration — before the task is considered done.
+
+---
+
 ### 9. **Commit - Module Implementation**
 
 - Commit the completed module implementation
@@ -581,6 +599,11 @@ Validation:
 - terraform init → ✓ Providers downloaded
 - terraform fmt → ✓ Formatted 3 files
 - terraform validate → ✓ Configuration valid
+
+Integration Verification:
+- Check environment configs → VPC module instantiated in infra/envs/dev/main.tf
+- Check security groups module → references module.vpc.vpc_id ✓
+- No orphaned outputs found → Proceed to commit
 
 Commit: "1.1 Implement VPC resource with DNS enabled (auto via agent)"
 

@@ -196,6 +196,12 @@ Your output must:
   * Suitable for one pull request
   * References specific interfaces/modules
   * One-line rationale
+* **Every parent task must end with an integration verification subtask** — always the last subtask:
+  * Phrased generically so it is meaningful to both software coders and infrastructure engineers
+  * Focuses on confirming the newly built component is reachable from the rest of the system (called, wired, registered, referenced, or consumed)
+  * Does not describe *how* to connect the component (that is for the implementer to decide); it only asks that connection be confirmed
+  * Naming pattern: `X.N Verify <component name> is integrated into the system`
+  * Example subtasks: "Verify the authentication service is invoked from the request handler", "Verify the VPC module outputs are consumed by the security groups module", "Verify the order processor is reachable from the application entry point"
 * **For each parent task, include rich context**:
   * Interface/module spec references
   * Existing types/modules to reuse
@@ -276,6 +282,7 @@ Generate `./.llm/tasks.md` with appropriate format:
     - [ ] Pre-commit hooks will pass (format, lint, secrets)
   - [ ] 1.1 Implement Result<T, E> type and helper functions
   - [ ] 1.2 Implement branded types (Email, UserId)
+  - [ ] 1.3 Verify core shared types are imported and used by dependent modules
 
 - [ ] 2.0 Implement Authentication Domain Types
   - Context:
@@ -287,6 +294,7 @@ Generate `./.llm/tasks.md` with appropriate format:
   - Assertions: docs/spec/assertions.md #1-4
   - [ ] 2.1 Implement UserCredentials type
   - [ ] 2.2 Implement AuthError discriminated union
+  - [ ] 2.3 Verify authentication domain types are integrated into the system
 ```
 
 #### Infrastructure Project Format
@@ -332,6 +340,7 @@ Generate `./.llm/tasks.md` with appropriate format:
   - [ ] 1.4 Implement internet gateway and routing
   - [ ] 1.5 Implement NAT gateways (conditional on variable)
   - [ ] 1.6 Add variable validation and outputs
+  - [ ] 1.7 Verify VPC module is referenced by dependent modules
 
 - [ ] 2.0 Implement Security Groups Module
   - Context:
@@ -345,6 +354,7 @@ Generate `./.llm/tasks.md` with appropriate format:
   - [ ] 2.2 Implement ECS security group (allow from ALB only)
   - [ ] 2.3 Implement RDS security group (allow from ECS only)
   - [ ] 2.4 Add descriptions to all rules
+  - [ ] 2.5 Verify security groups module is referenced by compute and data modules
 
 - [ ] 3.0 Setup Terraform Backend
   - Context:
@@ -356,6 +366,7 @@ Generate `./.llm/tasks.md` with appropriate format:
   - [ ] 3.1 Create S3 bucket for state with versioning
   - [ ] 3.2 Create DynamoDB table for state locking
   - [ ] 3.3 Configure backend in environment configs
+  - [ ] 3.4 Verify backend configuration is active in all environment configurations
 ```
 
 ---
