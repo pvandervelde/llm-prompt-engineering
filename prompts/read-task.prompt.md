@@ -153,6 +153,30 @@ Integration Points:
 - [integration point 2]
 ```
 
+### Significant Implementation Decisions
+
+List every implementation choice that has broad or lasting impact before any code is written. For each item, state what the decision is, the intended approach, and why.
+
+**What qualifies as a significant decision:**
+- Authentication or authorization mechanisms between components or services (e.g., JWT, API keys, mTLS, OAuth flow)
+- External service integrations (adding or changing which service owns a concern)
+- Security-sensitive patterns (secret management, encryption, RBAC design)
+- New data storage structures or schema changes (new tables, ownership changes)
+- API contract changes visible to other services or clients
+- Significant architectural boundary crossings
+- Performance trade-offs with broad impact (disabling a cache, adding synchronous calls in async paths)
+- Introduction of a new third-party dependency
+
+**Format each decision as:**
+```
+Decision: [brief name]
+Approach: [what will be done]
+Rationale: [why this approach — spec reference or constraint]
+Alternatives considered: [other options and why not chosen]
+```
+
+If no significant decisions are required, state: "No significant decisions identified."
+
 ### Implementation Plan
 
 After gathering all context, create a detailed implementation plan following TDD principles:
@@ -225,9 +249,15 @@ After gathering all context, create a detailed implementation plan following TDD
 
 ## 🎯 Final Step: Present Implementation Plan
 
-After completing all analysis and context gathering, present the implementation plan to the user and ask:
+After completing all analysis and context gathering, present the implementation plan to the user.
 
-**"I've analyzed the next task and prepared an implementation plan. Would you like me to proceed with implementation in coder mode, or would you like to review/modify the plan first?"**
+If the **Significant Implementation Decisions** section contains any items, highlight them prominently and ask:
+
+**"I've identified the following significant decisions that will shape the implementation: [list decisions]. Do you approve these approaches, or would you like to adjust any of them before I proceed? Once confirmed, I'll begin implementation in coder mode."**
+
+If no significant decisions were identified, ask:
+
+**"I've analyzed the next task and prepared an implementation plan. No significant decisions were required. Would you like me to proceed with implementation in coder mode, or would you like to review/modify the plan first?"**
 
 ---
 

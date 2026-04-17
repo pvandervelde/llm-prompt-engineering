@@ -66,6 +66,7 @@ You do **not** modify code. You analyze, compare, and provide structured evaluat
 - No types or interfaces introduced that duplicate or substantially overlap with existing ones
 - TODO/FIXME/HACK markers not left in completed task code paths
 - Pre-existing code rendered obsolete by the changes has been removed (e.g., a function that was replaced by a new implementation but the old one still exists)
+- Significant implementation decisions (auth mechanisms, external integrations, schema changes, API contracts, security patterns) are documented in commit messages or ADRs — flag as **Major** if silent
 
 ### Bootstrap Standards Verification
 
@@ -150,7 +151,31 @@ Flag any task that:
 
 ---
 
-### 4. **Check Spec Coverage**
+### 3a. **Verify Significant Decision Documentation**
+
+Scan the diff for implementation choices that have significant or lasting impact, and check that each was surfaced and documented.
+
+**What counts as a significant decision:**
+- Authentication or authorization mechanisms introduced or changed (e.g., JWT, API keys, mTLS, OAuth flow, token storage)
+- New external service integrations or changes to service responsibility boundaries
+- Security-sensitive patterns (secret management, encryption, RBAC design)
+- Data storage or schema changes (new tables/collections, ownership transfers between services)
+- API contract changes visible to other services or clients
+- Significant architectural boundary crossings
+- Performance trade-offs with broad impact (disabled caches, sync calls in async paths)
+- Introduction of a new third-party dependency
+
+**For each significant decision found in the diff:**
+
+1. Check commit messages — does the commit explain the decision, rationale, and alternatives?
+2. Check docs/adr/ — does an ADR exist for this decision if it is architectural in scope?
+3. Check `.llm/tasks.md` Notes or implementation plan — was the decision listed before implementation started?
+
+Flag as **Major** if a significant decision was made silently (no mention in commit messages, no ADR, not listed in the implementation plan). The coder is expected to surface these before and during implementation.
+
+Flag as **Minor** if the decision is documented in the commit but not in an ADR when one should exist (per docs/adr/ conventions).
+
+
 
 For each major requirement in `./docs/spec/`:
 
@@ -206,6 +231,13 @@ Found [X Critical], [Y Major], [Z Minor] issues, [W Suggestions]
 - **Issue**: No caching implementation found in codebase
 - **Spec Ref**: `docs/spec/architecture.md` → "Cache must be invalidated on write"
 - **Fix**: Implement caching or unmark task as complete
+
+### 3. [MAJOR] Significant decision made silently
+- **File**: `services/auth.rs`
+- **Decision**: Service-to-service authentication implemented using JWT bearer tokens
+- **Issue**: No mention in commit messages, no ADR, not listed in the implementation plan — the user had no opportunity to review this choice before it was made
+- **Spec Ref**: Step 3a of the Verification Process
+- **Fix**: Add an ADR documenting the decision; ensure future decisions of this nature are surfaced before implementation begins
 
 ### 3. [MAJOR] Missing test coverage for error paths
 - **File**: `auth/operations.rs`

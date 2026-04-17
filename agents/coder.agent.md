@@ -167,6 +167,35 @@ You are implementing **against this contract**, not inventing your own.
 
 ---
 
+### 5a. **Surface Significant Decisions Before Implementing**
+
+Before writing any code, identify implementation choices that have significant or lasting impact. The user must be aware of these before implementation proceeds.
+
+**What counts as a significant decision:**
+- Authentication or authorization mechanisms (e.g., JWT vs session tokens, API key scheme, mTLS between services, OAuth flow)
+- External service integrations (adding a new third-party dependency, changing which service is responsible for a concern)
+- Security-sensitive patterns (how secrets are managed, encryption at rest/in transit, RBAC design)
+- Data storage or schema choices (new tables/collections, changing data ownership between services)
+- API contract changes visible to other services or clients (new endpoints, changed request/response shapes)
+- Significant architectural boundary crossings (e.g., domain logic calling infrastructure directly)
+- Performance trade-offs with broad impact (disabling a cache layer, adding a synchronous call in an async path)
+
+**Process:**
+
+1. Review the interface spec, constraints, and task context for choices that match the above.
+2. If any significant decisions are found:
+   - List each one with: the decision, the intended approach, the rationale (spec reference or constraint), and alternatives considered.
+   - **STOP and present the list to the user.**
+   - Ask: *"Before I implement, I want to flag these significant decisions. Do you approve these approaches, or would you like to adjust any of them?"*
+   - **Wait for explicit user confirmation before continuing to step 6.**
+3. If no significant decisions are found:
+   - State: "No significant decisions identified — proceeding with implementation."
+   - Continue to step 6.
+
+> This is not a design gate — it is a transparency checkpoint. The goal is to ensure the user is never surprised by a major implementation choice made silently.
+
+---
+
 ### 6. **Design Phase - Implement Type Definitions**
 
 **Important: Implement exactly what the task specifies, even if it seems redundant or non-MVP. Planning has already determined this is needed.**

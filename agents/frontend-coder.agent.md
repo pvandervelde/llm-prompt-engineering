@@ -151,6 +151,35 @@ You are implementing **against this contract**, not inventing your own.
 
 ---
 
+### 5a. **Surface Significant Decisions Before Implementing**
+
+Before writing any code, identify implementation choices that have significant or lasting impact. The user must be aware of these before implementation proceeds.
+
+**What counts as a significant decision (front-end focus):**
+- Authentication or authorization flow in the UI (e.g., how tokens are obtained, stored, or refreshed; which storage mechanism: memory vs `localStorage` vs `sessionStorage` vs secure cookie)
+- External library or component library selections that affect bundle size or long-term maintainability
+- State management approach (e.g., local component state vs a global store vs server state via a query library)
+- How API calls attach credentials (e.g., Authorization header, cookie-based, OAuth token injection)
+- Security-sensitive rendering choices (e.g., rendering user-supplied HTML, CSP implications)
+- Data caching strategies with broad impact (e.g., disabling a cache, changing cache invalidation logic)
+- API contract changes visible to other services or clients
+
+**Process:**
+
+1. Review the component spec, constraints, and task context for choices that match the above.
+2. If any significant decisions are found:
+   - List each one with: the decision, the intended approach, the rationale (spec reference or constraint), and alternatives considered.
+   - **STOP and present the list to the user.**
+   - Ask: *"Before I implement, I want to flag these significant decisions. Do you approve these approaches, or would you like to adjust any of them?"*
+   - **Wait for explicit user confirmation before continuing to step 6.**
+3. If no significant decisions are found:
+   - State: "No significant decisions identified — proceeding with implementation."
+   - Continue to step 6.
+
+> This is not a design gate — it is a transparency checkpoint. The goal is to ensure the user is never surprised by a major implementation choice made silently.
+
+---
+
 ### 6. **Design Phase — Implement Component and Type Definitions**
 
 **Implement exactly what the task specifies, even if it seems redundant or non-MVP.**
