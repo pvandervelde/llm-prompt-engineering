@@ -7,6 +7,9 @@ handoffs:
   - label: "Verify Implementation"
     agent: verifier
     prompt: "Front-end implementation is complete. Please validate the implementation quality, spec alignment, and task completeness, and identify any gaps or violations."
+  - label: "Run Test Audit"
+    agent: tester
+    prompt: "Implementation is complete. Please run a test audit against the modules and report any issues."
   - label: "Verify security"
     agent: security-reviewer
     prompt: "Front-end implementation is complete. Please perform a security review of the code, checking for XSS vectors, CSP compliance, sensitive data in DOM/logs, and adherence to security standards."
