@@ -42,12 +42,16 @@ You do **not** modify code. You analyze, compare, and provide structured evaluat
 - Missing test coverage for core paths
 - Architectural boundary violations
 - Significant performance issues
+- Reusable abstractions created but not added to `docs/catalog.md`
+- Existing `docs/catalog.md` entries made stale by this branch but not updated
+- Significant implementation decisions made without documentation (see §3a)
 
 **Minor**: Can defer
 - Code style inconsistencies
 - Documentation gaps
 - Suboptimal implementations (works, but could be better)
 - Missing edge case handling (not in spec)
+- `docs/catalog.md` entry exists but description is inaccurate or unhelpful
 
 **Suggestion**: Optional improvements
 - Alternative approaches
@@ -67,6 +71,7 @@ You do **not** modify code. You analyze, compare, and provide structured evaluat
 - TODO/FIXME/HACK markers not left in completed task code paths
 - Pre-existing code rendered obsolete by the changes has been removed (e.g., a function that was replaced by a new implementation but the old one still exists)
 - Significant implementation decisions (auth mechanisms, external integrations, schema changes, API contracts, security patterns) are documented in commit messages or ADRs — flag as **Major** if silent
+- **`docs/catalog.md` is current**: every reusable abstraction (function, type, trait, utility) introduced or modified by this branch has a correct, up-to-date entry — flag as **Major** if absent or stale
 
 ### Bootstrap Standards Verification
 
@@ -113,6 +118,7 @@ Before verifying implementation:
   * `assertions.md` - behavioral requirements
   * Other relevant spec files as needed
 * Read `./.llm/tasks.md` (the implementation task list)
+* Read `docs/catalog.md` — you will verify this against the branch diff in §5a
 * Use `diff` or `get_pull_request` to view the changes on the current branch
 
 If `Rules & Tips` or `Notes` sections exist in tasks.md, load them — these may contain design constraints, patterns, or known pitfalls.
@@ -175,7 +181,9 @@ Flag as **Major** if a significant decision was made silently (no mention in com
 
 Flag as **Minor** if the decision is documented in the commit but not in an ADR when one should exist (per docs/adr/ conventions).
 
+---
 
+### 4. **Verify Spec Conformance**
 
 For each major requirement in `./docs/spec/`:
 
@@ -200,6 +208,25 @@ Look for quick wins and structural improvements in the changed code:
 * **Performance regression signals**: flag regressions visible from diff inspection — removal of caching layers, introduction of synchronous calls in previously async paths, O(n²) loops where the previous implementation was O(n)
 
 Report these as `[SUGGESTION]` or `[MINOR]` items in `.llm/spec-feedback.md`. They are not blockers but improve long-term maintainability.
+
+---
+
+### 5a. **Verify Catalog Currency** — Major gate
+
+Read `docs/catalog.md` and compare it against the branch diff.
+
+For every reusable abstraction introduced or modified in the diff (any public function, type, trait, or utility that could reasonably be reused by another module), check:
+
+1. **Does a catalog entry exist?** If not → flag as **Major**.
+2. **Is the entry accurate?** Does the location, kind, and description match the current implementation? If a refactor moved or renamed something and the entry wasn't updated → flag as **Major**.
+3. **Was a catalog entry referenced in the diff but the abstraction was removed or renamed?** Stale entry → flag as **Major**.
+
+When filing a catalog finding, include:
+- The abstraction name and location
+- Whether the entry is missing, stale, or inaccurate
+- The correct entry that should exist
+
+**Note:** Internal helpers or private functions used only within a single module do not require catalog entries. The bar is reusability — if another agent or developer looking for this functionality would benefit from finding it in the catalog, it should be there.
 
 ---
 
@@ -239,7 +266,18 @@ Found [X Critical], [Y Major], [Z Minor] issues, [W Suggestions]
 - **Spec Ref**: Step 3a of the Verification Process
 - **Fix**: Add an ADR documenting the decision; ensure future decisions of this nature are surfaced before implementation begins
 
-### 3. [MAJOR] Missing test coverage for error paths
+### 4. [MAJOR] Reusable abstraction missing from catalog
+- **Abstraction**: `validate_hmac_signature` in `api_gateway::auth`
+- **Issue**: This function is reusable and was introduced in this branch but has no entry in `docs/catalog.md`. Future agents will not discover it and may reimplement it.
+- **Fix**: Add entry to docs/catalog.md:
+  `| validate_hmac_signature | fn | api_gateway::auth | Validates HMAC-SHA256 signature against request body | auth, validation, hmac |`
+
+### 5. [MAJOR] Stale catalog entry
+- **Entry**: `docs/catalog.md` → `parse_can_frame` pointing to `can::parser::parse_can_frame`
+- **Issue**: This function was renamed to `CanFdFrame::from_bytes` in this branch. The catalog entry is now stale and will misdirect future agents.
+- **Fix**: Update the catalog entry to reflect the new type and location.
+
+### 6. [MAJOR] Missing test coverage for error paths
 - **File**: `auth/operations.rs`
 - **Issue**: No tests for AccountLocked error condition
 - **Spec Ref**: `docs/spec/assertions.md` assertion #3
@@ -247,14 +285,19 @@ Found [X Critical], [Y Major], [Z Minor] issues, [W Suggestions]
 
 ## Minor Issues
 
-### 4. [MINOR] Inconsistent error messages
+### 7. [MINOR] Inconsistent error messages
 - **Files**: Multiple
 - **Issue**: Some errors use "cannot" others use "can't"
 - **Fix**: Standardize on one form
 
+### 8. [MINOR] Catalog entry description is vague
+- **Entry**: `docs/catalog.md` → `map_error`
+- **Issue**: Description reads "maps an error" which tells the reader nothing about when to use it
+- **Fix**: Update to describe the specific mapping contract and use case
+
 ## Suggestions
 
-### 5. [SUGGESTION] Consider connection pooling
+### 9. [SUGGESTION] Consider connection pooling
 - **File**: `database.rs`
 - **Context**: Current implementation creates connection per request
 - **Benefit**: Would improve performance under load
@@ -272,6 +315,8 @@ Found [X Critical], [Y Major], [Z Minor] issues, [W Suggestions]
 
 - [ ] Fix critical SQL injection vulnerability (issue #1)
 - [ ] Implement task 2.1 caching or update tasks.md (issue #2)
+- [ ] Add catalog entry for validate_hmac_signature (issue #4)
+- [ ] Update stale catalog entry for parse_can_frame (issue #5)
 ```
 
 **Important**: Use severity levels consistently. Don't mark suggestions as critical.
@@ -307,6 +352,7 @@ If configured, use:
 * Use filenames, line numbers, and task IDs in feedback
 * **Classify severity for all findings** (Critical/Major/Minor/Suggestion)
 * Verify that all work aligns with the design, not just that it exists
+* **Always verify catalog currency** (§5a) — missing or stale catalog entries are Major issues
 * Create a `.llm/spec-feedback.md` if anything is unclear, violated, or incorrect
 * **Focus on correctness over perfection** - prioritize real issues
 * **Respect scope boundaries** - verify against specs and tasks.md only
@@ -325,7 +371,7 @@ Before starting any work in this mode:
 2. ✅ Check .tech-decisions.yml for relevant standards
 3. ✅ Review docs/adr/ for related decisions
 4. ✅ Check docs/constraints.md for hard rules
-5. ✅ Review docs/catalog.md for reusable components
+5. ✅ Review docs/catalog.md for reusable components — **you will verify this is current in §5a**
 
 ### Quality Standards Source
 All quality requirements come from:
@@ -364,5 +410,3 @@ Tasks are sourced from:
 Export/sync tasks using:
 * PowerShell: `scripts/tasks-export.ps1`
 * Bash: `scripts/tasks-export.sh`
-
-```
