@@ -80,7 +80,7 @@ Before reading tasks, load production standards:
 
 * **Check docs/standards/** for language/domain-specific patterns
 
-* **Review docs/catalog.md** for existing reusable components
+* **Review docs/catalog.md** for existing reusable components — **you must consult this before creating any new abstraction**
 
 **These are non-negotiable constraints** - all code must meet these standards.
 
@@ -130,18 +130,37 @@ This context prevents duplicate types and ensures consistency.
 Before starting design, verify you're not duplicating work:
 
 * **Check shared registry**: Does this type already exist?
-* **Search codebase**: Are there similar functions or patterns?
+
+* **Search docs/catalog.md**: REQUIRED before creating any new function, utility, or abstraction. Search for entries with matching names or tags. If a catalog entry covers your need, use it rather than creating a new one.
+
+* **Run structural search with ast-grep**: Before implementing any function that parses input, validates data, handles errors, or performs a transformation, run ast-grep to find structurally similar patterns that already exist in the codebase:
+
+  ```bash
+  # Install if not present
+  cargo install ast-grep
+
+  # Find functions with similar input/output shapes (adapt pattern to your task)
+  ast-grep --pattern 'fn $NAME($ARG: &[u8]) -> Result<$_, $_>' --lang rust .
+  ast-grep --pattern 'fn $NAME($ARG: &str) -> Result<$_, $_>' --lang rust .
+  ast-grep --pattern 'fn validate_$NAME($$$) -> bool' --lang rust .
+
+  # Find similar error-mapping patterns
+  ast-grep --pattern '.map_err(|$E| $F)' --lang rust .
+  ```
+
+  If ast-grep finds **structurally similar code elsewhere in the codebase**, note it in your implementation commit message and create a GitHub issue labelled `tech-debt,refactor`. Do NOT stop implementation — the Refactor agent will handle consolidation after GREEN. The differences may be intentional; flag, don't block.
+
 * **Review interface spec**: What exactly needs to be implemented?
+
 * **Check for stub files**: Does the interface designer already define this?
 
 If you find **exact duplicates** (same function signature, same behavior, same location):
-* **STOP** and report the finding
-* This indicates a task list error
+* **STOP** and report the finding — this indicates a task list error
 
 If you find **similar but not identical** implementations:
-* **DO NOT STOP** - implement the task as specified
-* The differences may be intentional
+* **DO NOT STOP** — implement the task as specified
 * Note the similarity in your implementation commit message
+* Create a GitHub issue labelled `tech-debt,refactor` describing both locations and the suggested consolidation
 
 If you find partial implementations:
 * Note what exists
@@ -396,7 +415,7 @@ After test passes but before committing:
    * Function length < max_function_length
    * Complexity < max_complexity
    * Naming follows naming conventions
-   * No duplicate code blocks
+   * No duplicate code blocks within this task's files — if you see duplication, note it for the Refactor agent in your commit message rather than leaving it silent
 
 2. **Verify security** (if applicable):
    * No hardcoded secrets
@@ -448,6 +467,7 @@ While working on the task you will encounter pre-existing issues in surrounding 
 - Missing test coverage for existing untouched code paths
 - Security or performance concerns that require non-trivial changes
 - Refactoring opportunities that cross multiple files or modules
+- Structural duplication found by ast-grep between your new code and existing code
 
 When creating a GitHub issue for a larger problem:
 1. Title: concise description of the problem
@@ -510,6 +530,7 @@ Format:
 
 Task: bd-xxx (if using Beads)
 Refs: ADR-NNNN (if architectural decision)
+Refs: #NNN (if cross-scope duplication issue was filed)
 ```
 
 Example:
@@ -526,11 +547,13 @@ Refs: ADR-0042
 
 ---
 
-### 12. **Update Shared Type Registry**
+### 12. **Update Shared Type Registry and Catalog**
 
-If you created or discovered reusable types/patterns during implementation:
+After implementation, update both the shared registry and the catalog for any reusable code created.
 
-Update the **Shared Types Registry** section in `./.llm/tasks.md`:
+#### 12a. Update the Shared Types Registry
+
+If you created or discovered reusable types/patterns during implementation, update the **Shared Types Registry** section in `./.llm/tasks.md`:
 
 ```markdown
 ## Shared Types Registry
@@ -551,6 +574,28 @@ Update the **Shared Types Registry** section in `./.llm/tasks.md`:
 ```
 
 Only add entries for truly reusable, shared code. Don't list every type.
+
+#### 12b. Update docs/catalog.md — MANDATORY
+
+**This step is not optional.** If you created or modified any reusable abstraction (function, type, trait, utility, module), you must add or update its entry in `docs/catalog.md`.
+
+The catalog uses a structured table. Add a row to the appropriate section:
+
+```markdown
+| `<name>` | `<kind>` | `<crate>::<module>` | <one sentence: what it does and when to use it> | <tags> |
+```
+
+Example entries:
+```markdown
+| `validate_hmac_signature` | fn | `api_gateway::auth` | Validates HMAC-SHA256 signature against request body using a pre-shared key | auth, validation, hmac |
+| `CanFdFrame` | type | `can::frame` | Parsed, validated CAN FD frame — use instead of raw byte slices | can, parser |
+```
+
+**If you used an existing abstraction that was missing from the catalog, add it.** The catalog should reflect what actually exists and is reusable, not just what was recently added.
+
+**If you replaced or superseded an existing catalog entry, update or remove the stale entry.** A stale catalog misleads future agents.
+
+> The Verifier will flag a missing catalog update as a Major issue. Do not skip this step.
 
 ---
 
@@ -610,6 +655,8 @@ Example entries:
   * "Reused types: <list>"
   * "Added <N> tests covering all documented behaviors"
   * "Made 2 commits (design+tests, implementation)"
+  * "Catalog updated: <N entries>"
+  * "Cross-scope issues filed: <list or 'none'>"
 
 ---
 
@@ -639,6 +686,7 @@ If all tasks are completed provide a summary to the user and suggest that they s
 ### Context Loading Rules
 - Always read docs/spec/constraints.md before starting
 - Always check docs/spec/shared-registry.md for reusable types
+- Always read docs/catalog.md before creating any new abstraction
 - Always read the specific interface spec for the task
 - Always verify no duplicate types exist before creating new ones
 
@@ -651,8 +699,9 @@ If all tasks are completed provide a summary to the user and suggest that they s
 
 ### Type Reuse Rules
 - **Check shared registry before creating any type**
+- **Check docs/catalog.md before creating any reusable abstraction**
 - If a type exists, reuse it - don't duplicate
-- If you create a reusable type, add it to registry
+- If you create a reusable type, add it to registry AND catalog
 - Prefer shared types over local duplicates
 
 ### TDD Workflow Rules
@@ -681,6 +730,12 @@ If all tasks are completed provide a summary to the user and suggest that they s
 - Never include tasks.md in code commits
 - **Never include task numbers from .llm/tasks.md in commit messages** - they are local-only identifiers
 - **Never include task numbers in code comments or documentation** - use descriptive feature names instead
+
+### Catalog Rules
+- **Always update docs/catalog.md when you create a reusable abstraction** - this is mandatory
+- **Always update docs/catalog.md when you use an existing abstraction not yet catalogued**
+- **Always remove or update stale catalog entries when you replace or delete code**
+- The Verifier treats a missing catalog update as a Major issue
 
 ---
 
@@ -747,6 +802,7 @@ Expected `./.llm/tasks.md` structure:
 ### Context Loading Quality
 - All relevant specs read before starting
 - Shared registry consulted for reusable types
+- docs/catalog.md consulted before creating any new abstraction
 - Interface specifications understood completely
 - No assumptions about what to build
 
@@ -772,11 +828,13 @@ Expected `./.llm/tasks.md` structure:
 - Implementation doesn't exceed documented scope
 - No "improvements" beyond interface contract
 
-### Registry Maintenance Quality
-- Only truly reusable types added
+### Registry and Catalog Maintenance Quality
+- Only truly reusable types added to registry
 - Entries include file location and spec reference
 - Patterns documented clearly
 - Kept up-to-date throughout implementation
+- docs/catalog.md updated for every new reusable abstraction
+- Stale catalog entries removed or corrected
 
 ---
 
@@ -784,7 +842,7 @@ Expected `./.llm/tasks.md` structure:
 
 If you find yourself thinking:
 - "This isn't necessary for MVP" → **WRONG CONTEXT** - implement it anyway
-- "This duplicates existing code" → **CHECK**: Is it an exact duplicate or similar? If similar, implement it
+- "This duplicates existing code" → **CHECK**: Is it an exact duplicate or similar? If similar, implement it and file a GitHub issue
 - "This could be designed better" → **NOT YOUR ROLE** - implement the specified design
 - "This seems like overkill" → **TRUST THE PLAN** - implement it as specified
 
@@ -800,13 +858,16 @@ Task: "4.1 Implement authenticate() function signature matching docs/spec/interf
 Context Loading:
 - Read docs/spec/constraints.md → Result pattern, no exceptions
 - Read docs/spec/shared-registry.md → Email and Result types exist
+- Read docs/catalog.md → No validate_credentials entry; hmac_validator entry exists (not relevant here)
 - Read docs/spec/interfaces/auth-operations.md → Complete signature and behavior
 - Check codebase → Stub exists in src/auth/domain/operations.ts
 
 Pre-Task Verification:
 - Search for "authenticate" → Found stub, needs implementation
 - Check registry → UserCredentials type exists, reuse it
-- No duplication found → Proceed
+- Run ast-grep for similar validation patterns → found similar validate_token() in api_gateway; noted for Refactor agent
+- Create GitHub issue #42 "Refactor: consolidate credential validation patterns"
+- No exact duplication found → Proceed
 
 Design Phase:
 - Stub already has signature from interface designer
@@ -820,7 +881,7 @@ Test Phase (from docs/spec/assertions.md):
 - test('returns ValidationError when email malformed') // Assertion #4
 - test('updates lastLoginAt on successful auth') // Assertion #5
 
-Commit 1: "4.1 Add tests for authenticate() function (auto via agent)"
+Commit 1: "Add types, docs, and tests for user authentication (auto via agent)"
 
 Implementation Phase:
 - Implement validation (email, password checks)
@@ -832,7 +893,16 @@ Implementation Phase:
 - Update lastLoginAt via repository
 - All tests pass ✓
 
-Commit 2: "4.1 Implement authenticate() function (auto via agent)"
+Commit 2: "Implement user authentication (auto via agent)
+
+Implements authenticate() against docs/spec/interfaces/auth-operations.md.
+Similar validation pattern exists in api_gateway::validate_token — filed for consolidation.
+
+Refs: #42"
+
+Catalog Update:
+- No new shared abstractions created (authenticate is domain-specific)
+- Checked: hmac_validator already in catalog ✓
 
 Registry Update:
 - No new shared types created
@@ -843,6 +913,7 @@ Rules & Tips Update:
 - "Error mapping: Always map infrastructure errors to domain errors"
 
 Task Complete: Mark [x] 4.1
+Summary: "Cross-scope issues filed: #42"
 ```
 
 Remember: TDD with pre-defined interfaces ensures you implement exactly what was designed, with no invention, no duplication, and complete test coverage. The interface designer has already thought through the problem - your job is to make it work correctly.
@@ -859,7 +930,7 @@ Before starting any work in this mode:
 2. ✅ Check .tech-decisions.yml for relevant standards
 3. ✅ Review docs/adr/ for related decisions
 4. ✅ Check docs/constraints.md for hard rules
-5. ✅ Review docs/catalog.md for reusable components
+5. ✅ Review docs/catalog.md for reusable components — **REQUIRED before any abstraction is created**
 
 ### Quality Standards Source
 All quality requirements come from:
@@ -898,5 +969,3 @@ Tasks are sourced from:
 Export/sync tasks using:
 * PowerShell: `scripts/tasks-export.ps1`
 * Bash: `scripts/tasks-export.sh`
-
-```
