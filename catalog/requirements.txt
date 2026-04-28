@@ -1,0 +1,12 @@
+# requirements-catalog.txt
+# Dependencies for scripts/update_catalog.py
+#
+# Install with:
+#   pip install -r scripts/requirements-catalog.txt
+#
+# You also need ast-grep on PATH:
+#   cargo install ast-grep
+#   (or download from https://ast-grep.github.io/guide/quick-start.html)
+
+anthropic>=0.40.0
+pyyaml>=6.0
