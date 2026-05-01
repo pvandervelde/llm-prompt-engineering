@@ -27,6 +27,7 @@ Environment:
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -36,13 +37,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 # ── Dependency checks ──────────────────────────────────────────────────────────
-
-try:
-    import anthropic
-except ImportError:
-    print("Error: 'anthropic' package not found.", file=sys.stderr)
-    print("  pip install anthropic", file=sys.stderr)
-    sys.exit(1)
 
 try:
     import yaml
@@ -69,8 +63,8 @@ class Symbol:
 
     @property
     def key(self) -> str:
-        """Stable dedup key. Survives edits to function body."""
-        return f"{self.file}::{self.name}"
+        """Stable dedup key. Includes line to distinguish same-named symbols in one file."""
+        return f"{self.file}::{self.name}::{self.line}"
 
     @property
     def location(self) -> str:
@@ -126,10 +120,13 @@ def find_repo_root() -> Path:
 
 
 def get_current_commit(repo_root: Path) -> Optional[str]:
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=repo_root, capture_output=True, text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_root, capture_output=True, text=True, timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return None
     return result.stdout.strip() if result.returncode == 0 else None
 
 
@@ -139,18 +136,26 @@ def get_changed_files(repo_root: Path, last_commit: str) -> Optional[List[str]]:
     Returns None if the diff cannot be computed (triggers full re-index).
     """
     # Verify the stored commit still exists (rebase safety)
-    verify = subprocess.run(
-        ["git", "cat-file", "-e", last_commit],
-        cwd=repo_root, capture_output=True,
-    )
+    try:
+        verify = subprocess.run(
+            ["git", "cat-file", "-e", last_commit],
+            cwd=repo_root, capture_output=True, timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        print("Warning: git cat-file timed out — full re-index.")
+        return None
     if verify.returncode != 0:
         print(f"Warning: Stored commit {last_commit[:8]} no longer exists — full re-index.")
         return None
 
-    result = subprocess.run(
-        ["git", "diff", "--name-only", last_commit, "HEAD"],
-        cwd=repo_root, capture_output=True, text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", last_commit, "HEAD"],
+            cwd=repo_root, capture_output=True, text=True, timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        print("Warning: git diff timed out — full re-index.")
+        return None
     if result.returncode != 0:
         print("Warning: git diff failed — full re-index.")
         return None
@@ -160,10 +165,13 @@ def get_changed_files(repo_root: Path, last_commit: str) -> Optional[List[str]]:
 
 def get_deleted_files(repo_root: Path, last_commit: str) -> List[str]:
     """Files deleted between last_commit and HEAD."""
-    result = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=D", last_commit, "HEAD"],
-        cwd=repo_root, capture_output=True, text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "--diff-filter=D", last_commit, "HEAD"],
+            cwd=repo_root, capture_output=True, text=True, timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return []
     if result.returncode != 0:
         return []
     return [f.strip() for f in result.stdout.splitlines() if f.strip()]
@@ -171,15 +179,45 @@ def get_deleted_files(repo_root: Path, last_commit: str) -> List[str]:
 
 # ── File discovery ─────────────────────────────────────────────────────────────
 
+def _glob_to_regex(pattern: str) -> "re.Pattern[str]":
+    """
+    Convert a glob pattern with ``**`` support to a compiled regex.
+
+    Rules:
+    - ``**/``  matches zero or more path segments (including none)
+    - ``**``   at end matches any remaining characters
+    - ``*``    matches any sequence of non-separator characters
+    - ``?``    matches a single non-separator character
+    """
+    pattern = pattern.replace("\\", "/")
+    result = ""
+    i = 0
+    while i < len(pattern):
+        if pattern[i : i + 3] == "**/":
+            result += "(?:.+/)?"
+            i += 3
+        elif pattern[i : i + 2] == "**":
+            result += ".*"
+            i += 2
+        elif pattern[i] == "*":
+            result += "[^/]*"
+            i += 1
+        elif pattern[i] == "?":
+            result += "[^/]"
+            i += 1
+        else:
+            result += re.escape(pattern[i])
+            i += 1
+    return re.compile("^" + result + "$")
+
+
 def path_matches_any(rel_posix: str, patterns: List[str]) -> bool:
     """Check a forward-slash relative path against a list of glob patterns."""
     name = rel_posix.rsplit("/", 1)[-1]
     for pattern in patterns:
         if fnmatch(rel_posix, pattern) or fnmatch(name, pattern):
             return True
-        # Support patterns like **/target/** by matching interior segments
-        clean_pattern = pattern.lstrip("*/")
-        if clean_pattern and clean_pattern in rel_posix:
+        if "**" in pattern and _glob_to_regex(pattern).match(rel_posix):
             return True
     return False
 
@@ -269,8 +307,11 @@ _ASTGREP_BATCH = 40
 
 
 def check_ast_grep() -> bool:
-    result = subprocess.run(["ast-grep", "--version"], capture_output=True)
-    return result.returncode == 0
+    try:
+        result = subprocess.run(["ast-grep", "--version"], capture_output=True, timeout=10)
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, OSError):
+        return False
 
 
 def _run_ast_grep_pattern(
@@ -287,14 +328,22 @@ def _run_ast_grep_pattern(
         batch = file_strs[i : i + _ASTGREP_BATCH]
         cmd = ["ast-grep", "run", "--pattern", pattern, "--lang", lang, "--json"] + batch
 
-        result = subprocess.run(
-            cmd,
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=300,
+            )
+        except subprocess.TimeoutExpired:
+            print(
+                f"    ast-grep: timed out scanning batch of {len(batch)} files — skipping",
+                file=sys.stderr,
+            )
+            continue
 
         # returncode 1 = no matches (not an error)
         if result.returncode not in (0, 1):
@@ -393,8 +442,10 @@ def extract_symbols_for_language(
             # ast-grep lines are 0-indexed
             line = match.get("range", {}).get("start", {}).get("line", 0) + 1
 
-            # Deduplicate: same symbol matched by multiple patterns
-            key = f"{file_rel}::{name}"
+            # Deduplicate: same symbol matched by multiple patterns.
+            # Line is included so that same-named symbols in one file
+            # (e.g. pub fn new() across multiple impl blocks) are kept.
+            key = f"{file_rel}::{name}::{line}"
             if key in seen_keys:
                 continue
             seen_keys.add(key)
@@ -575,7 +626,18 @@ def generate_descriptions(symbols: List[Symbol], config: dict) -> List[Symbol]:
             sym.description = f"{sym.kind} in {sym.file}"
         return symbols
 
-    client = anthropic.Anthropic(api_key=api_key)
+    try:
+        import anthropic as _anthropic
+    except ImportError:
+        print(
+            "Error: 'anthropic' package not found. Install it with: pip install anthropic",
+            file=sys.stderr,
+        )
+        for sym in symbols:
+            sym.description = f"{sym.kind} in {sym.file}"
+        return symbols
+
+    client = _anthropic.Anthropic(api_key=api_key)
     llm_config = config.get("llm", {})
     model      = llm_config.get("model", "claude-haiku-4-5-20251001")
     batch_size = llm_config.get("batch_size", 20)
@@ -629,7 +691,7 @@ def generate_descriptions(symbols: List[Symbol], config: dict) -> List[Symbol]:
             for sym in batch:
                 descriptions.setdefault(sym.key, f"{sym.kind} — description unavailable")
 
-        except anthropic.APIError as e:
+        except _anthropic.APIError as e:
             print(f"    Warning: Anthropic API error for batch {batch_num}: {e}",
                   file=sys.stderr)
             for sym in batch:
