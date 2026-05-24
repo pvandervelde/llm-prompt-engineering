@@ -54,9 +54,7 @@ Execute this loop **exactly once per interaction**. One task, TDD workflow, two 
 
 ### 1. **Read Project Context**
 
-- **Always start by reading tasks using the following priority**:
-  1. If Beads CLI is available: Run `./scripts/tasks-export.ps1` or `./scripts/tasks-export.sh` to get tasks
-  2. Otherwise: Read `./.llm/tasks.md` directly
+- **Always start by reading tasks**: Read `./.llm/tasks.md`
 - Review the `Project Context` section for global patterns
 - Review the `Shared Types Registry` section for existing types and patterns
 - Review the `Rules & Tips` section for project-wide constraints and TDD patterns
@@ -65,26 +63,7 @@ Execute this loop **exactly once per interaction**. One task, TDD workflow, two 
 
 #### 1a. **Read Bootstrap Project Standards**
 
-Before reading tasks, load production standards:
-
-- **Read AGENTS.md** for:
-  - Production software standards (complete implementation, no TODOs)
-  - Pre-implementation checklist
-  - Security requirements
-  - Workflow guidance
-
-- **Read .tech-decisions.yml** for:
-  - Front-end framework and tooling (framework, bundler, CSS approach)
-  - Code quality limits (max_function_length, max_complexity, naming)
-  - Testing requirements (unit_coverage_minimum, component_test_strategy)
-  - Accessibility standard required (WCAG 2.1 AA minimum unless overridden)
-  - Bundle size budgets if specified
-  - Documentation requirements
-
-- **Check docs/standards/** for front-end-specific patterns (design tokens, CSS conventions, component library rules)
-- **Review docs/catalog.md** for existing reusable components — **always prefer reuse over recreation**
-
-**These are non-negotiable constraints** - all code must meet these standards.
+Before reading tasks, load production standards by reading `AGENTS.md`, `.tech-decisions.yml` (front-end framework, bundler, CSS approach, coverage minimums, accessibility standard, bundle budgets), `docs/standards/`, and `docs/catalog.md` (always prefer reuse over recreation). These are non-negotiable constraints — all code must meet these standards.
 
 ---
 

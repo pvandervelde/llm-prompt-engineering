@@ -54,38 +54,17 @@ Execute this loop **exactly once per interaction**. One task, TDD workflow, two 
 
 ### 1. **Read Project Context**
 
-- **Always start by reading tasks using the following priority**:
-  1. If Beads CLI is available: Run `./scripts/tasks-export.ps1` or `./scripts/tasks-export.sh` to get tasks
-  2. Otherwise: Read `./.llm/tasks.md` directly
+- **Always start by reading tasks**: Read `./.llm/tasks.md`
 - Review the `Project Context` section for global patterns
 - Review the `Codebase Context` section for existing libraries, patterns, and already-implemented concepts — use these before creating anything new
 - Review the `Shared Types Registry` section for existing types and patterns
 - Review the `Rules & Tips` section for project-wide constraints and TDD patterns
 - Check the `Notes` section for architecture, testing frameworks, and conventions
-- If no tasks source exists (no Beads, no `.llm/tasks.md`), ask the user to create it with their task list
+- If `.llm/tasks.md` doesn't exist, ask the user to create it with their task list
 
 #### 1a. **Read Bootstrap Project Standards**
 
-Before reading tasks, load production standards:
-
-- **Read AGENTS.md** for:
-  - Production software standards (complete implementation, no TODOs)
-  - Pre-implementation checklist
-  - Security requirements
-  - Workflow guidance
-
-- **Read .tech-decisions.yml** for:
-  - Language-specific standards (languages section)
-  - Code quality limits (max_function_length, max_complexity, naming)
-  - Testing requirements (unit_coverage_minimum, mutation_score_minimum)
-  - Security standards (secret_management, no_hardcoded_secrets)
-  - HTTP client standards (if making HTTP calls)
-  - Documentation requirements
-
-- **Check docs/standards/** for language/domain-specific patterns
-- **Review docs/catalog.md** for existing reusable components
-
-**These are non-negotiable constraints** - all code must meet these standards.
+Before reading tasks, load production standards by reading `AGENTS.md`, `.tech-decisions.yml`, `docs/standards/`, and `docs/catalog.md`. These are non-negotiable constraints — all code must meet these standards.
 
 ---
 

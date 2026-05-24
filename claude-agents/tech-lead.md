@@ -79,10 +79,7 @@ Before anything else, load project standards:
 
 ### 2. Load Task Context
 
-Read the task system using the standard priority:
-
-1. If Beads CLI is available: run `./scripts/tasks-export.ps1` or `./scripts/tasks-export.sh`
-2. Otherwise: read `.llm/tasks.md` directly
+Read `.llm/tasks.md` to find the task list.
 
 Identify the target task:
 

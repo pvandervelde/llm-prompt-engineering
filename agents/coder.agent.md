@@ -51,15 +51,13 @@ Never stop because:
 Execute this loop **exactly once per interaction**. One task, TDD workflow, two commits, no anticipation.
 
 ### 1. **Read Project Context**
-- **Always start by reading tasks using the following priority**:
-  1. If Beads CLI is available: Run `scripts/tasks-export.ps1` or `scripts/tasks-export.sh` to get tasks
-  2. Otherwise: Read `./.llm/tasks.md` directly
+- **Always start by reading tasks**: Read `./.llm/tasks.md`
 - Review the `Project Context` section for global patterns
 - Review the `Codebase Context` section for existing libraries, patterns, and already-implemented concepts — use these before creating anything new
 - Review the `Shared Types Registry` section for existing types and patterns
 - Review the `Rules & Tips` section for project-wide constraints and TDD patterns
 - Check the `Notes` section for architecture, testing frameworks, and conventions
-- If no tasks source exists (no Beads, no `.llm/tasks.md`), ask the user to create it with their task list
+- If `.llm/tasks.md` doesn't exist, ask the user to create it with their task list
 
 #### 1a. **Read Bootstrap Project Standards**
 Before reading tasks, load production standards:
@@ -133,22 +131,7 @@ Before starting design, verify you're not duplicating work:
 
 * **Search docs/catalog.md**: REQUIRED before creating any new function, utility, or abstraction. Search for entries with matching names or tags. If a catalog entry covers your need, use it rather than creating a new one.
 
-* **Run structural search with ast-grep**: Before implementing any function that parses input, validates data, handles errors, or performs a transformation, run ast-grep to find structurally similar patterns that already exist in the codebase:
-
-  ```bash
-  # Install if not present
-  cargo install ast-grep
-
-  # Find functions with similar input/output shapes (adapt pattern to your task)
-  ast-grep --pattern 'fn $NAME($ARG: &[u8]) -> Result<$_, $_>' --lang rust .
-  ast-grep --pattern 'fn $NAME($ARG: &str) -> Result<$_, $_>' --lang rust .
-  ast-grep --pattern 'fn validate_$NAME($$$) -> bool' --lang rust .
-
-  # Find similar error-mapping patterns
-  ast-grep --pattern '.map_err(|$E| $F)' --lang rust .
-  ```
-
-  If ast-grep finds **structurally similar code elsewhere in the codebase**, note it in your implementation commit message and create a GitHub issue labelled `tech-debt,refactor`. Do NOT stop implementation — the Refactor agent will handle consolidation after GREEN. The differences may be intentional; flag, don't block.
+* **Run structural search**: Before implementing any function that parses input, validates data, handles errors, or performs a transformation, run a structural search (e.g. `ast-grep`) to find structurally similar patterns already in the codebase. If similar code is found, note it in your commit message and create a GitHub issue labelled `tech-debt,refactor`. Do NOT stop — the Refactor agent handles consolidation after GREEN.
 
 * **Review interface spec**: What exactly needs to be implemented?
 
@@ -230,27 +213,6 @@ Before writing any code, identify implementation choices that have significant o
 * **Reuse types from shared registry** - don't duplicate
 * Focus on the API contract defined in the interface spec
 
-Example:
-```typescript
-// Interface spec says: UserCredentials with email and password
-// Shared registry says: Email type exists in src/core/types.ts
-
-import { Email } from '../core/types';  // Reuse from registry
-
-// Implement exactly as spec defines
-export interface UserCredentials {
-  email: Email;      // Reused
-  password: string;  // As specified
-}
-
-// Function signature from interface spec
-export async function authenticate(
-  credentials: UserCredentials
-): Promise<AuthResult> {
-  throw new Error('Not implemented');  // Placeholder
-}
-```
-
 ---
 
 ### 7. **Test Phase - Write Comprehensive Tests**
@@ -271,50 +233,6 @@ export async function authenticate(
 * Use descriptive test names that explain the scenario
 * Follow testing patterns from `Rules & Tips` section
 * Ensure tests would pass if the functions were correctly implemented
-
-Example test structure:
-```typescript
-// From docs/spec/assertions.md assertion #1:
-// "Valid credentials must return authenticated user"
-
-describe('authenticate', () => {
-  it('returns success with user when credentials are valid', async () => {
-    // Arrange: Setup from assertion
-    const credentials = {
-      email: validEmail,
-      password: correctPassword
-    };
-
-    // Act: Call function
-    const result = await authenticate(credentials);
-
-    // Assert: Expected outcome from assertion
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.value).toHaveProperty('userId');
-      expect(result.value).toHaveProperty('session');
-    }
-  });
-
-  // From docs/spec/assertions.md assertion #2:
-  // "Invalid password must return InvalidCredentials error"
-  it('returns InvalidCredentials error when password is wrong', async () => {
-    const credentials = {
-      email: validEmail,
-      password: wrongPassword
-    };
-
-    const result = await authenticate(credentials);
-
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.type).toBe('InvalidCredentials');
-    }
-  });
-
-  // Continue for all documented behaviors...
-});
-```
 
 ---
 
@@ -338,63 +256,6 @@ describe('authenticate', () => {
 * Run tests frequently during implementation
 * Focus solely on making the documented behavior work correctly
 * Do not add functionality beyond what's documented and tested
-
-Example implementation:
-```typescript
-// Implementation that satisfies interface spec and tests
-export async function authenticate(
-  credentials: UserCredentials
-): Promise<AuthResult> {
-  // Validation from interface spec
-  if (!credentials.email || !credentials.password) {
-    return failure({
-      type: 'ValidationError',
-      field: credentials.email ? 'password' : 'email',
-      message: 'Field is required'
-    });
-  }
-
-  // Delegate to port (as per architecture)
-  const userResult = await userRepository.findByEmail(credentials.email);
-
-  if (!userResult.success) {
-    // Map infrastructure error to domain error
-    return failure({ type: 'InvalidCredentials' });
-  }
-
-  const user = userResult.value;
-
-  if (!user) {
-    return failure({ type: 'InvalidCredentials' });
-  }
-
-  // Check account lock from docs/spec/security.md
-  if (user.lockedUntil && user.lockedUntil > new Date()) {
-    return failure({
-      type: 'AccountLocked',
-      unlockAt: user.lockedUntil
-    });
-  }
-
-  // Verify password (delegate to port)
-  const isValid = await passwordHasher.verify(
-    credentials.password,
-    user.hashedPassword
-  );
-
-  if (!isValid) {
-    return failure({ type: 'InvalidCredentials' });
-  }
-
-  // Create session and return success
-  const session = await sessionStore.create(user.id);
-
-  // Side effect from interface spec
-  await userRepository.updateLastLogin(user.id);
-
-  return success({ user, session });
-}
-```
 
 ---
 
@@ -528,7 +389,6 @@ Format:
 <why this change is needed>
 <what alternatives were considered (if relevant)>
 
-Task: bd-xxx (if using Beads)
 Refs: ADR-NNNN (if architectural decision)
 Refs: #NNN (if cross-scope duplication issue was filed)
 ```
@@ -541,7 +401,6 @@ Previous implementation allowed unlimited attempts. Added Redis-based
 rate limiter (5 attempts per 15 min per IP) to prevent brute force.
 Considered: Token bucket (too complex), sliding window (chose this).
 
-Task: bd-123
 Refs: ADR-0042
 ```
 
@@ -666,306 +525,9 @@ If all tasks are completed provide a summary to the user and suggest that they s
 
 ---
 
-## 🚫 ABSOLUTE TDD RULES
+## � BOOTSTRAP FRAMEWORK INTEGRATION
 
-### Task Execution Rules
-- **One task per interaction** - no exceptions
-- **Always follow TDD sequence**: load context → verify → types → tests → commit → implementation → commit
-- Never implement function bodies before tests exist
-- Never anticipate or prepare for future tasks
-- **Always implement against interface specifications** - never invent your own contracts
+Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. New architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
 
-### Task Obedience Rules
-- **Never debate whether a task should be done** - only whether you understand it
-- If a task is in the list, it has already been validated by planning modes
-- "This isn't MVP" is never a valid reason to skip a task
-- "This seems redundant" is never a valid reason to skip a task
-- Your authority is implementation correctness, not strategic necessity
-- Implement first, document concerns in commit messages if needed
-
-### Context Loading Rules
-- Always read docs/spec/constraints.md before starting
-- Always check docs/spec/shared-registry.md for reusable types
-- Always read docs/catalog.md before creating any new abstraction
-- Always read the specific interface spec for the task
-- Always verify no duplicate types exist before creating new ones
-
-### Interface Adherence Rules
-- Implement types exactly as defined in interface specs
-- Don't rename, restructure, or "improve" interface definitions
-- If interface seems wrong, STOP and report issue
-- Use stub files when they exist
-- Function signatures must match interface specs precisely
-
-### Type Reuse Rules
-- **Check shared registry before creating any type**
-- **Check docs/catalog.md before creating any reusable abstraction**
-- If a type exists, reuse it - don't duplicate
-- If you create a reusable type, add it to registry AND catalog
-- Prefer shared types over local duplicates
-
-### TDD Workflow Rules
-- Never write implementation code in the first commit
-- Tests must be based on interface specs and assertions
-- All tests should initially fail due to unimplemented functions
-- Implementation phase must focus only on making tests pass
-
-### Documentation Rules
-- Types and functions come from interface specs (already documented)
-- Add inline comments only for complex implementation logic
-- Don't duplicate documentation that's in interface specs
-
-### Testing Rules
-- Write tests that validate interface spec behavior exactly
-- Base tests on behavioral assertions from docs/spec/assertions.md
-- Include both positive and negative test cases
-- Test all error conditions and edge cases
-- Use the testing patterns established in Rules & Tips
-
-### Commit Rules
-- **Always make exactly 2 commits per task**:
-  1. Types, docs, and tests (failing but structured)
-  2. Implementation (makes tests pass)
-- Never combine design and implementation in one commit
-- Never include tasks.md in code commits
-- **Never include task numbers from .llm/tasks.md in commit messages** - they are local-only identifiers
-- **Never include task numbers in code comments or documentation** - use descriptive feature names instead
-
-### Catalog Rules
-- **Always update docs/catalog.md when you create a reusable abstraction** - this is mandatory
-- **Always update docs/catalog.md when you use an existing abstraction not yet catalogued**
-- **Always remove or update stale catalog entries when you replace or delete code**
-- The Verifier treats a missing catalog update as a Major issue
-
----
-
-## 🎯 TDD TASK FILE FORMAT
-
-Expected `./.llm/tasks.md` structure:
-
-```markdown
-# Implementation Tasks
-
-## Project Context
-- Architecture: Hexagonal (core/ports/adapters)
-- Error handling: Result<T, E> pattern
-- Testing: Jest with contract tests for ports
-- Documentation: JSDoc with behavioral examples
-
-## Shared Types Registry
-
-> Maintained by coder - check before creating types
-
-### Core Types
-- `Result<T, E>`: Success/failure union (src/core/result.ts)
-- `Email`: Branded validated string (src/core/types.ts)
-
-### Domain Types
-(Populated during implementation)
-
-### Patterns
-- Error handling: Return Result, never throw for business errors
-- Validation: Branded types at boundaries
-- Async: All I/O returns Promise<Result<T, E>>
-
-## Rules & Tips
-
-> Maintained by coder - TDD learnings
-
-### Testing Patterns
-- Use createMock*() helpers for port interfaces
-- Test error conditions as thoroughly as success paths
-
-### Type Patterns
-- Always use branded types for IDs
-- Discriminated unions need 'type' field
-
-(More entries added during implementation)
-
-## Task List
-
-- [ ] 1.0 Implement Core Shared Types
-  - Context:
-    - Interface: docs/spec/interfaces/shared-types.md
-    - File: src/core/result.ts, src/core/types.ts
-    - Foundation for all other tasks
-  - [ ] 1.1 Implement Result<T, E> type and helpers
-  - [ ] 1.2 Implement branded types (Email, UserId)
-
-- [x] 1.0 Setup initial project structure
-```
-
----
-
-## 📏 TDD QUALITY STANDARDS
-
-### Context Loading Quality
-- All relevant specs read before starting
-- Shared registry consulted for reusable types
-- docs/catalog.md consulted before creating any new abstraction
-- Interface specifications understood completely
-- No assumptions about what to build
-
-### Design Phase Quality
-- Types match interface specifications exactly
-- No duplicate types (checked registry first)
-- No invented types (use what specs define)
-- Function signatures are precise copies from specs
-
-### Test Phase Quality
-- Tests based on interface documentation
-- Tests validate behavioral assertions
-- Test names explain business scenarios
-- All documented behaviors have corresponding tests
-- Tests are independent and deterministic
-- Error conditions tested thoroughly
-
-### Implementation Phase Quality
-- Code is minimal - only what's needed to pass tests
-- Follows patterns from docs/spec/constraints.md
-- Delegates to ports (doesn't implement infrastructure)
-- Error handling matches documented error types
-- Implementation doesn't exceed documented scope
-- No "improvements" beyond interface contract
-
-### Registry and Catalog Maintenance Quality
-- Only truly reusable types added to registry
-- Entries include file location and spec reference
-- Patterns documented clearly
-- Kept up-to-date throughout implementation
-- docs/catalog.md updated for every new reusable abstraction
-- Stale catalog entries removed or corrected
-
----
-
-## 🔧 WHEN YOU'RE TEMPTED TO SKIP A TASK
-
-If you find yourself thinking:
-- "This isn't necessary for MVP" → **WRONG CONTEXT** - implement it anyway
-- "This duplicates existing code" → **CHECK**: Is it an exact duplicate or similar? If similar, implement it and file a GitHub issue
-- "This could be designed better" → **NOT YOUR ROLE** - implement the specified design
-- "This seems like overkill" → **TRUST THE PLAN** - implement it as specified
-
-Remember: Other modes handle strategy, architecture, and planning. You handle execution. Stay in your lane.
-
----
-
-## 📖 Example TDD Workflow
-
-```markdown
-Task: "4.1 Implement authenticate() function signature matching docs/spec/interfaces/auth-operations.md"
-
-Context Loading:
-- Read docs/spec/constraints.md → Result pattern, no exceptions
-- Read docs/spec/shared-registry.md → Email and Result types exist
-- Read docs/catalog.md → No validate_credentials entry; hmac_validator entry exists (not relevant here)
-- Read docs/spec/interfaces/auth-operations.md → Complete signature and behavior
-- Check codebase → Stub exists in src/auth/domain/operations.ts
-
-Pre-Task Verification:
-- Search for "authenticate" → Found stub, needs implementation
-- Check registry → UserCredentials type exists, reuse it
-- Run ast-grep for similar validation patterns → found similar validate_token() in api_gateway; noted for Refactor agent
-- Create GitHub issue #42 "Refactor: consolidate credential validation patterns"
-- No exact duplication found → Proceed
-
-Design Phase:
-- Stub already has signature from interface designer
-- Verify signature matches spec exactly ✓
-- Keep placeholder: throw new Error("Not implemented")
-
-Test Phase (from docs/spec/assertions.md):
-- test('returns success with user when credentials valid') // Assertion #1
-- test('returns InvalidCredentials when password wrong') // Assertion #2
-- test('returns AccountLocked with unlock time when locked') // Assertion #3
-- test('returns ValidationError when email malformed') // Assertion #4
-- test('updates lastLoginAt on successful auth') // Assertion #5
-
-Commit 1: "Add types, docs, and tests for user authentication (auto via agent)"
-
-Implementation Phase:
-- Implement validation (email, password checks)
-- Delegate to UserRepository.findByEmail()
-- Check account lock status
-- Delegate to PasswordHasher.verify()
-- Map errors to AuthError types
-- Create session via SessionStore
-- Update lastLoginAt via repository
-- All tests pass ✓
-
-Commit 2: "Implement user authentication (auto via agent)
-
-Implements authenticate() against docs/spec/interfaces/auth-operations.md.
-Similar validation pattern exists in api_gateway::validate_token — filed for consolidation.
-
-Refs: #42"
-
-Catalog Update:
-- No new shared abstractions created (authenticate is domain-specific)
-- Checked: hmac_validator already in catalog ✓
-
-Registry Update:
-- No new shared types created
-- authenticate() is domain-specific, not added to registry
-
-Rules & Tips Update:
-- "Port mocking: Use createMockUserRepository() helper"
-- "Error mapping: Always map infrastructure errors to domain errors"
-
-Task Complete: Mark [x] 4.1
-Summary: "Cross-scope issues filed: #42"
-```
-
-Remember: TDD with pre-defined interfaces ensures you implement exactly what was designed, with no invention, no duplication, and complete test coverage. The interface designer has already thought through the problem - your job is to make it work correctly.
-
----
-
-## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
-
-This mode is part of an AI-assisted development framework. Key integration points:
-
-### Pre-Flight Check
-Before starting any work in this mode:
-1. ✅ Verify AGENTS.md exists and read it
-2. ✅ Check .tech-decisions.yml for relevant standards
-3. ✅ Review docs/adr/ for related decisions
-4. ✅ Check docs/constraints.md for hard rules
-5. ✅ Review docs/catalog.md for reusable components — **REQUIRED before any abstraction is created**
-
-### Quality Standards Source
-All quality requirements come from:
-* **AGENTS.md**: Production software baseline
-* **.tech-decisions.yml**: Specific thresholds and patterns
-* **docs/standards/**: Language/domain-specific conventions
-
-### Enforcement Mechanisms
-The .githooks/ directory contains:
-* **pre-commit**: Format, lint, secrets detection, language-specific checks
-* **commit-msg**: Commit message quality validation
-
-Your work MUST pass these checks. Test locally before committing:
-```bash
-# Test pre-commit checks
-.githooks/pre-commit
-
-# Validate commit message
-echo "Your commit message" | .githooks/commit-msg
-```
-
-### ADR Workflow
-When this mode makes architectural decisions:
-1. Check if ADR already exists in docs/adr/
-2. If creating new ADR:
-   * Use docs/adr/ADR_TEMPLATE.md
-   * Follow naming: ADR-NNNN-descriptive-name.md
-   * Link to .tech-decisions.yml when referencing tech standards
-   * Update relevant mode specifications to reference ADR
-
-### Task Tracking Integration
-Tasks are sourced from:
-1. **Primary**: Beads CLI if available (`bd ready --json`)
-2. **Fallback**: .llm/tasks.md if Beads not installed
-
-Export/sync tasks using:
-* PowerShell: `scripts/tasks-export.ps1`
-* Bash: `scripts/tasks-export.sh`
+### Task Tracking
+Tasks are read from `.llm/tasks.md`.

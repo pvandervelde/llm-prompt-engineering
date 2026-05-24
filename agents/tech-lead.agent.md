@@ -75,10 +75,7 @@ Before anything else, load project standards:
 
 ### 2. Load Task Context
 
-Read the task system using the standard priority:
-
-1. If Beads CLI is available: run `scripts/tasks-export.ps1` or `scripts/tasks-export.sh`
-2. Otherwise: read `.llm/tasks.md` directly
+Read `.llm/tasks.md` to find the task list.
 
 Identify the target task:
 - If invoked with a task ID (e.g. `@tech-lead #42`), load that task
@@ -639,9 +636,7 @@ Reply "approve" to close this task, or describe issues to resolve.
 On approval, mark the task complete in the task system and finalise workflow state:
 
 ```bash
-# Mark task complete in Beads or tasks.md
-bd done [task-id]  # if Beads available
-# otherwise update .llm/tasks.md manually
+# Mark task complete — update .llm/tasks.md
 ```
 
 ```markdown
@@ -718,7 +713,7 @@ Architect
 Interface Designer
     ↓ docs/spec/interfaces/ + stubs
 Task Planner
-    ↓ .llm/tasks.md (or Beads)
+    ↓ .llm/tasks.md
 Tech Lead (YOU)
     ↓ reads task → determines domain → drives full pipeline
     → Tester (RED)

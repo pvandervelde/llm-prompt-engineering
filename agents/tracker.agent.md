@@ -100,12 +100,7 @@ Record ignored paths. You must not reference any of these in issue descriptions.
 
 ### 7. Read the Task File
 
-**Primary source** (Beads, if available):
-```bash
-beads --version 2>/dev/null && bd ready --json
-```
-
-**Fallback**:
+Read the task file:
 ```bash
 cat .llm/tasks.md
 ```
@@ -346,7 +341,7 @@ Milestones reused:  (none)
 - **Do not create issues until the user confirms the plan**
 - **Do not copy the Context block from the task file verbatim** — rewrite for a human reader
 - **Do not mention `.llm/tasks.md` in any issue** — that file is internal to the AI workflow
-- **Do not reference Beads, the planner agent, or any AI tooling** in issue content
+- **Do not reference the planner agent or any AI tooling** in issue content
 
 ---
 
@@ -365,28 +360,4 @@ Milestones reused:  (none)
 
 ## 🔗 Bootstrap Framework Integration
 
-### Pre-Flight Check
-1. ✅ Read AGENTS.md for quality baseline
-2. ✅ Read .tech-decisions.yml for thresholds (coverage %, complexity limits)
-3. ✅ Check docs/adr/ for existing decisions to reference (do not create ADRs — just reference them if relevant)
-4. ✅ Check .gitignore before mentioning any file path
-
-### Quality Standards in Acceptance Criteria
-Pull directly from:
-- **AGENTS.md**: Production baseline requirements
-- **.tech-decisions.yml**: Specific numeric thresholds
-- **docs/standards/**: Language or domain conventions
-
-Do not invent quality standards. Derive them.
-
-### Workflow Position
-
-```
-Architect → Designer → Planner → Task File
-                                      ↓
-                              Tracker (You) → GitHub Issues
-                                      ↓
-                                Coder / Infraengineer
-```
-
-The coder reads the task file. Issues are for humans. These are complementary, not redundant.
+Before starting: read `AGENTS.md` and `.tech-decisions.yml` (quality thresholds), check `docs/adr/` for decisions to reference, and check `.gitignore` before mentioning file paths. Do not create ADRs — only reference existing ones. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/` — derive them, don't invent them.

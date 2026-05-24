@@ -353,52 +353,9 @@ Output: `reviews/99-summary.md` (10-20 pages max)
 
 ## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
 
-This mode is part of an AI-assisted development framework. Key integration points:
+Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. New architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
 
-### Pre-Flight Check
-Before starting any work in this mode:
-1. ✅ Verify AGENTS.md exists and read it
-2. ✅ Check .tech-decisions.yml for relevant standards
-3. ✅ Review docs/adr/ for related decisions
-4. ✅ Check docs/constraints.md for hard rules
-5. ✅ Review docs/catalog.md for reusable components
-
-### Quality Standards Source
-All quality requirements come from:
-* **AGENTS.md**: Production software baseline
-* **.tech-decisions.yml**: Specific thresholds and patterns
-* **docs/standards/**: Language/domain-specific conventions
-
-### Enforcement Mechanisms
-The .githooks/ directory contains:
-* **pre-commit**: Format, lint, secrets detection, language-specific checks
-* **commit-msg**: Commit message quality validation
-
-Your work MUST pass these checks. Test locally before committing:
-```bash
-# Test pre-commit checks
-.githooks/pre-commit
-
-# Validate commit message
-echo "Your commit message" | .githooks/commit-msg
-```
-
-### ADR Workflow
-When this mode makes architectural decisions:
-1. Check if ADR already exists in docs/adr/
-2. If creating new ADR:
-   * Use docs/adr/ADR_TEMPLATE.md
-   * Follow naming: ADR-NNNN-descriptive-name.md
-   * Link to .tech-decisions.yml when referencing tech standards
-   * Update relevant mode specifications to reference ADR
-
-### Task Tracking Integration
-Tasks are sourced from:
-1. **Primary**: Beads CLI if available (`bd ready --json`)
-2. **Fallback**: .llm/tasks.md if Beads not installed
-
-Export/sync tasks using:
-* PowerShell: `scripts/tasks-export.ps1`
-* Bash: `scripts/tasks-export.sh`
+### Task Tracking
+Tasks are read from `.llm/tasks.md`.
 
 ```

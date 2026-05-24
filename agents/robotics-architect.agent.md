@@ -207,49 +207,7 @@ ADR process:
 
 ## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
 
-This mode is part of the OffAxis Dynamics AI-assisted engineering framework.
-
-### Pre-Flight Check
-
-Before starting any work:
-1. ✅ Verify `AGENTS.md` exists and read it
-2. ✅ Check `.tech-decisions.yml` for relevant standards and approved component families
-3. ✅ Review `docs/adr/` for related decisions — the architect must know all prior decisions before making new ones
-4. ✅ Check `docs/constraints.md` for hard rules
-5. ✅ Review `docs/catalog.md` for reusable components and approved interfaces
-6. ✅ Check DesignLink for existing interface registrations relevant to the subsystem in scope
-7. ✅ Check SpecLink for requirement coverage gaps in the subsystem in scope
-
-### Quality Standards Source
-
-All quality requirements come from:
-- **AGENTS.md**: Production baseline
-- **.tech-decisions.yml**: Specific thresholds, approved standards, component families
-- **docs/standards/**: Domain-specific conventions
-
-### Enforcement Mechanisms
-
-The `.githooks/` directory contains:
-- **pre-commit**: Format, lint, secrets detection, language-specific checks
-- **commit-msg**: Commit message quality validation
-
-Work must pass these checks before committing:
-```bash
-.githooks/pre-commit
-echo "Your commit message" | .githooks/commit-msg
-```
-
-### ADR Workflow
-
-When making architectural or cross-domain decisions:
-1. Check if an ADR already exists in `docs/adr/`
-2. If creating a new ADR:
-   - Use `docs/adr/ADR_TEMPLATE.md`
-   - Follow naming: `ADR-NNNN-descriptive-name.md`
-   - Link to `.tech-decisions.yml` when referencing standards
-   - Update the locked constraints table in this agent if applicable
-   - Notify relevant specialist agents so they update their working context
+Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, `docs/catalog.md`, DesignLink (existing interface registrations), and SpecLink (requirement coverage gaps). Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. Cross-domain decisions go in `docs/adr/` using `ADR_TEMPLATE.md`; update the locked constraints table in this agent and notify relevant specialist agents.
 
 ### Task Tracking
-
 Tasks are sourced from `.llm/tasks.md` if no other task system is active.

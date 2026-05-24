@@ -491,34 +491,8 @@ You do **not** depend on the interface designer — your component contracts are
 
 ## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
 
-### Pre-Flight Check
-Before starting any work in this mode:
-1. ✅ Verify AGENTS.md exists and read it
-2. ✅ Check .tech-decisions.yml for frontend framework and accessibility standards
-3. ✅ Review docs/spec/vocabulary.md — all UX copy must use domain terms
-4. ✅ Review docs/spec/security.md — security constraints affect UX copy and flows
-5. ✅ Check docs/spec/assertions.md — UX flows must be consistent with system assertions
+Before starting: read `AGENTS.md`, `.tech-decisions.yml` (accessibility requirements, supported browsers, component library), `docs/spec/vocabulary.md`, `docs/spec/security.md`, and `docs/spec/assertions.md`. UX architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
 
-### Quality Standards Source
-All quality requirements come from:
-* **AGENTS.md**: Production software baseline and user-facing quality standards
-* **.tech-decisions.yml**: Accessibility requirements, supported browsers, component library
-* **docs/spec/vocabulary.md**: Canonical terminology for all user-facing copy
-
-### ADR Workflow
-When this mode makes UX decisions with significant product implications:
-1. Check if ADR already exists in docs/adr/
-2. If creating new ADR:
-   * Use docs/adr/ADR_TEMPLATE.md
-   * Follow naming: ADR-NNNN-descriptive-name.md
-   * Example: ADR-0012-account-lockout-as-dedicated-screen.md
-
-### Task Tracking Integration
-Tasks are sourced from:
-1. **Primary**: Beads CLI if available (`bd ready --json`)
-2. **Fallback**: .llm/tasks.md if Beads not installed
-
-Export/sync tasks using:
-* PowerShell: `scripts/tasks-export.ps1`
-* Bash: `scripts/tasks-export.sh`
+### Task Tracking
+Tasks are read from `.llm/tasks.md`.
 ```

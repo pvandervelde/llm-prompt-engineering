@@ -499,25 +499,7 @@ Verifier
 
 ## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
 
-### Pre-Flight Check
-1. ✅ Verify `AGENTS.md` exists and read it
-2. ✅ Check `.tech-decisions.yml` for testing framework and coverage targets
-3. ✅ Review `docs/spec/assertions.md` — these are your primary inputs
-4. ✅ Check `docs/spec/edge-cases.md` for adversarial test candidates
-5. ✅ Review `docs/spec/constraints.md` for error-handling contract
+Before starting: read `AGENTS.md`, `.tech-decisions.yml` (testing framework and coverage targets), `docs/spec/assertions.md`, `docs/spec/edge-cases.md`, and `docs/spec/constraints.md`. Work must pass `.githooks/pre-commit`.
 
-### Enforcement Mechanisms
-```bash
-# Run tests
-cargo test
-
-# Run coverage
-cargo llvm-cov --html
-
-# Test pre-commit hook
-.githooks/pre-commit
-```
-
-### Task Tracking Integration
-1. **Primary**: Beads CLI if available (`bd ready --json`)
-2. **Fallback**: `.llm/tasks.md`
+### Task Tracking
+Tasks are read from `.llm/tasks.md`.

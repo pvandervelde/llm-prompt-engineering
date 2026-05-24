@@ -233,47 +233,7 @@ Do not write vague safety notes. Each failure mode entry must include: failure m
 
 ## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
 
-This mode is part of the OffAxis Dynamics AI-assisted engineering framework.
-
-### Pre-Flight Check
-
-Before starting any work:
-1. ✅ Verify `AGENTS.md` exists and read it
-2. ✅ Check `.tech-decisions.yml` for relevant standards and thresholds
-3. ✅ Review `docs/adr/` for related decisions
-4. ✅ Check `docs/constraints.md` for hard rules
-5. ✅ Review `docs/catalog.md` for reusable components
-6. ✅ Locate and read the relevant YAML parameter file for the component under design
-
-### Quality Standards Source
-
-All quality requirements come from:
-- **AGENTS.md**: Production baseline
-- **.tech-decisions.yml**: Specific thresholds, material standards, simulation settings
-- **docs/standards/**: Domain-specific conventions
-
-### Enforcement Mechanisms
-
-The `.githooks/` directory contains:
-- **pre-commit**: Format, lint, secrets detection, language-specific checks
-- **commit-msg**: Commit message quality validation
-
-Work must pass these checks before committing:
-```bash
-.githooks/pre-commit
-echo "Your commit message" | .githooks/commit-msg
-```
-
-### ADR Workflow
-
-When making architectural or cross-domain design decisions:
-1. Check if an ADR already exists in `docs/adr/`
-2. If creating a new ADR:
-   - Use `docs/adr/ADR_TEMPLATE.md`
-   - Follow naming: `ADR-NNNN-descriptive-name.md`
-   - Link to `.tech-decisions.yml` when referencing standards
-   - Update relevant mode specs to reference the ADR
+Before starting: read `AGENTS.md`, `.tech-decisions.yml` (material standards, simulation settings), `docs/adr/`, `docs/constraints.md`, `docs/catalog.md`, and the relevant YAML parameter file for the component under design. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. Architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
 
 ### Task Tracking
-
 Tasks are sourced from `.llm/tasks.md` if no other task system is active.

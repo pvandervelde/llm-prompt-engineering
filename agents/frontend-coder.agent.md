@@ -51,14 +51,12 @@ Never stop because:
 Execute this loop **exactly once per interaction**. One task, TDD workflow, two commits, no anticipation.
 
 ### 1. **Read Project Context**
-- **Always start by reading tasks using the following priority**:
-  1. If Beads CLI is available: Run `scripts/tasks-export.ps1` or `scripts/tasks-export.sh` to get tasks
-  2. Otherwise: Read `./.llm/tasks.md` directly
+- **Always start by reading tasks**: Read `./.llm/tasks.md`
 - Review the `Project Context` section for global patterns
 - Review the `Shared Types Registry` section for existing types and patterns
 - Review the `Rules & Tips` section for project-wide constraints and TDD patterns
 - Check the `Notes` section for architecture, testing frameworks, and conventions
-- If no tasks source exists (no Beads, no `.llm/tasks.md`), ask the user to create it with their task list
+- If `.llm/tasks.md` doesn't exist, ask the user to create it with their task list
 
 #### 1a. **Read Bootstrap Project Standards**
 Before reading tasks, load production standards:
@@ -329,7 +327,6 @@ After tests pass but before committing:
 <why this change is needed>
 <what alternatives were considered (if relevant)>
 
-Task: bd-xxx (if using Beads)
 Refs: ADR-NNNN (if architectural decision)
 ```
 
@@ -446,37 +443,7 @@ If all tasks are completed provide a summary to the user and suggest that they s
 
 ## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
 
-### Pre-Flight Check
-Before starting any work:
-1. ✅ Verify AGENTS.md exists and read it
-2. ✅ Check .tech-decisions.yml for front-end standards (framework, bundler, test strategy, bundle budget)
-3. ✅ Review docs/adr/ for front-end architectural decisions
-4. ✅ Check docs/constraints.md for hard rules
-5. ✅ Review docs/catalog.md for reusable components
+Before starting: read `AGENTS.md`, `.tech-decisions.yml` (front-end standards, bundler, test strategy, bundle budget), `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. Front-end architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`; flag decision points in commit messages if none exists rather than introducing new approaches unilaterally.
 
-### Quality Standards Source
-* **AGENTS.md**: Production software baseline
-* **.tech-decisions.yml**: Specific thresholds (coverage, bundle budgets, complexity limits)
-* **docs/standards/**: Front-end-specific conventions (CSS methodology, component structure, naming)
-
-### Enforcement Mechanisms
-The .githooks/ directory contains:
-* **pre-commit**: Format, lint, secrets detection, type checks
-* **commit-msg**: Commit message quality validation
-
-Test locally before committing:
-```bash
-.githooks/pre-commit
-echo "Your commit message" | .githooks/commit-msg
-```
-
-### ADR Workflow
-When implementation requires a front-end architectural decision (e.g. state management approach, CSS methodology, accessibility pattern):
-1. Check docs/adr/ for existing decision
-2. If none exists, flag the decision point in your commit message and suggest the architect creates an ADR
-3. Do not unilaterally introduce a new architectural approach without an ADR backing it
-
-### Task Tracking Integration
-Tasks are sourced from:
-1. **Primary**: Beads CLI if available (`bd ready --json`)
-2. **Fallback**: .llm/tasks.md if Beads not installed
+### Task Tracking
+Tasks are read from `.llm/tasks.md`.

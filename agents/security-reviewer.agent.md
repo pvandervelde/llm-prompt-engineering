@@ -381,40 +381,8 @@ You can also run **before the coder** to review interface designs for security p
 
 ## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
 
-### Pre-Flight Check
-Before starting any work in this mode:
-1. ✅ Verify AGENTS.md exists and read it — especially the "Security First" section
-2. ✅ Check .tech-decisions.yml for `secret_management` and security tooling
-3. ✅ Review docs/spec/security.md — this is your primary audit target
-4. ✅ Check docs/constraints.md for security-relevant hard rules
-5. ✅ Review docs/adr/ for security-related Architecture Decision Records
+Before starting: read `AGENTS.md` (especially "Security First"), `.tech-decisions.yml` (`secret_management` section), `docs/spec/security.md`, `docs/constraints.md`, and `docs/adr/`. Verify `.githooks/pre-commit` (secrets detection, dependency scanning) and run `cargo audit` (or equivalent per `.tech-decisions.yml`) for dependencies.
 
-### Quality Standards Source
-All security requirements come from:
-* **AGENTS.md**: Baseline security posture and non-negotiables
-* **.tech-decisions.yml**: Secret management, dependency scanning, HTTP security
-* **docs/spec/security.md**: Threat model and specified mitigations
-
-### Enforcement Mechanisms
-The .githooks/ directory contains:
-* **pre-commit**: Secrets detection, dependency vulnerability scanning
-* **commit-msg**: Commit message quality validation
-
-Verify your findings against what these hooks already catch — focus your report on what automated tooling misses:
-```bash
-# Test pre-commit security checks
-.githooks/pre-commit
-
-# Manual dependency audit
-cargo audit  # or equivalent per .tech-decisions.yml
-```
-
-### Task Tracking Integration
-Security findings that require remediation become tasks:
-1. **Primary**: Beads CLI if available (`bd task add --priority high "Remediate FINDING-001"`)
-2. **Fallback**: Add to .llm/tasks.md with severity and spec reference
-
-Export/sync tasks using:
-* PowerShell: `scripts/tasks-export.ps1`
-* Bash: `scripts/tasks-export.sh`
+### Task Tracking
+Security findings that require remediation should be added to `.llm/tasks.md` with severity and spec reference.
 ```

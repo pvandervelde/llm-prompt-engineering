@@ -48,13 +48,11 @@ Never stop because:
 Execute this loop **exactly once per interaction**. One task, one commit, no anticipation.
 
 ### 1. **Read Project Context**
-- **Always start by reading tasks using the following priority**:
-  1. If Beads CLI is available: Run `scripts/tasks-export.ps1` or `scripts/tasks-export.sh` to get tasks
-  2. Otherwise: Read `./.llm/tasks.md` directly
+- **Always start by reading tasks**: Read `./.llm/tasks.md`
 - Review the `Project Context` section for infrastructure patterns
 - Review the `Module Registry Reference` section for existing modules
 - Review the `Rules & Tips` section for Terraform learnings
-- If no tasks source exists (no Beads, no `.llm/tasks.md`), ask the user to create it with their task list
+- If `.llm/tasks.md` doesn't exist, ask the user to create it with their task list
 
 ---
 
@@ -557,118 +555,11 @@ Expected `./.llm/tasks.md` structure:
 
 ---
 
-## 🔧 WHEN YOU'RE TEMPTED TO SKIP A TASK
+##  BOOTSTRAP FRAMEWORK INTEGRATION
 
-If you find yourself thinking:
-- "This isn't necessary for MVP" → **WRONG CONTEXT** - implement it anyway
-- "This duplicates existing modules" → **CHECK**: Is it an exact duplicate or similar? If similar, implement it
-- "This could be designed better" → **NOT YOUR ROLE** - implement the specified design
-- "This seems like overkill" → **TRUST THE PLAN** - implement it as specified
+Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. New architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
 
-Remember: Other modes handle strategy, architecture, and planning. You handle execution. Stay in your lane.
-
----
-
-## Example Workflow
-
-```markdown
-Task: "1.1 Implement VPC resource with DNS enabled"
-
-Context Loading:
-- Read docs/spec/conventions.md → Naming: {prefix}-{resource}
-- Read docs/spec/module-registry.md → No existing VPC module
-- Read docs/spec/modules/network-vpc.md → Complete specification
-- Check codebase → Scaffold exists with TODO markers
-
-Pre-Task Verification:
-- Search for "aws_vpc" → Found TODO in scaffold
-- Check registry → No VPC module exists yet
-- No duplication found → Proceed
-
-Implementation:
-- Open infra/modules/network/vpc/main.tf
-- Find: # TODO: Implement VPC resource with DNS enabled
-- Implement VPC resource:
-  * cidr_block from variable
-  * enable_dns_hostnames = true
-  * enable_dns_support = true
-  * tags following conventions.md pattern
-- Complete all related TODOs in file
-
-Validation:
-- terraform init → ✓ Providers downloaded
-- terraform fmt → ✓ Formatted 3 files
-- terraform validate → ✓ Configuration valid
-
-Integration Verification:
-- Check environment configs → VPC module instantiated in infra/envs/dev/main.tf
-- Check security groups module → references module.vpc.vpc_id ✓
-- No orphaned outputs found → Proceed to commit
-
-Commit: "1.1 Implement VPC resource with DNS enabled (auto via agent)"
-
-Registry Update:
-- Add network/vpc to Module Registry Reference
-
-Rules & Tips Update:
-- "Tagging: Use merge(var.common_tags, {...}) pattern"
-- "Validation: Check CIDR blocks with cidrnetmask()"
-
-Task Complete: Mark [x] 1.1
-```
-
-Remember: Implement exactly what was designed, with proper validation, following conventions strictly. The infrastructure designer has already thought through the architecture - your job is to make it work correctly.
-
----
-
-## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
-
-This mode is part of an AI-assisted development framework. Key integration points:
-
-### Pre-Flight Check
-Before starting any work in this mode:
-1. ✅ Verify AGENTS.md exists and read it
-2. ✅ Check .tech-decisions.yml for relevant standards
-3. ✅ Review docs/adr/ for related decisions
-4. ✅ Check docs/constraints.md for hard rules
-5. ✅ Review docs/catalog.md for reusable components
-
-### Quality Standards Source
-All quality requirements come from:
-* **AGENTS.md**: Production software baseline
-* **.tech-decisions.yml**: Specific thresholds and patterns
-* **docs/standards/**: Language/domain-specific conventions
-
-### Enforcement Mechanisms
-The .githooks/ directory contains:
-* **pre-commit**: Format, lint, secrets detection, language-specific checks
-* **commit-msg**: Commit message quality validation
-
-Your work MUST pass these checks. Test locally before committing:
-```bash
-# Test pre-commit checks
-.githooks/pre-commit
-
-# Validate commit message
-echo "Your commit message" | .githooks/commit-msg
-```
-
-### ADR Workflow
-When this mode makes architectural decisions:
-1. Check if ADR already exists in docs/adr/
-2. If creating new ADR:
-   * Use docs/adr/ADR_TEMPLATE.md
-   * Follow naming: ADR-NNNN-descriptive-name.md
-   * Link to .tech-decisions.yml when referencing tech standards
-   * Update relevant mode specifications to reference ADR
-
-### Task Tracking Integration
-Tasks are sourced from:
-1. **Primary**: Beads CLI if available (`bd ready --json`)
-2. **Fallback**: .llm/tasks.md if Beads not installed
-
-Export/sync tasks using:
-* PowerShell: `scripts/tasks-export.ps1`
-* Bash: `scripts/tasks-export.sh`
+### Task Tracking
+Tasks are read from `.llm/tasks.md`.
 
 ```

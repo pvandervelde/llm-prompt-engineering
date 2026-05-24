@@ -73,39 +73,9 @@ Enumerate what you find before changing anything.
 
 ---
 
-### 4. Run Structural Search (ast-grep)
+### 4. Run Structural Search
 
-After your manual scan, use ast-grep to catch structural duplicates your reading may have missed.
-
-```bash
-# Install if not present
-cargo install ast-grep
-```
-
-Run targeted searches against the changed files. Adapt patterns to what you found in step 3:
-
-```bash
-# Find repeated error mapping patterns
-ast-grep --pattern 'Err($E) => return Err($F)' --lang rust
-
-# Find repeated validation guards
-ast-grep --pattern 'if $X.is_empty() { return Err($E) }' --lang rust
-
-# Find repeated Result-mapping chains
-ast-grep --pattern 'let $V = $EXPR.map_err($F)?;' --lang rust
-
-# Find repeated byte-slice parser shapes
-ast-grep --pattern 'fn $NAME($ARG: &[u8]) -> Result<$_, $_>' --lang rust
-```
-
-Then run the same patterns across the **wider codebase** to detect whether the pattern already exists somewhere outside the task scope:
-
-```bash
-# Project-wide structural search (run from repo root)
-ast-grep --pattern '<your pattern>' --lang rust .
-```
-
-Document every match: file, line, and which pattern it matched. Distinguish between:
+After your manual scan, run a structural search (e.g. `ast-grep`) against the changed files and project-wide to catch duplicates your reading may have missed. Distinguish between:
 - **Within-diff matches** → candidates for extraction
 - **Cross-scope matches** → candidates for GitHub issues
 

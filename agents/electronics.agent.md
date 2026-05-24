@@ -223,47 +223,7 @@ Populate:
 
 ## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
 
-This mode is part of the OffAxis Dynamics AI-assisted engineering framework.
-
-### Pre-Flight Check
-
-Before starting any work:
-1. ✅ Verify `AGENTS.md` exists and read it
-2. ✅ Check `.tech-decisions.yml` for relevant standards and thresholds
-3. ✅ Review `docs/adr/` for related decisions — especially any covering bus topology, power architecture, or isolation strategy
-4. ✅ Check `docs/constraints.md` for hard rules
-5. ✅ Review `docs/catalog.md` for reusable components and approved part families
-6. ✅ Read the current `electronics.md` for the relevant subsystem — do not rely on this agent description for component selections
-
-### Quality Standards Source
-
-All quality requirements come from:
-- **AGENTS.md**: Production baseline
-- **.tech-decisions.yml**: Specific thresholds, voltage ratings, approved component families
-- **docs/standards/**: Domain-specific conventions
-
-### Enforcement Mechanisms
-
-The `.githooks/` directory contains:
-- **pre-commit**: Format, lint, secrets detection, language-specific checks
-- **commit-msg**: Commit message quality validation
-
-Work must pass these checks before committing:
-```bash
-.githooks/pre-commit
-echo "Your commit message" | .githooks/commit-msg
-```
-
-### ADR Workflow
-
-When making architectural or cross-domain design decisions:
-1. Check if an ADR already exists in `docs/adr/`
-2. If creating a new ADR:
-   - Use `docs/adr/ADR_TEMPLATE.md`
-   - Follow naming: `ADR-NNNN-descriptive-name.md`
-   - Link to `.tech-decisions.yml` when referencing standards
-   - Update relevant mode specs to reference the ADR
+Before starting: read `AGENTS.md`, `.tech-decisions.yml` (voltage ratings, approved component families), `docs/adr/`, `docs/constraints.md`, `docs/catalog.md`, and the current `electronics.md` for the relevant subsystem. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. Architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
 
 ### Task Tracking
-
 Tasks are sourced from `.llm/tasks.md` if no other task system is active.
