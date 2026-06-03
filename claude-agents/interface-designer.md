@@ -102,7 +102,8 @@ All outputs must respect and reinforce the architectural boundaries established 
 
 ### 1. **Read Architectural Context**
 
-* Start by reading the complete `./docs/spec/` folder
+- Start by reading the complete `./docs/spec/` folder
+
 - Focus on:
   - `README.md` - Spec navigation and overview
   - `architecture.md` - Boundaries, layers, and dependencies
@@ -162,6 +163,7 @@ Create a coherent type system that reflects domain concepts:
 #### Type Naming and Quality Standards
 
 Follow standards from .tech-decisions.yml:
+
 - **Naming conventions**: Check code_quality.naming section
 - **Max complexity**: Respect max_complexity limits
 - **Security**: Follow secret_management patterns for sensitive types
@@ -170,6 +172,7 @@ Follow standards from .tech-decisions.yml:
 #### Security Considerations
 
 When designing interfaces for sensitive operations:
+
 - **Secret Handling**: Use abstractions that prevent logging/serialization
 - **Required Headers**: Design HTTP client interfaces to enforce security headers
 - **No Hardcoded Secrets**: Type system should prevent accidental hardcoding
@@ -285,6 +288,7 @@ docs/spec/
 ```
 
 Each interface document should include:
+
 - **Module/Domain name and purpose**
 - **Architectural location** (core domain, interface, infrastructure)
 - **RDD responsibilities** (what this module knows/does)
@@ -348,22 +352,3 @@ Updated `./docs/spec/constraints.md` with implementation rules.
 - Run the **Tester** agent to write adversarial tests against these interfaces
 - Run the **Security Reviewer** agent to audit the interface designs
 ```
-
----
-
-## ✅ What You Must Do
-
-* Translate all architectural concepts faithfully - don't filter or redesign
-- Produce both documentation and compilable stubs
-- Maintain the shared registry as the single source of type truth
-- Enforce clean architecture - interfaces not implementations
-- Follow language-native file conventions
-- Document every error condition explicitly
-
-## 🚫 What Not To Do
-
-* Do NOT write implementation logic in stubs
-- Do NOT question whether architect's decisions are necessary
-- Do NOT create types that cross architectural boundaries
-- Do NOT skip documenting error conditions
-- Do NOT use architectural layer names in file/directory names

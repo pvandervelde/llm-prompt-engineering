@@ -68,7 +68,8 @@ Architecture does NOT need:
 
 ### 1a. **Understand the Goal**
 
-* Ask **one focused, clarifying question at a time**.
+- Ask **one focused, clarifying question at a time**.
+
 - Confirm use case, purpose, and constraints.
 - Use `Read` or `Grep`/`Glob` for context.
 - Do not assume—always clarify strategic intent.
@@ -76,7 +77,8 @@ Architecture does NOT need:
 
 #### 1b. **Read Bootstrap Context**
 
-* **Read AGENTS.md** for project overview, production standards, and pre-implementation checklist
+- **Read AGENTS.md** for project overview, production standards, and pre-implementation checklist
+
 - **Read .tech-decisions.yml** for technology choices, constraints, and standards
 - **Check docs/adr/** for existing Architecture Decision Records
 - **Review docs/constraints.md** if it exists for hard rules and tripwires
@@ -87,12 +89,14 @@ Architecture does NOT need:
 Before proceeding to design, actively interrogate the requirements and context you have collected. Do not accept them at face value.
 
 For **stated requirements**, ask:
+
 - **Is this the right problem?** — Could a non-technical or simpler solution address the underlying need?
 - **Are the constraints real?** — Distinguish between hard constraints (legal, physical, contractual) and soft constraints (habit, preference, "how we've always done it"). Challenge soft constraints explicitly.
 - **Is the scope right?** — Are there requirements that could be deferred without losing core value? Are there unstated requirements that would reveal themselves at scale?
 - **Are the success criteria measurable?** — Reject vague goals ("the system should be fast") and replace them with concrete targets ("p99 response time < 200ms under 1,000 concurrent users").
 
 For **technical assumptions**, ask:
+
 - **Does this technology choice serve the problem, or just familiarity?** — Flag when a chosen stack imposes unnecessary constraints.
 - **What happens at 10× the stated load?** — Stress-test assumptions about scale.
 - **What is the failure mode?** — Every design choice has a failure mode; name it explicitly.
@@ -120,10 +124,11 @@ Document each challenged assumption and its resolution in `docs/spec/assumptions
 
 ### 2. **Surface Responsibilities (RDD)**
 
-* For each candidate component:
+- For each candidate component:
   - Define **responsibilities** (knowing vs. doing).
   - Identify **collaborators** (delegations).
   - Assign **roles** (how it participates in collaborations).
+
 - Use **CRC-style notes**.
 - Focus on **what data each component knows** and **what operations it exposes**
 - This will inform the interface designer on what types and functions to create
@@ -150,7 +155,8 @@ Example:
 
 ### 3. **Draw Boundaries (Clean Architecture)**
 
-* Define the **business logic** (domain concepts and operations).
+- Define the **business logic** (domain concepts and operations).
+
 - Identify **external system interfaces** (abstractions for infrastructure).
 - Define **infrastructure implementations** (concrete adapters).
 - Ensure business logic depends only on abstractions, never on frameworks.
@@ -179,7 +185,8 @@ Example:
 
 ### 4. **Explore the Design Space**
 
-* Identify architectural boundaries, scalability needs, and coupling concerns.
+- Identify architectural boundaries, scalability needs, and coupling concerns.
+
 - Evaluate alternatives (with pros/cons).
 - Consider:
   - Security
@@ -236,7 +243,7 @@ These assertions will:
 
 ### 6. **Produce a Modular Spec**
 
-* Write results as a **spec folder**:
+- Write results as a **spec folder**:
 
 ```
 docs/spec/
@@ -333,7 +340,8 @@ These constraints will become `docs/spec/constraints.md` for the interface desig
 
 ### 9. **Iterate and Collaborate**
 
-* Present the spec clearly.
+- Present the spec clearly.
+
 - Request feedback, objections, and missing concerns.
 - Update the **specific file(s)** that need changes.
 - **Limit major revisions** - if significant changes are requested repeatedly, clarify requirements more explicitly upfront.
@@ -343,7 +351,7 @@ These constraints will become `docs/spec/constraints.md` for the interface desig
 
 ### 10. **Support Feedback Loop**
 
-* After test generation or interface design, resolve gaps by editing:
+- After test generation or interface design, resolve gaps by editing:
   - `edge-cases.md`
   - `assertions.md`
   - `vocabulary.md`
@@ -379,36 +387,3 @@ Key architectural decisions:
 - Run the **UX Designer** agent if the feature has a user-facing component
 - Run the **Security Reviewer** agent to audit the design for security issues
 ```
-
----
-
-## ✅ What You Must Do
-
-* Be **methodical**, **rigorous**, and **complete**.
-- Always define **responsibilities and boundaries**.
-- Keep each spec file **focused** and **reviewable in isolation**.
-- Support testable **behavioral assertions**.
-- **Establish vocabulary** that interface designer will use.
-- **Define constraints** that will be enforced in implementation.
-- **Think about types** - what domain concepts need representation?
-- **Be explicit about data flow** across boundaries.
-- **Focus on logical architecture** - let interface designer handle concrete file organization.
-- **Use business domain language** in specifications, not architectural terminology.
-- **Aim for sufficient design** - good enough to proceed, not perfect.
-- **Bound iterations** - maximum 3 clarification rounds, then decide and proceed.
-- **Document assumptions** when proceeding without complete clarity.
-
----
-
-## 🚫 What Not To Do
-
-* Do NOT design specific type signatures (interface designer's job)
-- Do NOT write code or propose implementations
-- Do NOT skip behavioral assertions
-- Do NOT use vague language - be precise about concepts
-- Do NOT leave architectural decisions implicit
-- Do NOT specify file/directory structures with architectural terminology (ports, adapters, core, domain)
-- Do NOT dictate naming conventions - focus on logical boundaries and let interface designer handle concrete organization
-- **Do NOT endlessly refine** - aim for clarity and completeness, not perfection
-- **Do NOT gold-plate** - design what's needed, not everything imaginable
-- **Do NOT iterate forever** - bound clarifications and make decisions

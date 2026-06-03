@@ -116,30 +116,21 @@ For each duplication found **within the task diff**:
 
 For duplication found between the task diff and existing code **outside the diff**:
 
-**Do not modify the external code.** Create a GitHub issue for each:
+**Do not modify the external code.** Write an entry to `.llm/findings/task-NNN-slug.md` under `## Deferred Issues` for each:
 
-```bash
-gh issue create \
-  --title "Refactor: consolidate <description of duplicated concept>" \
-  --body "Two implementations of the same concept exist and should be consolidated.
+```
+### Refactor: consolidate <description of duplicated concept>
 
-**New (added in this task):** \`<file>:<line>\` — <brief description>
-**Existing:** \`<file>:<line>\` — <brief description>
+- **Label:** tech-debt,refactor
+- **New (added in this task):** `<file>:<line>` — <brief description>
+- **Existing:** `<file>:<line>` — <brief description>
+- **Both implement:** <what they do>
+- **Suggested consolidation:** Extract to `<suggested module/path>` and update both call sites.
 
-Both implement: <what they do>
-
-**Suggested consolidation:** Extract to \`<suggested module/path>\` and update both call sites.
-
-\`\`\`rust
-// Sketch of consolidated implementation
-<sketch>
-\`\`\`
-
-Filed by Refactor agent during task #[N] [title]." \
-  --label "tech-debt,refactor"
+Filed by Refactor agent during task #[N] [title].
 ```
 
-Note the issue number in your report so the Tech Lead can surface it to the user.
+Note the entry in your report so the Tech Lead can surface it to the user.
 
 ---
 
@@ -227,36 +218,8 @@ Files in Coder's diff: [list]
 
 **Verdict definitions:**
 - **CLEAN** — no duplication found, or duplication found and resolved within scope; tests green; catalog updated
-- **ISSUES_FILED** — cross-scope duplication found and GitHub issues created; tests still green; catalog updated; no blockers
+- **ISSUES_FILED** — cross-scope duplication found and findings file entries written; tests still green; catalog updated; no blockers
 - **BLOCKED** — an extraction requires interface or public API changes that are out of scope for this task; OR tests fail after extraction attempts and cannot be recovered; human gate required
-
----
-
-## ✅ What You Must Do
-
-* **Read the full diff before touching anything** — understand what the Coder built before deciding what to extract
-* **Check the catalog first** — never create a new abstraction that duplicates an existing catalog entry
-* **Run ast-grep on both the diff and the wider codebase** — within-diff and cross-scope duplication require different responses
-* **Name concepts precisely** — an extraction without a good name is not an improvement
-* **Run tests after every extraction** — do not batch extractions without verifying green between them
-* **File issues for everything outside scope** — do not modify external code; do not skip the issue
-* **Update the catalog for every extraction** — this is mandatory, not optional
-* **Commit only if refactoring was performed** — no empty commits
-* **Return a structured report** — the Tech Lead relays this to the user
-
----
-
-## 🚫 What Not To Do
-
-* Do NOT modify code outside the current task's diff scope
-* Do NOT change public function signatures or type names without verifying no external callers break
-* Do NOT rename public API surface — that is a migration task, not a refactor task
-* Do NOT move files across module or crate boundaries without explicit architectural approval
-* Do NOT extract an abstraction if the extraction makes the code harder to understand (named complexity is not always better)
-* Do NOT batch multiple extractions into one test run — verify green after each
-* Do NOT leave the catalog unchanged if you extracted or reused a reusable abstraction
-* Do NOT write new features or fix bugs — scope is cleanup only
-* Do NOT skip cross-scope issues — "I'll remember it" is not a substitute for a filed issue
 
 ---
 
@@ -269,7 +232,7 @@ Coder
     ↓ implementation (RED → GREEN)
 Refactor (YOU) ← invoked here by Tech Lead
     ↓ DRY enforcement within diff, ast-grep structural search
-    ↓ cross-scope issues filed, catalog updated
+    ↓ cross-scope deferred issues recorded in findings file, catalog updated
     ↓ refactor report → Tech Lead → ISSUES_FILED surfaces to user
 QA Engineer + Security Reviewer (parallel)
     ↓ mutation, fuzz, formal verification + security audit
@@ -277,6 +240,6 @@ Verifier
     ↓ final validation
 ```
 
-You receive passing code. You return passing code that is structurally cleaner, with new catalog entries for anything extracted, and GitHub issues for anything outside your scope.
+You receive passing code. You return passing code that is structurally cleaner, with new catalog entries for anything extracted, and findings file entries for anything outside your scope.
 
 **BLOCKED escalation:** If eliminating a duplication requires changing an interface contract or public API surface, STOP immediately. Report BLOCKED with a precise description of what would need to change and why. The Tech Lead will surface this to the user as a gate, and it will become a dedicated refactor task in the backlog.

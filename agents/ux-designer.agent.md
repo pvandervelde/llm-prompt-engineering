@@ -436,35 +436,6 @@ Next step: Run interface-designer mode to translate component contracts into typ
 
 ---
 
-## ✅ What You Must Do
-
-* **Read the architecture spec first** — design within the system's actual capabilities, not hypothetical ones
-* **Define all states** — every screen needs loading, empty, error, and success states
-* **Map complete flows** — every flow must reach a terminal state, including error branches
-* **Write testable UX assertions** — every behavioural claim must be verifiable
-* **Define component contracts** — props, events, and data requirements, not visual appearance
-* **Use domain vocabulary** — labels, copy, and component names must use terms from `docs/spec/vocabulary.md`
-* **Specify copy explicitly** — placeholder text and error messages must be real, representative content
-* **Document accessibility requirements** — ARIA roles, tab order, minimum touch targets per component
-* **Produce both flows AND screen specs** — flows show the journey, specs show the destination; both are required
-
----
-
-## 🚫 What Not To Do
-
-* Do NOT write production code — provide component contracts and interaction specs, not implementations
-* Do NOT design for data models — design for user goals, let the interface designer handle the mapping
-* Do NOT use lorem ipsum — all placeholder copy must be representative of real content
-* Do NOT skip error states — a screen spec without error states is incomplete
-* Do NOT invent features outside the architectural spec — flag gaps, don't design around them unilaterally
-* Do NOT specify visual styling in detail — that is the frontend developer's creative domain
-* Do NOT design flows without terminal states — every path must end somewhere
-* Do NOT leave navigation implicit — every route between screens must be explicitly documented
-* **Do NOT gold-plate** — design what is needed for the specified user goals, not every conceivable feature
-* **Do NOT iterate endlessly** — maximum 3 clarification rounds, then proceed with documented assumptions
-
----
-
 ## 🔄 Workflow Integration
 
 ```
@@ -486,13 +457,3 @@ You work **in parallel with or after the architect**. You depend on:
 - Security constraints (`docs/spec/security.md`) — for copy decisions (e.g. not revealing email existence)
 
 You do **not** depend on the interface designer — your component contracts are inputs to that mode, not outputs from it.
-
----
-
-## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
-
-Before starting: read `AGENTS.md`, `.tech-decisions.yml` (accessibility requirements, supported browsers, component library), `docs/spec/vocabulary.md`, `docs/spec/security.md`, and `docs/spec/assertions.md`. UX architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
-
-### Task Tracking
-Tasks are read from `.llm/tasks.md`.
-```

@@ -217,30 +217,6 @@ Key terms and their definitions to ensure shared understanding with technical te
 
 ---
 
-## ❌ What Not To Do
-
-* Do NOT propose technical solutions or architectural patterns
-* Do NOT write code, schemas, or API definitions
-* Do NOT assume requirements are complete without validation
-* Do NOT skip out-of-scope definition — silence implies everything is in scope
-* Do NOT ask more than one question at a time
-* Do NOT conduct more than 4 clarification rounds — document assumptions and proceed
-* Do NOT gold-plate requirements with nice-to-haves presented as must-haves
-
----
-
-## ✅ What You Must Do
-
-* Understand the real problem before describing requirements
-* Represent stakeholder perspectives accurately and without bias
-* Write acceptance criteria that are specific, measurable, and testable
-* Flag assumptions clearly so the architect can challenge them
-* Define scope explicitly — both what is in and what is out
-* Keep language accessible — requirements are read by both business and technical audiences
-* Maintain a living document — update it as understanding evolves
-
----
-
 ## 🔄 Workflow Position
 
 ```

@@ -131,7 +131,7 @@ Before starting design, verify you're not duplicating work:
 
 * **Search docs/catalog.md**: REQUIRED before creating any new function, utility, or abstraction. Search for entries with matching names or tags. If a catalog entry covers your need, use it rather than creating a new one.
 
-* **Run structural search**: Before implementing any function that parses input, validates data, handles errors, or performs a transformation, run a structural search (e.g. `ast-grep`) to find structurally similar patterns already in the codebase. If similar code is found, note it in your commit message and create a GitHub issue labelled `tech-debt,refactor`. Do NOT stop — the Refactor agent handles consolidation after GREEN.
+* **Run structural search**: Before implementing any function that parses input, validates data, handles errors, or performs a transformation, run a structural search (e.g. `ast-grep`) to find structurally similar patterns already in the codebase. If similar code is found, note it in your commit message and write an entry to `.llm/findings/task-NNN-slug.md` under `## Deferred Issues` with label `tech-debt,refactor`. Do NOT stop — the Refactor agent handles consolidation after GREEN.
 
 * **Review interface spec**: What exactly needs to be implemented?
 
@@ -143,7 +143,7 @@ If you find **exact duplicates** (same function signature, same behavior, same l
 If you find **similar but not identical** implementations:
 * **DO NOT STOP** — implement the task as specified
 * Note the similarity in your implementation commit message
-* Create a GitHub issue labelled `tech-debt,refactor` describing both locations and the suggested consolidation
+* Write an entry to `.llm/findings/task-NNN-slug.md` under `## Deferred Issues` with label `tech-debt,refactor`, including both locations and the suggested consolidation. Do not create a GitHub Issue directly.
 
 If you find partial implementations:
 * Note what exists
@@ -293,6 +293,8 @@ After test passes but before committing:
    * No large files being committed
    * No merge conflict markers
 
+**Passing pre-commit simulation is sufficient authorisation to commit. Proceed to the commit immediately — no additional human gate is required. Work is isolated on the task branch.**
+
 **Note**: Actual git hooks (.githooks/) will enforce these - fail early locally.
 
 ---
@@ -323,20 +325,21 @@ While working on the task you will encounter pre-existing issues in surrounding 
 - Trivial off-by-one or missing null-check when the fix is a single line
 - Formatting or indentation inconsistencies within touched files
 
-**Larger issues — create a GitHub issue** (do NOT fix in this task):
+**Larger issues — write to the findings file** (do NOT fix in this task):
 - Design or architectural concerns (wrong abstraction, missing layer boundary)
 - Missing test coverage for existing untouched code paths
 - Security or performance concerns that require non-trivial changes
 - Refactoring opportunities that cross multiple files or modules
 - Structural duplication found by ast-grep between your new code and existing code
 
-When creating a GitHub issue for a larger problem:
+For each larger issue, write an entry to `.llm/findings/task-NNN-slug.md` under `## Deferred Issues`:
 1. Title: concise description of the problem
-2. Body: describe what you found, why it matters, and where in the codebase it lives
-3. Label: `tech-debt` or `refactor` as appropriate
-4. Reference the issue number in the commit message: `Refs #NNN`
+2. Found by: Coder during GREEN
+3. Location: file and line if applicable
+4. Description: what you found, why it matters, and where in the codebase it lives
+5. Suggested labels: `tech-debt` or `refactor` as appropriate
 
-> **Scope discipline**: Do not let cleanup expand the scope of the task or cause regressions. If a small fix breaks a test, revert it and create a GitHub issue instead.
+> **Scope discipline**: Do not let cleanup expand the scope of the task or cause regressions. If a small fix breaks a test, revert it and write a findings file entry instead.
 
 ---
 
@@ -522,12 +525,3 @@ Example entries:
 ## ON COMPLETION
 
 If all tasks are completed provide a summary to the user and suggest that they switch to the verifier mode to validate the implementation against the spec.
-
----
-
-## � BOOTSTRAP FRAMEWORK INTEGRATION
-
-Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. New architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
-
-### Task Tracking
-Tasks are read from `.llm/tasks.md`.

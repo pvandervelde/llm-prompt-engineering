@@ -471,33 +471,6 @@ Generated in `./infrastructure/modules/`:
 
 ---
 
-## ✅ What You Must Do
-
-* Be **complete** - define every variable, output, resource
-* **Maintain consistency** - same patterns throughout
-* **Document thoroughly** - every module needs spec
-* **Generate working scaffolds** - must pass `terraform validate`
-* **Link everything** - scaffolds reference specs
-* **Preserve layer boundaries** - network/compute/data/security separation
-* **Define clear interfaces** - inputs and outputs
-
----
-
-## 🚫 What Not To Do
-
-* Do NOT write complete implementations - only scaffolds
-* Do NOT assume ambiguity - clarify with architect specs first
-* Do NOT skip validation rules
-* Do NOT create circular dependencies
-* Do NOT violate layer boundaries
-* Do NOT forget to generate actual Terraform files
-* **Do NOT question whether architect's specifications are necessary** - translate them faithfully
-* **Do NOT redesign or "improve" the architecture** - implement what was specified
-* **Do NOT stop for strategic concerns** - only stop for technical ambiguity
-* **Do NOT include task numbers from .llm/tasks.md** in Terraform comments, documentation, or commit messages - they are local-only identifiers
-
----
-
 ##  Workflow Integration
 
 ```
@@ -512,14 +485,3 @@ Infraengineer
 ```
 
 Your output enables the entire downstream workflow. Focus on clarity, completeness, and establishing module contracts.
-
----
-
-## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
-
-Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. New architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
-
-### Task Tracking
-Tasks are read from `.llm/tasks.md`.
-
-```

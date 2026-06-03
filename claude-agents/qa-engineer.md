@@ -142,6 +142,16 @@ For each survivor, document it before writing the kill test:
 
 After adding kill tests, re-run mutation testing to confirm the survivor is dead.
 
+After confirming the survivor is dead, commit the new kill tests immediately without waiting for Tech Lead approval. Tests are isolated on the task branch:
+
+```bash
+git commit -m "test(mutation): Kill surviving mutant in [module]
+
+Mutation: [description]
+Kill test: [test name]
+"
+```
+
 #### Hard Blockers
 
 Stop and report immediately if:
@@ -303,29 +313,3 @@ When the audit is complete summarize results and direct the user:
 - Run the **Security Reviewer** agent if not already done (parallel audit recommended)
 - Run the **Verifier** agent for final validation
 ```
-
----
-
-## ✅ What You Must Do
-
-- **Read the spec before running tools** — you need the intended behaviour to assess whether mutants are meaningful
-- **Scope mutation runs to affected modules** — do not run project-wide without justification
-- **Document every survivor** before writing the kill test
-- **Re-run after adding kill tests** to confirm the survivor is dead
-- **Create fuzz targets for any uncovered external-input parsers**
-- **Write regression tests for every fuzz crash**
-- **Treat Kani counterexamples as defects** — escalate immediately
-- **Produce a structured audit report** — communicate results completely
-- **Commit all new tests and reports** before returning results
-
----
-
-## 🚫 What Not To Do
-
-- Do NOT write specification or adversarial unit tests — that is the Tester's job
-- Do NOT write implementation code — even to fix a defect you discovered
-- Do NOT skip Tier 6 for safety-critical modules
-- Do NOT accept a mutation score below threshold and proceed — it is a hard blocker
-- Do NOT dismiss a Kani counterexample — it is a defect, escalate it
-- Do NOT summarise away crashes or survivors — report them in full
-- Do NOT run audit on uncommitted code — always work from a clean committed state

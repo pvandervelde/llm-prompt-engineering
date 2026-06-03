@@ -174,209 +174,33 @@ Present this plan and confirm scope before writing tests.
 
 ### 5. **Write Specification Tests (Tier 1)**
 
-For each behavioral assertion, write an explicit test. Map assertions to tests 1:1:
-
-```rust
-// From docs/spec/assertions.md assertion #2:
-// "Invalid password must return specific error — does NOT reveal whether email exists"
-
-#[test]
-fn wrong_password_returns_invalid_credentials_not_user_not_found() {
-    let repo = MockUserRepository::with_user(valid_user());
-    let hasher = MockPasswordHasher::always_invalid();
-    let service = AuthService::new(repo, hasher, MockSessionStore::new());
-
-    let result = service.authenticate(credentials_with_wrong_password());
-
-    assert!(matches!(result, Err(AuthError::InvalidCredentials)));
-}
-
-#[test]
-fn nonexistent_email_returns_same_error_as_wrong_password() {
-    let repo = MockUserRepository::empty();
-    let service = AuthService::new(repo, MockPasswordHasher::new(), MockSessionStore::new());
-
-    let result = service.authenticate(credentials_with_valid_format());
-
-    assert!(matches!(result, Err(AuthError::InvalidCredentials)));
-}
-```
-
----
+For each behavioral assertion, write an explicit test. Map assertions to tests 1:1
 
 ### 6. **Write Adversarial Tests (Tier 2)**
 
 #### Boundary Value Tests
 
-```rust
-#[test]
-fn four_failed_attempts_does_not_lock_account() {
-    let service = service_with_failure_count(4);
-    let result = service.authenticate(valid_credentials());
-    assert!(!matches!(result, Err(AuthError::AccountLocked { .. })));
-}
-
-#[test]
-fn fifth_failed_attempt_locks_account() {
-    let service = service_with_failure_count(5);
-    let result = service.authenticate(valid_credentials());
-    assert!(matches!(result, Err(AuthError::AccountLocked { unlock_at: _ })));
-}
-```
+Validate that boundary conditions are handled correctly — these are common sources of off-by-one errors and logic bugs
 
 #### Side-Effect Verification Tests
 
-```rust
-#[test]
-fn successful_auth_updates_last_login_at() {
-    let repo = MockUserRepository::with_user(valid_user());
-    let service = AuthService::new(repo.clone(), MockPasswordHasher::valid(), MockSessionStore::new());
-
-    let _ = service.authenticate(valid_credentials());
-
-    assert!(repo.last_login_was_updated());
-}
-
-#[test]
-fn failed_auth_does_not_update_last_login_at() {
-    let repo = MockUserRepository::with_user(valid_user());
-    let service = AuthService::new(repo.clone(), MockPasswordHasher::always_invalid(), MockSessionStore::new());
-
-    let _ = service.authenticate(credentials_with_wrong_password());
-
-    assert!(!repo.last_login_was_updated());
-}
-```
+Verify that side effects occur when they should, and do not occur when they shouldn't
 
 #### Stub-Killing Tests
 
-```rust
-// A stub returning Ok(default_session()) would pass a single success test.
-// These two tests together kill that stub:
-
-#[test]
-fn authenticated_session_contains_correct_user_id() {
-    let user = user_with_id(UserId::from("user-abc-123"));
-    let repo = MockUserRepository::with_user(user.clone());
-    let service = AuthService::new(repo, MockPasswordHasher::valid(), MockSessionStore::new());
-
-    let session = service.authenticate(valid_credentials()).unwrap();
-
-    assert_eq!(session.user_id, user.id);
-}
-
-#[test]
-fn sessions_for_different_users_have_different_ids() {
-    let session_a = authenticate_as(user_with_id(UserId::from("user-a")));
-    let session_b = authenticate_as(user_with_id(UserId::from("user-b")));
-
-    assert_ne!(session_a.id, session_b.id);
-    assert_ne!(session_a.user_id, session_b.user_id);
-}
-```
-
----
+Add stub killing tests that would fail against an `unimplemented!()` or `todo!()` implementation, and also against trivial hardcoded returns
 
 ### 7. **Write Property-Based Tests (Tier 3)**
 
 Use `proptest` to verify invariants across generated input ranges. Property tests are required for state machines, protocol logic, and any module where an invariant must hold across arbitrary inputs.
 
-```toml
-[dev-dependencies]
-proptest = "1"
-```
-
-```rust
-use proptest::prelude::*;
-
-proptest! {
-    // Valid credentials always produce a session with the correct user ID
-    #[test]
-    fn valid_credentials_always_produce_correct_user_id(
-        email in valid_email_strategy(),
-        password in valid_password_strategy(),
-    ) {
-        let user = user_with_credentials(email.clone(), password.clone());
-        let repo = MockUserRepository::with_user(user.clone());
-        let service = default_service_with(repo);
-
-        let result = service.authenticate(Credentials { email, password });
-
-        prop_assert!(result.is_ok());
-        prop_assert_eq!(result.unwrap().user_id, user.id);
-    }
-
-    // Wrong password is never a success regardless of email
-    #[test]
-    fn wrong_password_never_succeeds(
-        email in valid_email_strategy(),
-        wrong_password in wrong_password_strategy(),
-    ) {
-        let service = service_with_registered_user(email.clone());
-        let result = service.authenticate(Credentials { email, password: wrong_password });
-        prop_assert!(result.is_err());
-    }
-
-    // authenticate never panics on arbitrary byte input
-    #[test]
-    fn authenticate_never_panics_on_arbitrary_input(
-        email_bytes in prop::collection::vec(any::<u8>(), 0..=512),
-        password_bytes in prop::collection::vec(any::<u8>(), 0..=512),
-    ) {
-        let email = String::from_utf8_lossy(&email_bytes).into_owned();
-        let password = String::from_utf8_lossy(&password_bytes).into_owned();
-        let _ = default_service().authenticate(RawCredentials { email, password });
-    }
-}
-```
-
 #### State Machine Property Tests
 
-For FSM-heavy modules (Safety MCU, GateKeeper transitions):
-
-```rust
-proptest! {
-    // From any valid state, no input sequence reaches an invalid state
-    #[test]
-    fn state_machine_never_reaches_invalid_state(
-        initial_state in valid_state_strategy(),
-        inputs in prop::collection::vec(valid_input_strategy(), 0..=50),
-    ) {
-        let mut fsm = SafetyFsm::new(initial_state);
-        for input in inputs {
-            fsm.transition(input);
-        }
-        prop_assert!(fsm.is_valid_state());
-    }
-}
-```
-
----
+For FSM-heavy modules (Safety MCU, GateKeeper transitions), verify that no sequence of valid inputs can lead to an invalid state
 
 ### 8. **Write Contract Tests for Interface Abstractions**
 
-For every external interface (repository, hasher, store), write contract tests that any concrete implementation must satisfy:
-
-```rust
-pub fn user_repository_contract_tests<R: UserRepository>(repo: R) {
-    // find_by_email returns None for unknown email
-    assert!(repo.find_by_email(&Email::new("unknown@example.com")).is_none());
-
-    // find_by_email returns Some after save
-    let user = valid_user();
-    repo.save(&user);
-    assert!(repo.find_by_email(&user.email).is_some());
-
-    // update_last_login modifies only the timestamp
-    let before = repo.find_by_email(&user.email).unwrap();
-    repo.update_last_login(&user.id, Utc::now());
-    let after = repo.find_by_email(&user.email).unwrap();
-    assert_eq!(before.id, after.id);
-    assert_ne!(before.last_login_at, after.last_login_at);
-}
-```
-
----
+For every external interface (repository, hasher, store), write contract tests that any concrete implementation must satisfy
 
 ### 9. **Verify Test Quality**
 
@@ -396,6 +220,8 @@ Before committing, review your test suite:
 ---
 
 ### 10. **Commit and Document**
+
+After writing and verifying the test suite, commit immediately without waiting for Tech Lead confirmation. The commit must be made before reporting results back.
 
 ```bash
 git commit -m "test: Add adversarial test suite for authenticate()
@@ -443,38 +269,6 @@ After implementation by the coder:
 
 ---
 
-## ✅ What You Must Do
-
-* **Read specs before writing tests** — test the contract, not your assumptions
-* **Classify module criticality** before deciding which tiers apply
-* **Test every documented error condition** — not just the happy path
-* **Write boundary tests explicitly** — document the threshold, test at N-1, N, N+1
-* **Verify side effects bidirectionally** — both "performed" and "not performed when not expected"
-* **Kill stubs** — every test group must be impossible to satisfy with a trivial stub
-* **One behaviour per test** — narrow assertions, descriptive names
-* **Write contract tests for every interface abstraction**
-* **Write proptest invariants** for state machines and protocol logic
-* **Document the test plan** before writing code — enumerate all scenarios first
-* **Map tests to assertions** — traceability from spec assertion to test is mandatory
-
----
-
-## 🚫 What Not To Do
-
-* Do NOT read the implementation before writing tests — derive from specs only
-* Do NOT write tests that pass against `unimplemented!()` or `todo!()`
-* Do NOT merge multiple assertions into one test
-* Do NOT test internal state directly — only public API behaviour
-* Do NOT skip error variant discrimination — `is_err()` alone is not enough
-* Do NOT write tests only for the code that was written — test the spec that was defined
-* Do NOT leave side effects unverified
-* Do NOT use vague test names like `test_auth_works` or `test_error_case`
-* Do NOT run mutation testing, fuzzing, or formal verification — that is the QA Engineer's job
-* **Do NOT write implementation code** — you are a tester, not a coder
-* **Do NOT question whether specs need testing** — if it's specified, it needs a test
-
----
-
 ## 🔄 Workflow Integration
 
 ```
@@ -494,12 +288,3 @@ Security Reviewer
 Verifier
     ↓ final validation
 ```
-
----
-
-## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
-
-Before starting: read `AGENTS.md`, `.tech-decisions.yml` (testing framework and coverage targets), `docs/spec/assertions.md`, `docs/spec/edge-cases.md`, and `docs/spec/constraints.md`. Work must pass `.githooks/pre-commit`.
-
-### Task Tracking
-Tasks are read from `.llm/tasks.md`.

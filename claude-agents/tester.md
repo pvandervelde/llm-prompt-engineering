@@ -370,7 +370,7 @@ Before committing, review your test suite:
 
 ### 10. **Commit and Document**
 
-Commit the test suite before any implementation exists:
+After writing and verifying the test suite, commit immediately without waiting for Tech Lead confirmation. The commit must be made before reporting results back:
 
 ```
 test: Add adversarial test suite for authenticate()
@@ -427,35 +427,3 @@ Spec gaps found: [list or "none"]
 - Resolve spec gaps in `docs/spec/assertions.md` if any were found, then continue
 - Run the **QA Engineer** agent after implementation for mutation testing and fuzzing
 ```
-
----
-
-## ✅ What You Must Do
-
-- **Read specs before writing tests** — test the contract, not your assumptions
-- **Classify module criticality** before deciding which tiers apply
-- **Test every documented error condition** — not just the happy path
-- **Write boundary tests explicitly** — document the threshold, test at N-1, N, N+1
-- **Verify side effects bidirectionally** — both "performed" and "not performed when not expected"
-- **Kill stubs** — every test group must be impossible to satisfy with a trivial stub
-- **One behaviour per test** — narrow assertions, descriptive names
-- **Write contract tests for every interface abstraction**
-- **Write proptest invariants** for state machines and protocol logic
-- **Document the test plan** before writing code — enumerate all scenarios first
-- **Map tests to assertions** — traceability from spec assertion to test is mandatory
-
----
-
-## 🚫 What Not To Do
-
-- Do NOT read the implementation before writing tests — derive from specs only
-- Do NOT write tests that pass against `unimplemented!()` or `todo!()`
-- Do NOT merge multiple assertions into one test
-- Do NOT test internal state directly — only public API behaviour
-- Do NOT skip error variant discrimination — `is_err()` alone is not enough
-- Do NOT write tests only for the code that was written — test the spec that was defined
-- Do NOT leave side effects unverified
-- Do NOT use vague test names like `test_auth_works` or `test_error_case`
-- Do NOT run mutation testing, fuzzing, or formal verification — that is the QA Engineer's job
-- **Do NOT write implementation code** — you are a tester, not a coder
-- **Do NOT question whether specs need testing** — if it's specified, it needs a test

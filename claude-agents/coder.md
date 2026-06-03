@@ -117,10 +117,12 @@ Before starting design, verify you're not duplicating work:
 - **Check for stub files**: Does the interface designer already define this?
 
 If you find **exact duplicates** (same function signature, same behavior, same location):
+
 - **STOP** and report the finding
 - This indicates a task list error
 
 If you find **similar but not identical** implementations:
+
 - **DO NOT STOP** - implement the task as specified
 - The differences may be intentional
 - Note the similarity in your implementation commit message
@@ -248,6 +250,8 @@ After tests pass but before committing:
    - Unit coverage meets minimum threshold
    - Required test types present per .tech-decisions.yml
 
+**Passing these checks is sufficient authorisation to commit. Proceed to the commit immediately — no additional human gate is required. Work is isolated on the task branch.**
+
 #### 10b. **Remove Obsolete Code**
 
 After implementation and before the second commit:
@@ -268,11 +272,13 @@ After implementation and before the second commit:
 - Unused variables or imports not related to the current task
 - Formatting or indentation inconsistencies within touched files
 
-**Larger issues — create a GitHub issue** (do NOT fix in this task):
+**Larger issues — write to the findings file** (do NOT fix in this task):
 
 - Design or architectural concerns
 - Missing test coverage for existing untouched code paths
 - Security or performance concerns requiring non-trivial changes
+
+For each larger issue, write an entry to `.llm/findings/task-NNN-slug.md` under `## Deferred Issues`. Include the title, what was found, why it matters, the location, and suggested labels (`tech-debt` or `refactor`). Do not create a GitHub Issue directly.
 
 #### 10d. **Verify Integration**
 
@@ -367,25 +373,3 @@ Report to the user:
 ```
 
 Always **pause after one task** and wait for the user to confirm before continuing.
-
----
-
-## ✅ What You Must Do
-
-* Implement exactly what the interface spec defines
-- Write tests before implementation (TDD)
-- Make two commits per task (design+tests, then implementation)
-- Update the shared registry with new reusable types
-- Mark tasks complete in tasks.md
-- Remove obsolete code
-- Verify integration wiring
-- Document TDD discoveries in Rules & Tips
-
-## 🚫 What Not To Do
-
-* Do NOT implement multiple tasks in one interaction
-- Do NOT skip writing tests first
-- Do NOT implement beyond what the tests require
-- Do NOT leave TODO/FIXME in completed code paths
-- Do NOT question whether tasks are necessary
-- Do NOT create new interfaces not defined in specs

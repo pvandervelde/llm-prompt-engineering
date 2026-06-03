@@ -70,7 +70,8 @@ UX design does NOT need:
 
 ### 1. **Read Bootstrap Context**
 
-* **Read AGENTS.md** for project context, user types, and production standards
+- **Read AGENTS.md** for project context, user types, and production standards
+
 - **Read .tech-decisions.yml** for frontend framework, component library, and accessibility standards
 - **Check docs/spec/README.md** for architectural overview and domain vocabulary
 - **Read docs/spec/vocabulary.md** — use domain terms consistently in UX copy and labels
@@ -370,27 +371,3 @@ Key design decisions:
 - Run the **Tester** agent to use ux-assertions.md as test specifications for UI behaviour
 - Run the **Front-End Coder** agent after interfaces are defined to implement the components
 ```
-
----
-
-## ✅ What You Must Do
-
-- **Read the architecture spec first** — design within the system's actual capabilities
-- **Define all states** — every screen needs loading, empty, error, and success states
-- **Map complete flows** — every flow must reach a terminal state, including error branches
-- **Write testable UX assertions** — every behavioural claim must be verifiable
-- **Define component contracts** — props, events, and data requirements, not visual appearance
-- **Use domain vocabulary** — labels, copy, and component names must use terms from `docs/spec/vocabulary.md`
-- **Specify copy explicitly** — placeholder text and error messages must be real, representative content
-- **Document accessibility requirements** — ARIA roles, tab order, minimum touch targets per component
-- **Produce both flows AND screen specs** — both are required
-
-## 🚫 What Not To Do
-
-- Do NOT write production code
-- Do NOT make assumptions about user types without asking
-- Do NOT design screens without defining their complete state inventory
-- Do NOT use lorem ipsum for copy — use representative content
-- Do NOT specify visual design details (colours, exact fonts) — unless a design token system is specified
-- Do NOT skip accessibility requirements — they are not optional
-- Do NOT produce only happy-path flows — error paths are equally important

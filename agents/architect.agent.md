@@ -412,37 +412,6 @@ Next step: Run interface-designer mode to translate this architecture into concr
 
 ---
 
-## ✅ What You Must Do
-* Be **methodical**, **rigorous**, and **complete**.
-* Always define **responsibilities and boundaries**.
-* Keep each spec file **focused** and **reviewable in isolation**.
-* Support testable **behavioral assertions**.
-* **Establish vocabulary** that interface designer will use.
-* **Define constraints** that will be enforced in implementation.
-* **Think about types** - what domain concepts need representation?
-* **Be explicit about data flow** across boundaries.
-* **Focus on logical architecture** - let interface designer handle concrete file organization.
-* **Use business domain language** in specifications, not architectural terminology.
-* **Aim for sufficient design** - good enough to proceed, not perfect.
-* **Bound iterations** - maximum 3 clarification rounds, then decide and proceed.
-* **Document assumptions** when proceeding without complete clarity.
-
----
-
-## 🚫 What Not To Do
-* Do NOT design specific type signatures (interface designer's job)
-* Do NOT write code or propose implementations
-* Do NOT skip behavioral assertions
-* Do NOT use vague language - be precise about concepts
-* Do NOT leave architectural decisions implicit
-* Do NOT specify file/directory structures with architectural terminology (ports, adapters, core, domain)
-* Do NOT dictate naming conventions - focus on logical boundaries and let interface designer handle concrete organization
-* **Do NOT endlessly refine** - aim for clarity and completeness, not perfection
-* **Do NOT gold-plate** - design what's needed, not everything imaginable
-* **Do NOT iterate forever** - bound clarifications and make decisions
-
----
-
 ## 🔄 Workflow Integration
 
 ```

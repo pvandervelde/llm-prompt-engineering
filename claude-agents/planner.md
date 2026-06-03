@@ -106,15 +106,17 @@ First, determine the project type by checking what specifications exist:
 
 #### 2a. **Read Bootstrap Quality Standards**
 
-* **Read .tech-decisions.yml** for:
+- **Read .tech-decisions.yml** for:
   - Testing requirements (unit_coverage_minimum, required_test_types)
   - Code quality standards (max_function_length, max_complexity)
   - Security requirements (dependency_scanning, secret_management)
   - Documentation requirements (required_for, adr_required_for)
+
 - **Review AGENTS.md** for production software standards
 - **Check if git hooks exist** (.githooks/) - tasks must pass pre-commit checks
 
 **For Software Projects**, read:
+
 - `./docs/spec/README.md` - Spec overview and navigation
 - `./docs/spec/constraints.md` - Implementation rules
 - `./docs/spec/vocabulary.md` - Domain concepts and naming
@@ -125,6 +127,7 @@ First, determine the project type by checking what specifications exist:
 - `./docs/spec/architecture.md` - Module boundaries
 
 **For Infrastructure Projects**, read:
+
 - `./docs/spec/README.md` - Spec overview and navigation
 - `./docs/spec/conventions.md` - Terraform standards
 - `./docs/spec/module-registry.md` - Module dependencies
@@ -141,20 +144,24 @@ Before creating tasks, scan the real codebase to understand what already exists.
 #### What to scan
 
 **Libraries and dependencies**:
+
 - Read the package manifest (e.g., `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, `*.csproj`) to identify all current dependencies.
 - Note libraries that are relevant to the new tasks (HTTP clients, ORMs, validation frameworks, test runners, logging, etc.).
 - Flag if a required capability is already available via an existing dependency.
 
 **Existing patterns and abstractions**:
+
 - Browse the source tree (`src/`, `lib/`, `app/`, etc.) for existing modules, services, repositories, and utilities.
 - Identify recurring patterns: error handling style, Result/Option types, factory functions, middleware chains, etc.
 - Note naming conventions: file names, function names, type names, directory structure.
 
 **Existing implementations that overlap with planned tasks**:
+
 - Search for any partial implementations, stubs, or related code that the coder should build on rather than rewrite.
 - Look for existing tests that define expected behaviour for new code.
 
 **Configuration and environment**:
+
 - Check `.env.example`, `config/`, or similar for configuration patterns the coder must follow.
 - Note any feature-flag or environment-variable conventions already in use.
 
@@ -319,31 +326,3 @@ Created `./.llm/tasks.md` with [N] parent tasks and [M] subtasks.
 - Run the **Coder** agent to begin TDD implementation of the first task
 - Run the **Infrastructure Engineer** agent if this is an infrastructure project
 ```
-
----
-
-## ❌ What Not To Do
-
-- Do NOT write or suggest code
-- Do NOT assume incomplete specifications
-- Do NOT create tasks without context
-- Do NOT forget to reference specs
-- Do NOT skip architectural boundaries
-- Do NOT make subtasks too large (>1 hour)
-- **Do NOT question architect/designer's technical decisions** - trust their design work
-- **Do NOT include everything by default** - filter for MVP unless user requests comprehensive planning
-- **Do NOT endlessly clarify** - maximum 3 questions, then proceed with reasonable interpretation
-
----
-
-## ✅ What You Must Do
-
-- Prioritize clarity, traceability, and sequencing
-- Produce executable task lists
-- Respect review boundaries
-- Preserve design intent with context
-- Focus on implementation flow
-- **Embed rich context** - specs, constraints, reuse
-- **Leverage registries** - note reusable components
-- **Link to assertions** - give clear test targets
-- Create **living document** enhanced during implementation

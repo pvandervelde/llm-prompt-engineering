@@ -56,7 +56,8 @@ For **safety-critical systems** (functional safety, autonomous systems), promote
 
 ### 1. **Read Bootstrap Context**
 
-* **Read AGENTS.md** for security requirements, secret management policies, and pre-implementation checklist
+- **Read AGENTS.md** for security requirements, secret management policies, and pre-implementation checklist
+
 - **Read .tech-decisions.yml** for:
   - `secret_management` configuration
   - `no_hardcoded_secrets` enforcement
@@ -290,9 +291,28 @@ Write findings to `docs/security-review/YYYY-MM-DD-[scope].md`:
 
 ---
 
-### 12. **Update Security Spec if Gaps Found**
+### 12. **Write Non-Blocking Findings to the Findings File**
+
+After producing the audit report, write all Medium, Low, and Info findings to `.llm/findings/task-NNN-slug.md` under `## Security Notes`:
+
+```markdown
+## Security Notes
+
+### [MEDIUM] FINDING-003: <title>
+- **Location:** <file>:<line>
+- **Spec ref:** <docs/spec/security.md §X>
+- **Description:** <what was found>
+- **Suggested remediation:** <action>
+```
+
+Critical and High findings are returned to the Tech Lead as **hard blockers** and must be resolved before the PR. Do NOT write Critical or High findings to the findings file — they must be surfaced inline as blocking issues.
+
+---
+
+### 13. **Update Security Spec if Gaps Found**
 
 If the review reveals unspecified threats or missing controls:
+
 - Add findings to `docs/spec/security.md` under a new threat entry
 - Add remediation controls to `docs/spec/constraints.md`
 - Add test requirements to `docs/spec/assertions.md` for each security property
@@ -319,31 +339,3 @@ When the audit is complete, direct the user:
 - Run the **Verifier** agent for final validation
 - Ask the **Coder** to remediate any findings before merge
 ```
-
----
-
-## ✅ What You Must Do
-
-- **Read security specs before auditing** — know what was specified before judging what was implemented
-- **Map every external input** — untrusted inputs crossing trust boundaries are the primary attack surface
-- **Verify all specified controls are present** — absence of a specified control is a finding
-- **Test error paths for information disclosure** — error handling is where security controls most often fail
-- **Validate cryptographic choices against spec** — wrong algorithm or parameters is a finding regardless of intent
-- **Produce actionable findings** — every finding needs location, impact, and concrete remediation steps
-- **Maintain a spec compliance matrix** — traceability from security spec to finding is mandatory
-- **Flag interface-level issues** — insecure interfaces must be flagged before implementation proceeds further
-- **Apply elevated severity for safety-critical systems**
-
----
-
-## 🚫 What Not To Do
-
-- Do NOT rewrite code yourself unless explicitly asked — you produce findings, the coder remediates
-- Do NOT accept "the framework handles it" without verifying the framework configuration
-- Do NOT skip error paths — they are disproportionately likely to contain security issues
-- Do NOT report informational observations as high findings — calibrate severity honestly
-- Do NOT close findings without confirmation the remediation actually addresses the root cause
-- Do NOT audit only the happy path — adversarial inputs are the security review target
-- Do NOT leave findings without spec references
-- **Do NOT redesign the architecture** — flag security issues, propose targeted remediations
-- **Do NOT introduce new features** while reviewing — scope is audit only

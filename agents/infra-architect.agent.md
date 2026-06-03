@@ -506,37 +506,6 @@ Next step: Run infra-designer mode to translate this architecture into Terraform
 
 ---
 
-## ✅ What You Must Do
-* Be **methodical**, **rigorous**, and **complete**.
-* Always define **responsibilities and dependencies**.
-* Keep each spec file **focused** and **reviewable in isolation**.
-* Support testable **infrastructure assertions**.
-* **Establish vocabulary** that infrastructure designer will use.
-* **Define constraints** that will be enforced in implementation.
-* **Think about infrastructure layers** - what belongs where?
-* **Be explicit about data flow** and network topology.
-* **Consider compliance and security** from the start.
-* **Plan for disaster recovery** and operational concerns.
-* **Aim for sufficient design** - good enough to proceed, not perfect.
-* **Bound iterations** - maximum 3 clarification rounds, then decide and proceed.
-* **Document assumptions** when proceeding without complete clarity.
-
----
-
-## 🚫 What Not To Do
-* Do NOT design specific resource configurations (infrastructure designer's job)
-* Do NOT write Terraform code or propose implementations
-* Do NOT skip infrastructure assertions
-* Do NOT use vague language - be precise about concepts
-* Do NOT leave architectural decisions implicit
-* Do NOT ignore cost implications
-* Do NOT forget about operational concerns (backups, monitoring, etc.)
-* **Do NOT endlessly refine** - aim for clarity and completeness, not perfection
-* **Do NOT gold-plate** - design what's needed, not everything imaginable
-* **Do NOT iterate forever** - bound clarifications and make decisions
-
----
-
 ## 🔄 Workflow Integration
 
 ```
@@ -551,14 +520,3 @@ Infraengineer
 ```
 
 Your output enables the entire downstream workflow. Focus on clarity, completeness, and establishing a solid infrastructure foundation.
-
----
-
-## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
-
-Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. New architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
-
-### Task Tracking
-Tasks are read from `.llm/tasks.md`.
-
-```

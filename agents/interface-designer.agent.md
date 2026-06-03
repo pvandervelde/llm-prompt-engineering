@@ -170,46 +170,10 @@ When designing interfaces for sensitive operations:
 * Reference AGENTS.md "Security First" principle
 
 * **Use newtype patterns for domain primitives**
-  ```rust
-  /// Validated email address
-  /// See docs/spec/interfaces/shared-types.md
-  #[derive(Debug, Clone, PartialEq, Eq)]
-  pub struct Email(String);
-
-  /// Unique user identifier
-  #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-  pub struct UserId(uuid::Uuid);
-  ```
 
 * **Use enums for discriminated unions**
-  ```rust
-  /// Result of an operation that can fail with domain errors
-  #[derive(Debug)]
-  pub enum Result<T, E> {
-      Ok(T),
-      Err(E),
-  }
-
-  /// Authentication failure reasons
-  #[derive(Debug, Clone, PartialEq)]
-  pub enum AuthError {
-      InvalidCredentials,
-      AccountLocked { unlock_at: DateTime<Utc> },
-      ValidationError { field: String, message: String },
-  }
-  ```
 
 * **Use algebraic data types for domain states**
-  ```rust
-  /// Order lifecycle states
-  #[derive(Debug, Clone)]
-  pub enum OrderStatus {
-      Pending,
-      Confirmed { confirmed_at: DateTime<Utc> },
-      Shipped { tracking_number: String },
-      Delivered { delivered_at: DateTime<Utc> },
-  }
-  ```
 
 * **Establish naming conventions**
   * Consistent suffixes: `Error`, `Result`, `Config`, `Repository`
@@ -232,32 +196,6 @@ For each public operation in the core domain:
 * **Specify preconditions and postconditions**
 * **Note side effects and async behavior**
 
-Example:
-```rust
-/// Authenticates a user with email and password credentials.
-///
-/// # Arguments
-/// * `credentials` - User's email and password
-///
-/// # Returns
-/// `AuthResult` containing authenticated user on success, or specific error
-///
-/// # Errors
-/// * `AuthError::InvalidCredentials` - Email/password combination not found
-/// * `AuthError::AccountLocked` - Too many failed attempts, includes unlock time
-/// * `AuthError::ValidationError` - Malformed email or empty password
-///
-/// # Side Effects
-/// Updates user's `last_login_at` timestamp on success
-///
-/// See docs/spec/interfaces/auth-operations.md for full contract
-pub async fn authenticate(
-    credentials: UserCredentials,
-) -> Result<AuthenticatedUser, AuthError> {
-    unimplemented!("See docs/spec/interfaces/auth-operations.md")
-}
-```
-
 ---
 
 ### 5. **Define External System Interfaces**
@@ -269,104 +207,11 @@ For each external dependency identified in architecture:
 * **Use domain types exclusively - never infrastructure types**
 * **Document expected behavior and error conditions**
 
-Example:
-```rust
-// src/users.rs
-// GENERATED FROM: docs/spec/interfaces/user-storage.md
-// Interface trait - Business logic depends on this abstraction
-
-use crate::{User, Email, UserId};
-
-/// Interface for user persistence operations.
-///
-/// Implementations must handle connection failures gracefully.
-/// This trait defines what the business logic needs - infrastructure implements it.
-///
-/// See docs/spec/interfaces/user-storage.md for full contract and test requirements
-pub trait UserRepository {
-    /// Find user by email address.
-    ///
-    /// # Returns
-    /// * `Ok(Some(User))` - User found
-    /// * `Ok(None)` - User not found (not an error)
-    /// * `Err(RepositoryError)` - Connection or query failure
-    ///
-    /// # Errors
-    /// * `RepositoryError::ConnectionFailed` - Database unavailable
-    /// * `RepositoryError::QueryFailed` - Invalid query execution
-    async fn find_by_email(&self, email: &Email) -> Result<Option<User>, RepositoryError>;
-
-    /// Save user entity.
-    ///
-    /// # Errors
-    /// * `RepositoryError::ConstraintViolation` - Unique constraint violated
-    /// * `RepositoryError::ConnectionFailed` - Database unavailable
-    async fn save(&self, user: &User) -> Result<(), RepositoryError>;
-}
-
-/// Errors that can occur during repository operations
-#[derive(Debug, Clone)]
-pub enum RepositoryError {
-    ConnectionFailed { message: String },
-    QueryFailed { message: String },
-    ConstraintViolation { constraint: String },
-}
-```
-
 **CRITICAL**: Interface traits define **what** the business logic needs, not **how** it's implemented. Infrastructure provides the **how**.
 
 ### Multi-Package/Crate Architecture
 
-When architectural boundaries need **compile-time enforcement**, organize code into separate packages:
-
-**Rust Workspace Example:**
-```toml
-# Cargo.toml (workspace root)
-[workspace]
-members = [
-    "orders",         # Order management domain
-    "users",          # User management domain
-    "inventory",      # Inventory domain
-    "payments",       # Payment processing
-    "notifications",  # Notification services
-    "web-server"      # HTTP API server
-]
-
-# orders/Cargo.toml
-[dependencies]
-users = { path = "../users" }
-inventory = { path = "../inventory" }
-# Dependencies on business domains, not infrastructure
-
-# web-server/Cargo.toml
-[dependencies]
-orders = { path = "../orders" }
-users = { path = "../users" }
-payments = { path = "../payments" }
-```
-
-**TypeScript Monorepo Example:**
-```json
-// package.json (workspace root)
-{
-  "workspaces": [
-    "packages/orders",
-    "packages/users",
-    "packages/inventory",
-    "packages/payments",
-    "packages/api-server"
-  ]
-}
-
-// packages/orders/package.json
-{
-  "dependencies": {
-    "@myapp/users": "workspace:*",
-    "@myapp/inventory": "workspace:*"
-    // Dependencies on business domains
-  }
-}
-```
+When architectural boundaries need **compile-time enforcement**, organize code into separate packages
 
 **When to Use Separate Packages:**
 - Business domains must be **completely isolated** from infrastructure concerns
@@ -845,46 +690,6 @@ Infrastructure (concrete implementations)
 
 ---
 
-## ✅ What You Must Do
-
-* **Be exhaustively complete** - define every type, every trait, every function
-* **Maintain consistency** - use the same names and patterns throughout
-* **Document thoroughly** - every interface needs complete documentation
-* **Think in contracts** - focus on "what" not "how"
-* **Generate working stubs** - all stubs must compile (`cargo check` passes)
-* **Link everything** - stubs reference specs, specs reference architecture
-* **Establish vocabulary** - create the canonical naming system
-* **Define boundaries clearly** - make module organization and dependencies explicit
-* **Organize types sensibly** - shared/generic types in main entry files, domain-specific types with their domains
-* **Preserve clean architecture** - business logic must be separated from infrastructure via interfaces
-* **Preserve RDD responsibilities** - don't blur knowing vs doing
-* **Generate both specs AND stubs** - they work together as the complete interface definition
-
----
-
-## 🚫 What Not To Do
-
-* Do NOT write implementation logic - only signatures and types
-* Do NOT assume ambiguity - clarify with architect specs first
-* Do NOT create types that don't map to domain concepts
-* Do NOT skip error condition definitions
-* Do NOT use vague or inconsistent naming
-* Do NOT create circular dependencies
-* Do NOT generate stubs that don't compile
-* Do NOT violate architectural boundaries (business logic importing infrastructure)
-* Do NOT blur RDD responsibilities (mixing knowing and doing)
-* Do NOT undo architectural decisions from the architect
-* Do NOT forget to generate actual source files - specs alone aren't enough
-* Do NOT use architectural terminology (ports, adapters, core, domain) in crate/module names - use meaningful business names instead
-* Do NOT create files named after architectural concepts (ports.rs, adapters.rs, core.rs) - organize by business domain
-* **Do NOT question whether architect's specifications are necessary** - translate them faithfully
-* **Do NOT redesign or "improve" the architecture** - implement what was specified
-* **Do NOT stop for strategic concerns** - only stop for technical ambiguity
-* **Do NOT include task numbers from .llm/tasks.md** in code comments, documentation, or commit messages - they are local-only identifiers
-
----
-
-
 ## 🔄 Iteration Support
 
 After planner or coder feedback:
@@ -917,14 +722,3 @@ Before finalizing, verify:
 - [ ] Code compiles/type-checks in target language
 
 **Remember**: You're translating architecture into code structure. The architect designed the boundaries - you make them concrete and enforceable through types and interfaces, organized according to language conventions.
-
----
-
-## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
-
-Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. New architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
-
-### Task Tracking
-Tasks are read from `.llm/tasks.md`.
-
-```

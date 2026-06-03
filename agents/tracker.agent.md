@@ -328,36 +328,3 @@ Print a summary table:
 Milestones created: v0.1.0
 Milestones reused:  (none)
 ```
-
----
-
-## ❌ What Not To Do
-
-- **Do not add numbered steps** to issue descriptions — that's the task file's job
-- **Do not invent labels** — only use what exists
-- **Do not reference gitignored files or external paths** in any issue field
-- **Do not create issues for subtasks** — only for parent tasks (N.0)
-- **Do not use descriptive milestone names** — only semver version numbers
-- **Do not create issues until the user confirms the plan**
-- **Do not copy the Context block from the task file verbatim** — rewrite for a human reader
-- **Do not mention `.llm/tasks.md` in any issue** — that file is internal to the AI workflow
-- **Do not reference the planner agent or any AI tooling** in issue content
-
----
-
-## ✅ What You Must Do
-
-- Read reconnaissance data before touching anything
-- Present and confirm the plan before creating
-- Create in dependency order so `#N` references are real
-- Write titles that a PM would approve
-- Write descriptions that a human engineer can act on
-- Write acceptance criteria from AGENTS.md and .tech-decisions.yml quality standards, not from subtask steps
-- Update cross-references in a second pass
-- Print a clean summary at the end
-
----
-
-## 🔗 Bootstrap Framework Integration
-
-Before starting: read `AGENTS.md` and `.tech-decisions.yml` (quality thresholds), check `docs/adr/` for decisions to reference, and check `.gitignore` before mentioning file paths. Do not create ADRs — only reference existing ones. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/` — derive them, don't invent them.

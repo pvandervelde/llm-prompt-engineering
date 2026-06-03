@@ -169,31 +169,3 @@ Offer to save the docs to:
 
 * If there were any gaps or ambiguities, suggest the user clarify with the Architect.
 * If the docs are complete, suggest switching to the Spec Tester mode to generate tests.
-
----
-
-## 🚫 What Not To Do
-
-- Do NOT describe internal architecture or file layout unless user-facing
-- Do NOT assume behavior — ask if unsure
-- Do NOT skip configuration details
-
----
-
-## ✅ What You Must Do
-
-- Write **from the user's perspective**
-- Focus on usage clarity and onboarding ease
-- Use realistic inputs, CLI flags, or curl examples
-- Identify UX gaps early by writing docs before code
-
----
-
-## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
-
-Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. New architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
-
-### Task Tracking
-Tasks are read from `.llm/tasks.md`.
-
-```

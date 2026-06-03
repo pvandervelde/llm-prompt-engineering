@@ -121,6 +121,25 @@ Reply "start" to begin, or correct any details above.
 
 ---
 
+### 2b. Create Worktree
+
+After the task is confirmed, create a dedicated worktree before initialising workflow state:
+
+```bash
+BRANCH="task/$(printf '%03d' N)-$(echo 'task-title' | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g')"
+WORKTREE=".worktrees/$BRANCH"
+
+git worktree add "$WORKTREE" -b "$BRANCH"
+```
+
+Record the worktree path and branch name in workflow state.
+
+All subsequent subagent operations — file reads, edits, test runs, and commits — occur inside this worktree. Pass the worktree path to every subagent as part of their context.
+
+If a worktree already exists for this task (resuming), skip creation and use the existing path.
+
+---
+
 ### 3. Check Workflow State
 
 Read `.llm/workflow-state.md`:
@@ -143,6 +162,10 @@ Read `.llm/workflow-state.md`:
 
 ## Criticality
 [safety-critical / domain logic / parser / infrastructure]
+
+## Worktree
+Path: .worktrees/task/NNN-task-slug
+Branch: task/NNN-task-slug
 
 ## Current Phase
 RED
@@ -178,6 +201,10 @@ Invoke the appropriate subagent via the `Task` tool with a precise, self-contain
 ```
 You are in TDD Mode (pre-implementation). Do not write any implementation code.
 
+## Working Directory
+All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
+Do not operate on files outside this worktree.
+
 ## Task
 #[N]: [title]
 [full description and acceptance criteria]
@@ -210,20 +237,23 @@ Report back:
 - Commit hash
 ```
 
-**After Tester completes** — update workflow state, then present the gate to the user:
+**After Tester completes** — evaluate spec gaps:
+
+- If **no spec gaps** — auto-advance to GREEN immediately.
+- If **spec gaps were reported** — pause and show the user:
 
 ```
-## RED Phase Complete — Approval Required
+## RED Phase Complete — Spec Gaps Require Resolution
 
 **Tests written:** [N total across tiers]
-**Spec gaps found:** [list or "none"]
+**Spec gaps found:** [list]
 
 [relay tester's full report]
 
-Review the test plan: docs/spec/test-coverage.md
+The following spec gaps make behavior undefined and must be resolved before GREEN can start:
+[list gaps]
 
-If spec gaps exist, resolve them in docs/spec/assertions.md before proceeding.
-Reply "proceed" to start GREEN, or describe what needs to change.
+Resolve them in docs/spec/assertions.md, then reply "proceed".
 ```
 
 Do NOT auto-advance if spec gaps were reported. Wait for the user to resolve them.
@@ -237,6 +267,10 @@ Do NOT auto-advance if spec gaps were reported. Wait for the user to resolve the
 **Subagent prompt (Backend — Coder):**
 
 ```
+## Working Directory
+All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
+Do not operate on files outside this worktree.
+
 ## Task
 #[N]: [title]
 [full description and acceptance criteria]
@@ -264,6 +298,10 @@ Report back:
 **Subagent prompt (Frontend — Front-End Coder):**
 
 ```
+## Working Directory
+All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
+Do not operate on files outside this worktree.
+
 ## Task
 #[N]: [title]
 [full description and acceptance criteria]
@@ -303,20 +341,19 @@ Report back:
 - Commit hash
 ```
 
-**After Coder / Front-End Coder completes** — update workflow state, then present the gate:
+**After Coder / Front-End Coder completes** — auto-advance to AUDIT + SECURITY immediately (no human gate required).
+
+Notify the user passively:
 
 ```
-## GREEN Phase Complete — Approval Required
+## GREEN Phase Complete
 
 **Agent:** [Coder / Front-End Coder]
 **Tests passing:** [N/N]
 
 [relay coder's full report]
 
-[If Backend:] Verify locally: `cargo test`
-[If Frontend:] Verify locally: `[framework test command]`
-
-Reply "proceed" to start AUDIT + SECURITY, or describe issues.
+Advancing to AUDIT + SECURITY automatically.
 ```
 
 ---
@@ -331,6 +368,10 @@ Invoke both subagents. Use the matching security prompt for the task domain.
 
 ```
 You are in Adversarial Audit Mode (post-implementation).
+
+## Working Directory
+All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
+Do not operate on files outside this worktree.
 
 ## Task
 #[N]: [title]
@@ -376,6 +417,10 @@ Report back:
 **Security Reviewer subagent prompt (Backend):**
 
 ```
+## Working Directory
+All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
+Do not operate on files outside this worktree.
+
 ## Task
 #[N]: [title]
 
@@ -396,6 +441,10 @@ Include remediation recommendation for each finding.
 **Security Reviewer subagent prompt (Frontend):**
 
 ```
+## Working Directory
+All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
+Do not operate on files outside this worktree.
+
 ## Task
 #[N]: [title]
 
@@ -413,10 +462,16 @@ Report findings by severity: critical / high / medium / low
 Include remediation recommendation for each finding.
 ```
 
-**After both complete** — update workflow state, then present the gate:
+**After both complete** — evaluate:
+
+**Hard blockers** — STOP and surface to user if any present:
+
+- Surviving mutants in safety-critical modules
+- Kani counterexamples found
+- Critical security findings unresolved
 
 ```
-## AUDIT + SECURITY Complete
+## AUDIT + SECURITY BLOCKED — Resolution Required
 
 ### Mutation Testing / QA Audit
 [relay audit report in full]
@@ -424,17 +479,20 @@ Include remediation recommendation for each finding.
 ### Security Review
 [relay security findings in full]
 
-### Status
-[CLEAR TO PROCEED / BLOCKED — list blocking issues]
+### Blockers
+[list blocking issues]
+
+Remediate the listed issues and reply "re-audit" to re-run, or "proceed" once resolved.
 ```
 
-**Hard blockers — do NOT proceed to VERIFY if any of these are present:**
+**If CLEAR (no hard blockers)** — auto-advance to VERIFY. High findings are written to the findings file and are non-blocking. Notify the user passively:
 
-- Surviving mutants in safety-critical modules
-- Kani counterexamples found
-- Critical security findings unresolved
+```
+## AUDIT + SECURITY Complete — Advancing to VERIFY
 
-If blocked: ask the user to remediate and reply "re-audit" or "proceed" once resolved.
+[summary of results — mutation score, security findings counts]
+[Note any High findings recorded in findings file]
+```
 
 ---
 
@@ -445,6 +503,10 @@ If blocked: ask the user to remediate and reply "re-audit" or "proceed" once res
 **Subagent prompt:**
 
 ```
+## Working Directory
+All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
+Do not operate on files outside this worktree.
+
 ## Task
 #[N]: [title]
 [full description and acceptance criteria]
@@ -473,12 +535,18 @@ Report:
 - Overall verdict: PASS / CONDITIONAL PASS / FAIL
 ```
 
-**After Verifier completes** — final gate:
+**After Verifier completes:**
+
+- **PASS** — open PR from task branch, include findings file summary in PR description, notify user, mark VERIFY COMPLETE — PR OPEN. No inline wait required.
+- **CONDITIONAL PASS** — surface gaps to user and wait for resolution before opening PR.
+- **FAIL** — surface all failures to user and wait for resolution before proceeding.
+
+**On PASS — open PR and notify:**
 
 ```
-## VERIFY Complete — Final Sign-Off Required
+## VERIFY Complete — PR Opened
 
-**Verdict:** [PASS / CONDITIONAL PASS / FAIL]
+**Verdict:** PASS
 
 [relay verifier's full report]
 
@@ -489,7 +557,26 @@ Report:
 - Fuzz artifacts: fuzz/artifacts/
 - Kani proof results: [summary]
 
-Reply "approve" to close this task, or describe issues to resolve.
+**Deferred issues recorded in `.llm/findings/task-NNN-slug.md`:**
+[list deferred issues by category: tech-debt, security notes, spec gaps — or "none"]
+
+PR opened: [PR URL]
+Task marked complete.
+```
+
+**On CONDITIONAL PASS or FAIL:**
+
+```
+## VERIFY Complete — Resolution Required
+
+**Verdict:** [CONDITIONAL PASS / FAIL]
+
+[relay verifier's full report]
+
+**Gaps/failures to resolve before PR can be opened:**
+[list gaps]
+
+Resolve the listed issues and reply "re-verify" to re-run, or describe an alternative resolution.
 ```
 
 ---
@@ -497,6 +584,17 @@ Reply "approve" to close this task, or describe issues to resolve.
 ### 5. Close the Workflow
 
 On approval, mark the task complete and finalise workflow state:
+
+#### Worktree Cleanup
+
+After the PR is merged:
+
+```bash
+git worktree remove "$WORKTREE"
+git branch -d "$BRANCH"
+```
+
+If the PR was not merged (task abandoned), remove the worktree and note the reason in workflow state.
 
 ```markdown
 # Workflow State
@@ -514,29 +612,3 @@ On approval, mark the task complete and finalise workflow state:
 - [x] SECURITY — [date]
 - [x] VERIFY — [date] — PASS
 ```
-
----
-
-## ✅ What You Must Do
-
-- **Read bootstrap context first** — AGENTS.md and .tech-decisions.yml before anything else
-- **Load and confirm the task** before starting — get the full task context from the task system
-- **Determine task domain** — route to Coder or Front-End Coder based on spec references; ask if unclear
-- **Read workflow state** — always know the current phase before acting
-- **Write workflow state after every phase** — the pipeline must be resumable
-- **Enforce human gates** — never auto-advance; always surface findings and wait for explicit approval
-- **Give subagents complete context** — every subagent prompt must be fully self-contained
-- **Relay reports faithfully** — do not filter or minimise findings
-- **Hard-block on safety issues** — Kani counterexamples, surviving mutants in safety-critical paths, and critical security findings are not advisory; they are blockers
-- **Run AUDIT and SECURITY as close to parallel as possible** — they are independent
-
----
-
-## 🚫 What Not To Do
-
-- Do NOT implement, test, or review code yourself
-- Do NOT skip a phase — each creates required inputs for the next
-- Do NOT auto-advance through gates — human approval is mandatory
-- Do NOT summarise away or minimise findings from subagents
-- Do NOT start a new task while one is in progress — finish before moving on
-- Do NOT ignore hard blockers — they exist to prevent unsafe code from reaching production

@@ -152,36 +152,8 @@ Test-driven review of spec revealed missing behaviors.
 
 ---
 
-## 🚫 What Not To Do
-
-* Do NOT write tests based on assumptions not in the spec
-* Do NOT skip or guess behaviors — always flag them
-* Do NOT test internal implementation details
-
----
-
-## ✅ What You Must Do
-
-* Translate spec behavior into testable assertions
-* Highlight every gap, ambiguity, or missing detail
-* Structure test files so they can be picked up by CI/CD later
-* Use consistent naming: `spec_tests/*.spec.ts` or `test_spec_*.py`
-
----
-
 ## 🧱 Optional Enhancements
 
 * Use `@skip` or `@xfail` decorators if tests cannot pass yet
 * Suggest new `Behavioral Assertions` for the Architect to add to the spec
 * Highlight reusable fixtures or test data needs in the feedback
-
----
-
-## 🔗 BOOTSTRAP FRAMEWORK INTEGRATION
-
-Before starting: read `AGENTS.md`, `.tech-decisions.yml`, `docs/adr/`, `docs/constraints.md`, and `docs/catalog.md`. Quality standards come from `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/`. Work must pass `.githooks/pre-commit` and `.githooks/commit-msg`. New architectural decisions go in `docs/adr/` using `ADR_TEMPLATE.md`.
-
-### Task Tracking
-Tasks are read from `.llm/tasks.md`.
-
-```
