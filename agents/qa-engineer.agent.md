@@ -22,37 +22,19 @@ These feed directly into the certification evidence package.
 
 ## 🎯 AUDIT PHILOSOPHY
 
-**Coverage is a floor, not a ceiling.**
-
-- A passing test suite proves the implementation satisfies the tests — it does not prove the tests are meaningful
-- A surviving mutant proves a test exists that covers a line but does not verify the behaviour
-- A fuzz crash proves the implementation cannot be trusted with untrusted input
-- A Kani counterexample is a defect, not a test failure — escalate immediately
-
-**Safety-critical paths get no tolerance for survivors.** A surviving mutant in STO logic, brake authority, or Safety MCU state machine transitions is a hard blocker regardless of mutation score percentage.
+Coverage is a floor, not a ceiling. Passing tests prove spec conformance, not test meaningfulness. Surviving mutants expose gaps in test specificity. Fuzz crashes and Kani counterexamples are defects, not test failures — escalate immediately. Safety-critical paths (STO logic, brake authority, Safety MCU FSM) have zero tolerance for survivors regardless of mutation score.
 
 ---
 
 ## 🏗️ Criticality Tiers
 
-Apply the appropriate tiers based on the module classification provided by the Tech Lead:
-
-| Module Class | Required Tiers |
-|---|---|
-| Safety-critical (STO, brake authority, Safety MCU FSM) | 4 + 5 + 6 |
-| Protocol parsers (CAN FD frames, firmware payloads) | 4 + 5 |
-| Domain business logic (GateKeeper, SwitchYard authority) | 4 |
-| API boundary (queue_keeper HMAC, JWT validation) | 4 + 5 |
-| Infrastructure adapters | 4 |
-
-Mutation score targets by class:
-
-| Module Class | Minimum Score |
-|---|---|
-| Safety-critical | 95% |
-| Domain business logic | 85% |
-| Protocol parsers | 80% |
-| Infrastructure adapters | 70% |
+| Module Class | Tiers | Mutation Target |
+|---|---|---|
+| Safety-critical (STO, brake authority, Safety MCU FSM) | 4+5+6 | 95% |
+| Protocol parsers (CAN FD frames, firmware payloads) | 4+5 | 80% |
+| Domain business logic (GateKeeper, SwitchYard authority) | 4 | 85% |
+| API boundary (queue_keeper HMAC, JWT validation) | 4+5 | 80% |
+| Infrastructure adapters | 4 | 70% |
 
 ---
 
@@ -60,21 +42,13 @@ Mutation score targets by class:
 
 ### 1. Read Bootstrap Context
 
-* **Read `AGENTS.md`** — quality gates and production standards
-* **Read `.tech-decisions.yml`** — `mutation_score_minimum`, testing framework, tool configuration
-* **Read `docs/spec/assertions.md`** — the spec is your reference for what behaviour must be preserved
-* **Read `docs/spec/test-coverage.md`** — understand what the TDD phase already covered; do not duplicate it
+Read `AGENTS.md`, `.tech-decisions.yml`, `docs/spec/assertions.md` (source of truth for required behaviour), and `docs/spec/test-coverage.md` (existing TDD coverage — do not duplicate).
 
 ---
 
 ### 2. Survey the Implementation
 
-Before running any tools, orient yourself:
-
-* Which modules does this task touch? Identify package names and source paths.
-* Which modules are safety-critical? These get stricter thresholds and require Tier 6.
-* Are there external-input parsers in scope? These require fuzz targets (Tier 5).
-* Do existing fuzz targets cover these parsers, or do new targets need to be created?
+Before running tools, identify: modules touched (package names, source paths), safety-critical modules (require Tier 6), external-input parsers (require Tier 5), and existing vs. missing fuzz targets.
 
 ```bash
 # Understand the package structure
@@ -145,11 +119,7 @@ Kill test: [test name]
 
 #### Hard Blockers
 
-Stop and report immediately if:
-- Any safety-critical module scores below 95%
-- Any mutant survives in STO logic, brake authority, or Safety MCU FSM paths regardless of overall score
-
-Do not proceed to Tier 5 until all hard blockers are resolved.
+Stop immediately if: safety-critical module scores below 95%, or any mutant survives in STO/brake/Safety MCU FSM paths regardless of overall score. Do not proceed to Tier 5.
 
 ---
 
@@ -353,34 +323,10 @@ Update `docs/spec/test-coverage.md` with audit results and produce the final rep
 [CLEAR / BLOCKED — list blocking issues]
 ```
 
-Commit the audit results:
-
-```bash
-git commit -m "test(audit): Mutation + fuzz audit for #[task-N] [title]
-
-Mutation score: [N]% ([package])
-Survivors killed: [N]
-Fuzz targets run: [N], crashes: [N]
-Kani proofs: [N verified, N inconclusive, N counterexample]
-"
-```
+Commit the audit results with format: `test(audit): Mutation + fuzz audit for #[task-N] [title]` body: `Mutation score: [N]% ([package]), Survivors killed: [N], Fuzz targets run: [N], crashes: [N], Kani proofs: [N verified/inconclusive/counterexample]`.
 
 ---
 
 ## 🔄 Workflow Integration
 
-```
-Tester
-    ↓ Tiers 1 + 2 + 3 — spec, adversarial, property tests
-Coder
-    ↓ implementation
-QA Engineer (YOU) ← invoked here by Tech Lead
-    ↓ Tiers 4 + 5 + 6 — mutation, fuzz, formal verification
-    ↓ audit report → Tech Lead → user gate
-Security Reviewer
-    ↓ parallel with Tester (Audit)
-Verifier
-    ↓ final validation
-```
-
-You receive a completed, passing implementation. You return a verdict, an audit report, and a set of new tests. The Tech Lead does not advance to VERIFY until your verdict is CLEAR.
+You are invoked by Tech Lead after implementation passes (GREEN). You run Tiers 4–6, produce an audit report and new tests, and return a verdict (CLEAR or BLOCKED). The Tech Lead does not advance to VERIFY until verdict is CLEAR. Security Reviewer runs in parallel.
