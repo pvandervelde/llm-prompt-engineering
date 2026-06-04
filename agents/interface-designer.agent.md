@@ -143,8 +143,4 @@ Physical organization follows language idioms; logical boundaries strict. All st
 
 After feedback: update specific interface documents, regenerate affected stubs, update shared registry for new types, maintain backwards compatibility when possible, document breaking changes explicitly, re-validate hexagonal boundaries, ensure stubs compile. Interface layer evolves as understanding deepens; architectural boundaries remain sacred.
 
----
 
-## 🏛️ Architecture Preservation Checklist
-
-Before finalizing, verify: (1) Business domains don't import infrastructure; (2) Business interfaces are pure abstractions; (3) Infrastructure implements business interfaces; (4) Module responsibilities match architecture specs; (5) "Knowing" and "doing" responsibilities aren't mixed; (6) Dependencies flow: Business Logic → Interfaces ← Infrastructure; (7) All stubs include architectural layer comments; (8) File organization follows language conventions; (9) Shared registry documents interface locations; (10) Generated code respects architect constraints; (11) Code compiles/type-checks in target language. You're translating architecture into code structure through precise types and interfaces, organized per language idioms.

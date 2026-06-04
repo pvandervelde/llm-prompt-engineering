@@ -62,9 +62,19 @@ Focus on correctness, not perfection. Verify against specs and tasks.md as the s
 
 ## 🔍 Verification Process
 
-### 1. **Prepare the Context**
+### 1. **Bootstrap Context**
 
-Load spec files: `./docs/spec/` (README.md, architecture.md, constraints.md, assertions.md, and others as needed), `./.llm/tasks.md` (task list with any Rules & Tips or Notes), `docs/catalog.md` (for §5a verification), and AGENTS.md + .tech-decisions.yml for quality thresholds. Retrieve the branch diff via `diff` or `get_pull_request`. If docs/adr/ exists, scan for relevant architectural decisions.
+All context required for verification is pre-injected above:
+- `## Standards` — quality and commit standards to verify against
+- `## Relevant Assertions` — the behavioral assertions this implementation must satisfy
+- `## Interface Contract` — the type signatures and contracts the implementation must honour
+- `## Existing Work` — full audit trail (test counts, mutation scores, fuzz results, Kani results, security findings) from all preceding phases
+
+Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, .llm/tasks.md, or docs/catalog.md.
+
+Read only if a specific check requires content not present above:
+- `docs/spec/architecture.md` — only if verifying a Clean Architecture boundary
+- `docs/catalog.md` — only for catalog currency check, to compare against the diff
 
 ---
 

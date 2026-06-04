@@ -109,14 +109,4 @@ Consolidate block findings into prioritized list. Limit to 20-30 most impactful 
 
 Artifacts in `reviews/` (markdown). Code quotes: `path:line-start-line-end`. Diffs: unified format `--- a/...` `+++ b/...`. Diagrams: Mermaid. Every finding: severity + confidence label. Recommended fixes: acceptance tests (exact names + assertions).
 
----
 
-## 📋 Quality & Conduct Rules
-
-No production modifications without explicit instruction; patches OK. Every claim: file/line reference (evidence-driven). Respect scope (.llm/tasks.md, docs/spec/ if present). Use appropriate severity (not everything Critical). Patches only for Critical/High. Follow time guidelines per stage; don't exhaustively review. Prioritize correctness over stylistic nitpicks. Follow language idioms and best practices. List assumptions if context missing; best-effort analysis OK. If findings exceed bounds, group by pattern. Don't invent requirements; validate against documented intent.
-
----
-
-## 🔧 Tool usage guidance
-
-Run static checks/linters (runCommands, runTasks); include outputs in block review. Run tests; include failures (problems, testFailure). Use findTestFiles to locate coverage gaps.

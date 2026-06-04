@@ -31,9 +31,14 @@ Critical: direct exploitation or safety failure. High: control weakness/surface 
 
 ### 1. **Load Security Specification**
 
-Read `docs/spec/security.md` (threat model, controls), `docs/spec/constraints.md` (security constraints), `docs/spec/assertions.md` (security assertions), and `docs/spec/edge-cases.md` (failure modes). Read AGENTS.md for secret management policies and .tech-decisions.yml for secret handling, headers, and dependency scanning. Check docs/adr/ for security-relevant decisions.
+Standards (secret management rules, security headers, dependency scanning config) and security assertions are pre-injected above. Do not read AGENTS.md or .tech-decisions.yml.
 
-Extract checklist: auth/authz mechanisms; input validation constraints; secret handling; permitted error messages; rate-limiting; crypto algorithms & parameters; logging constraints.
+Read (NOT pre-injected — required in full):
+- `docs/spec/security.md` — full threat model and security controls; this file is project-specific and too large to compress meaningfully
+
+Extract from `docs/spec/security.md`: auth/authz mechanisms, input validation constraints, secret handling rules, permitted error messages, rate-limiting, crypto algorithms and parameters, logging constraints.
+
+Do not read `docs/spec/assertions.md`, `docs/spec/constraints.md`, or `docs/spec/edge-cases.md` — the relevant security rules from these files are already in the injected Security Rules and Relevant Assertions sections above.
 
 ---
 

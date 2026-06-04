@@ -34,20 +34,7 @@ Context injected by Tech Lead. Read project files only if specific content is mi
 
 ### 2. Get the Task Diff
 
-Identify what the Coder just wrote. The last two commits on the current branch are the design+tests commit and the implementation commit:
-
-```bash
-# See the recent commits to confirm the Coder's two commits are on top
-git log --oneline -5
-
-# Get the full diff of what the Coder produced (last 2 commits)
-git diff HEAD~2..HEAD
-
-# See only the files changed
-git diff --name-only HEAD~2..HEAD
-```
-
-This diff is your **entire working scope**. You may read callers or consumers outside this diff to understand impact, but you do not modify them.
+The complete task diff is pre-injected above under `## Diff`. Do not run git diff. Read the diff as your working scope — you may only modify files that appear in it.
 
 ---
 

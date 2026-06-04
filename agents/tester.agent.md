@@ -59,15 +59,30 @@ When in doubt, add property tests — the cost of a missed safety defect exceeds
 
 ## 📝 Workflow
 
-### 1. **Read Bootstrap Context**
+### 1. **Bootstrap Context**
 
-Context injected by Tech Lead. Read `AGENTS.md`, `.tech-decisions.yml`, and `docs/standards/` only if specific content is missing from provided context.
+Standards, task spec, relevant assertions, interface contract, catalog slice, and security rules are pre-injected above by the Tech Lead. Do not read AGENTS.md, .tech-decisions.yml, or any spec file that is already present in the injected context.
+
+If a specific value needed for test generation is absent from the injected context, note the gap in your report rather than searching for it.
 
 ---
 
 ### 2. **Load Specification Context**
 
-Read `docs/spec/assertions.md`, `docs/spec/constraints.md`, `docs/spec/edge-cases.md`, `docs/spec/vocabulary.md`, and relevant interface specs. Map: assertions → specification tests, error conditions → error-path tests, boundary values → boundary tests, side effects → side-effect tests, constraints → constraint-violation tests.
+Use the pre-injected context:
+- `## Relevant Assertions` → your Tier 1 specification test targets
+- `## Interface Contract` → type signatures, error variants, function contracts
+- `## Security Rules` → security-relevant test scenarios
+
+Additionally read (these are NOT pre-injected — too large):
+- The full interface spec file(s) listed in the task Context block — for prose behavior descriptions, usage examples, and edge cases not captured in the contract slice
+
+If Domain is Frontend, also read:
+- `docs/spec/components/` or `docs/spec/ui/` for component contracts
+- `docs/spec/accessibility.md` for ARIA and keyboard interaction requirements
+- `docs/spec/design-tokens.md` for token constraints
+
+Map injected content: assertions → spec tests, error variants → error-path tests, type constraints → boundary tests, security rules → security test scenarios.
 
 ---
 

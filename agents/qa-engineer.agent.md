@@ -40,9 +40,11 @@ Coverage is a floor, not a ceiling. Passing tests prove spec conformance, not te
 
 ## 📝 Workflow
 
-### 1. Read Bootstrap Context
+### 1. Bootstrap Context
 
-Read `AGENTS.md`, `.tech-decisions.yml`, `docs/spec/assertions.md` (source of truth for required behaviour), and `docs/spec/test-coverage.md` (existing TDD coverage — do not duplicate).
+Standards (mutation score targets, testing tools) and module criticality classification are pre-injected above. Do not read AGENTS.md or .tech-decisions.yml.
+
+Do not read `docs/spec/assertions.md` or `docs/spec/test-coverage.md` — the audit scope is defined by the module classification and package names in the injected context.
 
 ---
 
@@ -165,25 +167,7 @@ fuzz_target!(|data: &[u8]| {
 
 Common targets for your stack:
 
-```rust
-// CAN FD frame parser
-fuzz_target!(|data: &[u8]| {
-    let _ = CanFdFrame::from_bytes(data);
-});
 
-// Firmware update payload
-fuzz_target!(|data: &[u8]| {
-    let _ = FirmwareUpdatePayload::deserialize(data);
-});
-
-// HMAC webhook validation
-fuzz_target!(|data: &[u8]| {
-    if data.len() < 32 { return; }
-    let validator = HmacValidator::with_test_key(b"fuzz-test-key-32-bytes-padded!!!");
-    let (sig, body) = data.split_at(32);
-    let _ = validator.validate(sig, body);
-});
-```
 
 #### Handling Crashes
 
@@ -243,31 +227,7 @@ mod verification {
         );
     }
 
-    // Brake release requires a valid auth token — no valid token, no release
-    #[kani::proof]
-    #[kani::unwind(5)]
-    fn brake_release_requires_valid_token() {
-        let mut brake = BrakeController::new();
-        let token: AuthToken = kani::any();
-        kani::assume(!token.is_valid());
 
-        let result = brake.request_release(token);
-
-        assert!(result.is_err(), "Brake released with invalid token — safety violation");
-        assert!(brake.is_applied(), "Brake state corrupted after invalid release attempt");
-    }
-
-    // No integer overflow in torque calculation within the operating envelope
-    #[kani::proof]
-    fn torque_calculation_never_overflows_in_operating_range() {
-        let speed_rpm: i32 = kani::any();
-        let current_amps: i32 = kani::any();
-        kani::assume(speed_rpm >= 0 && speed_rpm <= 6000);
-        kani::assume(current_amps >= -100 && current_amps <= 100);
-
-        // Must not panic within the operating envelope
-        let _ = calculate_torque(speed_rpm, current_amps);
-    }
 }
 ```
 

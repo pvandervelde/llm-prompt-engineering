@@ -35,29 +35,35 @@ Stop only for: ambiguous task parameters (unclear props, missing specs, undefine
 
 Execute this loop **exactly once per interaction**. One task, TDD workflow, two commits, no anticipation.
 
-### 1. **Read Project Context and Standards**
+### 1. **Bootstrap Context**
 
-Read `./.llm/tasks.md`. Load: Project Context, Shared Types Registry, Rules & Tips, Notes. If file absent, ask user to create it.
+Standards, interface contract, catalog slice, and security rules are pre-injected above by the Tech Lead. Do not read AGENTS.md, .tech-decisions.yml, design token files, or accessibility spec if already present above.
 
-Load production standards from AGENTS.md (software standards, security requirements), .tech-decisions.yml (framework, tooling, code quality limits, testing requirements, WCAG 2.1 AA minimum, bundle budgets), and docs/standards/ (front-end patterns, design tokens, CSS conventions). Review docs/catalog.md for existing components — always prefer reuse over recreation.
-
-These are non-negotiable constraints.
-
----
-
-### 2. **Load Specification Context**
-
-Read ./docs/spec/constraints.md (implementation rules), ./docs/spec/shared-registry.md (reusable types, props, tokens), ./docs/spec/interfaces/README.md (module overview). Load front-end-specific context: docs/spec/components/ or docs/spec/ui/ (component APIs, slots, events), docs/spec/design-tokens.md or docs/design/tokens/ (never hardcode design values), docs/spec/accessibility.md (ARIA patterns, keyboard contracts, focus rules).
+Read only if missing from injected context:
+- `docs/spec/design-tokens.md` — if specific token names not present in Interface Contract
+- `docs/spec/accessibility.md` — if ARIA requirements not present in Interface Contract
 
 ---
 
-### 3. **Identify Next Task**
+### 2. **Load Task and Test Context**
+
+The task is identified in the `## Task` section above. Read the test files committed by the Tester — these are not pre-injected. Understand every component state, prop contract, event, and accessibility requirement the tests assert before writing any code.
+
+---
+
+### 3. **Read Project Context and Standards**
+
+Read `./.llm/tasks.md`. Load: Project Context, Shared Types Registry, Rules & Tips, Notes. If file absent, ask user to create it. Review docs/catalog.md for existing components — always prefer reuse over recreation.
+
+---
+
+### 4. **Identify Next Task**
 
 Find the first unchecked `[ ]` task in `./.llm/tasks.md`. Read the entire task including Context block. Note: component/interface spec referenced, types/components to reuse, accessibility requirements. If technically unclear or ambiguous, STOP and request clarification. Never skip or reorder tasks.
 
 ---
 
-### 4. **Pre-Task Verification**
+### 5. **Pre-Task Verification**
 
 Check shared registry and catalog for existing components. Search codebase for similar patterns. Review component spec (props, slots, events, states). Check for stub files.
 
@@ -65,7 +71,7 @@ If exact duplicates found: STOP and report. If similar but not identical: implem
 
 ---
 
-### 5. **Load Component Specification**
+### 6. **Load Component Specification**
 
 Read the component/interface spec from task's Context block. Extract: exact prop/input types (required/optional), emitted events/callbacks with payload types, slot/children contracts, state machine (all possible states), accessibility requirements (ARIA, labels, keyboard, focus), responsive behaviour, dependencies on components/tokens/services.
 
@@ -73,7 +79,7 @@ Implement against this contract, not your own.
 
 ---
 
-### 5a. **Surface Significant Decisions Before Implementing**
+### 6a. **Surface Significant Decisions Before Implementing**
 
 Before writing any code, identify implementation choices that have significant or lasting impact. The user must be aware of these before implementation proceeds.
 
@@ -93,16 +99,16 @@ Before writing any code, identify implementation choices that have significant o
    - List each one with: the decision, the intended approach, the rationale (spec reference or constraint), and alternatives considered.
    - **STOP and present the list to the user.**
    - Ask: *"Before I implement, I want to flag these significant decisions. Do you approve these approaches, or would you like to adjust any of them?"*
-   - **Wait for explicit user confirmation before continuing to step 6.**
+   - **Wait for explicit user confirmation before continuing to step 7.**
 3. If no significant decisions are found:
    - State: "No significant decisions identified — proceeding with implementation."
-   - Continue to step 6.
+   - Continue to step 7.
 
 > This is not a design gate — it is a transparency checkpoint. The goal is to ensure the user is never surprised by a major implementation choice made silently.
 
 ---
 
-### 6. **Design Phase — Implement Component and Type Definitions**
+### 7. **Design Phase — Implement Component and Type Definitions**
 
 Implement exactly what the task specifies. Use exact prop/input types from spec. If stub files exist, work from those. Keep function bodies as `// TODO: implement` initially. Reuse types and tokens from shared registry; don't hardcode values. Define public API (props, events, slots) before rendering.
 
@@ -110,23 +116,22 @@ Front-end rules: Never use magic numbers for spacing/colour/typography—use des
 
 ---
 
-### 7. **Test Phase — Write Comprehensive Tests**
+### 8. **Test Phase — Verify Test Suite**
 
-Write tests BEFORE implementing rendering or logic. Use the project's testing strategy (Testing Library, Cypress, Storybook, etc.).
-
-Cover for every component: (1) **Rendering & states** — minimum required props, each documented state (loading, error, empty, populated, disabled), conditional rendering per spec; (2) **Prop contracts** — all documented prop combinations, graceful handling when required props absent; (3) **User interactions** — click/keypress responses, keyboard navigation (Tab, Enter, Space, Escape per spec), form submit/validation/enabling; (4) **Accessibility** — ARIA roles/attributes, keyboard reachability, focus management after changes, label associations, error announcements (aria-live or role="alert"); (5) **Events/callbacks** — each fires with correct payload, disabled components don't fire; (6) **Design system integration** — token classes applied, component composes per spec.
-
-Write test names describing user-observable behaviour, not implementation: ✅ `'shows error when email empty on submit'` instead of ❌ `'sets hasError to true'`.
+Read the test suite already written by the Tester. Understand what each test requires —
+component states, props, accessibility, interactions, and events. Do NOT write new tests.
+If tests are missing or incomplete, report back to the Tech Lead rather than writing them
+yourself.
 
 ---
 
-### 8. **First Commit — Design & Tests**
+### 9. **First Commit — Design & Tests**
 
 Validate test structure (should compile/run but fail on unimplemented logic). Verify prop types and API match spec. Commit component shell, types, and tests. Format: `Add types, docs, and tests for <component> (auto via agent)`. Never include task numbers—they are local-only.
 
 ---
 
-### 9. **Implementation Phase — Make Tests Pass**
+### 10. **Implementation Phase — Make Tests Pass**
 
 Implement component logic and rendering to make all tests pass. Follow specification exactly. Apply design tokens for all visual values; never hardcode. Use semantic HTML and ARIA per accessibility spec. Delegate data fetching/logic to services; components own presentation only. Handle all documented states and errors. Run tests frequently. Do not add undocumented functionality.
 
@@ -134,7 +139,7 @@ Front-end rules: Accessibility is a correctness requirement (missing ARIA/keyboa
 
 ---
 
-### 10. **Final Validation**
+### 11. **Final Validation**
 
 Run validation suite: (1) Linting (`npm run lint`, `eslint`, `stylelint`), (2) Type checking (`tsc --noEmit` or equivalent), (3) Full test suite for regressions, (4) Accessibility audit (`axe`, `pa11y`, etc.). Max 3 attempts to fix failures; STOP and report if still failing.
 
@@ -142,7 +147,31 @@ Before committing, verify: code quality standards (.tech-decisions.yml: function
 
 ---
 
-### 11. **Second Commit — Implementation**
+### 12. **Remove Obsolete Code**
+
+After implementation, search for callers of replaced functions/types/constants. Remove dead imports, orphaned code, and old implementations. Include removals in the implementation commit. Verify removals don't break tests before committing; if risky, flag in commit message for verifier.
+
+---
+
+### 13. **Leave the Place Better Than You Found It**
+
+**Small issues — fix immediately** (include in implementation commit): typos, naming inconsistencies, dead statements, unused imports, trivial fixes (single line), formatting inconsistencies.
+
+**Larger issues — write to findings file** (do NOT fix): design/architectural concerns, missing test coverage, security/performance concerns, cross-file refactoring, structural duplication. File entry: Title, Found by, Location, Description, Suggested labels (tech-debt/refactor).
+
+Do not expand scope. If a small fix breaks tests, revert and file instead.
+
+---
+
+### 14. **Verify Integration**
+
+Verify all new components are wired into the system. For each new function/type/module: confirm it is invoked/imported outside its own file and tests, verify registration/wiring if required, trace execution path from entry point, run integration tests.
+
+If not connected: add wiring/registration in same commit. Include location and rationale in commit message. No orphans allowed.
+
+---
+
+### 15. **Second Commit — Implementation**
 
 Commit only implementation (rendering logic, styles, behaviour). Format: `Implement <component> (auto via agent)`. Never include task numbers—they are local-only.
 
@@ -159,25 +188,25 @@ Refs: ADR-NNNN (if architectural decision)
 
 ---
 
-### 12. **Update Shared Type Registry**
+### 16. **Update Shared Type Registry**
 
 If you created or discovered reusable component types, design utilities, or patterns, update the Shared Types Registry in `./.llm/tasks.md` with: Components (name, path, spec ref), Design Tokens (import path), Patterns (framework idioms, accessibility patterns). Only add truly reusable, shared code—not every type.
 
 ---
 
-### 13. **Mark Task Complete**
+### 17. **Mark Task Complete**
 
 Change `[ ]` to `[x]` in `./.llm/tasks.md`. Do not modify other items or commit tasks.md.
 
 ---
 
-### 14. **Document TDD Discoveries**
+### 18. **Document TDD Discoveries**
 
 Update the Rules & Tips section in `./.llm/tasks.md` with project-wide front-end learnings: component testing patterns, accessibility patterns, design token conventions, framework-specific gotchas, mock strategies for services/stores.
 
 ---
 
-### 15. **STOP EXECUTION**
+### 19. **STOP EXECUTION**
 
 Never proceed to next task. Wait for next interaction. Provide summary: task ID and component name, spec reference, reused types/components, test count and coverage, commit summary.
 
@@ -186,21 +215,3 @@ Never proceed to next task. Wait for next interaction. Provide summary: task ID 
 ## ON COMPLETION
 
 If all tasks completed, summarize to user and suggest verifier mode to validate against spec.
-
----
-
-## 🚫 HARD RULES
-
-**Task Execution**: One task per interaction. Follow TDD sequence: load context → verify → shell → tests → commit → implement → commit. Never code before tests. Never anticipate future tasks. Always implement against specifications.
-
-**Task Obedience**: Never debate whether tasks should be done (only understand them). "Non-MVP" and "redundant" are not valid skip reasons. Implement first; document concerns in commits if needed.
-
-**Accessibility**: Correctness requirement, not preference. Every interactive component keyboard-navigable, form control labeled, error announced to assistive tech. Never use `role="presentation"` or `aria-hidden="true"` on focusable elements. Missing a11y = High severity.
-
-**Security**: Never render user HTML directly (use framework safe binding unless spec requires sanitised server-side HTML). Never embed API keys/secrets/tokens in front-end code. Never log user PII/credentials in console/error reporters/analytics.
-
-**Context Loading**: Read docs/spec/constraints.md, docs/spec/shared-registry.md, docs/catalog.md, component spec for task. Verify no duplicates before creating.
-
-**Interface Adherence**: Implement prop types and events exactly as specified. Don't rename or restructure APIs unilaterally. If spec seems wrong, STOP and report. Use stub files; API shape must match precisely.
-
-**Commits**: Exactly 2 commits per task (design+tests, then implementation). Never combine. Never include tasks.md. Never include task numbers.
