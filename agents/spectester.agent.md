@@ -118,7 +118,7 @@ Then:
    // TODO: Spec unclear — what should happen if email is invalid but domain is whitelisted?
    ```
 
-2. **Summarize all test-generation gaps in `./docs/spec/spec-feedback.md`:**
+2. **Summarize all test-generation gaps in `./.llm/spec-feedback.md`:**
 
 ```markdown
 # Spec Feedback from Test Generator

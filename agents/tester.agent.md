@@ -147,7 +147,7 @@ Before committing, review your test suite:
 
 ### 10. **Commit and Document**
 
-After verifying the test suite, commit immediately. Format: `git commit -m "test: Add [Tier] test suite for [module]"` with brief list of coverage (assertions, boundaries, side-effects, property invariants). Document in `docs/spec/test-coverage.md`: checkbox list per Tier, gaps/limitations.
+After verifying the test suite, commit immediately. Format: `git commit -m "test: Add [Tier] test suite for [module]"` with brief list of coverage (assertions, boundaries, side-effects, property invariants). Document in `.llm/test-coverage.md`: checkbox list per Tier, gaps/limitations.
 
 ---
 

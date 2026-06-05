@@ -77,7 +77,7 @@ cargo mutants --package [package-name] --timeout 60
 cargo mutants --file src/[path].rs --timeout 60
 
 # Generate structured output for CI and certification evidence
-cargo mutants --package [package-name] --json > docs/spec/mutation-report-$(git describe --tags --always).json
+cargo mutants --package [package-name] --json > .llm/mutation-report-$(git describe --tags --always).json
 ```
 
 #### Interpreting Survivors
@@ -106,7 +106,7 @@ For each survivor, document it before writing the kill test:
 After adding kill tests, re-run mutation testing to confirm the survivor is dead:
 
 ```bash
-cargo mutants --package [package-name] --json > docs/spec/mutation-report-$(git describe --tags --always)-post-kill.json
+cargo mutants --package [package-name] --json > .llm/mutation-report-$(git describe --tags --always)-post-kill.json
 ```
 
 After confirming the survivor is dead, commit the new kill tests immediately without waiting for Tech Lead approval. Tests are isolated on the task branch:
@@ -248,7 +248,7 @@ If a proof is inconclusive due to unwind limits, document this explicitly:
 
 ### 6. Compile the Audit Report
 
-Update `docs/spec/test-coverage.md` with audit results and produce the final report:
+Update `.llm/test-coverage.md` with audit results and produce the final report:
 
 ```markdown
 ## Audit Report: #[task-N] [title]
@@ -261,7 +261,7 @@ Update `docs/spec/test-coverage.md` with audit results and produce the final rep
 **Survivors found:** [N]
 **Survivors killed:** [N]
 **New tests added:** [N]
-**Report:** docs/spec/mutation-report-[version].json
+**Report:** .llm/mutation-report-[version].json
 
 ### Tier 5 — Fuzz Testing
 | Target | Duration | Crashes | Status |
@@ -269,7 +269,7 @@ Update `docs/spec/test-coverage.md` with audit results and produce the final rep
 | [target] | [Ns] | [N] | ✅ / ❌ |
 
 **Regression tests written:** [N]
-**Artifacts:** fuzz/artifacts/
+**Artifacts:** .llm/fuzz/artifacts/
 
 ### Tier 6 — Formal Verification
 | Harness | Result | Unwind Bound |

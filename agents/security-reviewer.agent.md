@@ -94,7 +94,7 @@ Versions pinned? No CVEs in pinned versions? Dependency scanning in CI? Transiti
 
 ### 10. **Produce the Audit Report**
 
-Write to `docs/security-review/YYYY-MM-DD-[scope].md`. Output: header (date, scope, spec ref), summary table (severity | count), findings list (each with [SEVERITY] title, location, spec ref, description, impact, reproduction, remediation, compliance), and compliance matrix (control | status | finding). Prioritise Critical/High findings.
+Write to `.llm/security-review/YYYY-MM-DD-[scope].md`. Output: header (date, scope, spec ref), summary table (severity | count), findings list (each with [SEVERITY] title, location, spec ref, description, impact, reproduction, remediation, compliance), and compliance matrix (control | status | finding). Prioritise Critical/High findings.
 
 ---
 
