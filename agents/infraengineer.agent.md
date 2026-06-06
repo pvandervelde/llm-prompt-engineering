@@ -37,7 +37,13 @@ Context injected by Tech Lead. Read `./.llm/tasks.md` (Project Context, Module R
 ---
 ### 2. **Load Specification Context**
 
-Read: `./docs/specs/conventions.md` (naming, tagging, validation), `./docs/specs/module-registry.md` (reusable modules, dependencies), `./docs/specs/architecture.md` (layer boundaries, cross-layer dependencies). Prevents duplicates and ensures consistency.
+Context injected by Infrastructure Lead above includes Standards, Module Spec, Conventions,
+and Module Registry Slice. Do not read these files directly — use the injected content.
+
+Read only if specific content is missing from injected context:
+
+- `docs/spec/infrastructure/conventions.md` — if a naming rule is not in injected Conventions
+- `docs/spec/infrastructure/module-registry.md` — if a module dependency is not in injected slice
 
 ---
 
@@ -55,7 +61,9 @@ Check: module registry (already exist?), codebase (similar patterns?), module sp
 
 ### 5. **Load Module Specification**
 
-Read the module document from task's Context block (e.g., "Module Spec: docs/spec/modules/network-vpc.md"). Extract: resource definitions, variable requirements, output values, module dependencies, behavioral requirements, tagging strategy. Implement against spec, never invent design.
+Read the module document from task's Context block (e.g., "Module Spec: docs/spec/infrastructure/modules/network-vpc.md").
+The injected Module Spec block contains the key definitions; read the full file only for
+resource details not captured there.
 
 ---
 
@@ -63,44 +71,7 @@ Read the module document from task's Context block (e.g., "Module Spec: docs/spe
 
 Locate scaffold files (main.tf, variables.tf, outputs.tf). Find TODO markers. Implement resources following module spec exactly. Follow conventions.md for naming, tagging, validation. Reuse module dependencies; don't duplicate. Add variable validation where specified; define outputs as documented in spec.
 
-Example implementation flow:
-```hcl
-# From scaffold: infra/modules/network/vpc/main.tf
 
-# TODO: Implement VPC resource with DNS enabled
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${var.name_prefix}-vpc"
-    }
-  )
-}
-
-# TODO: Implement public subnets (one per AZ, /24)
-resource "aws_subnet" "public" {
-  count             = length(var.availability_zones)
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index)
-  availability_zone = var.availability_zones[count.index]
-
-  map_public_ip_on_launch = true
-
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${var.name_prefix}-public-${var.availability_zones[count.index]}"
-      Type = "public"
-    }
-  )
-}
-
-# Continue implementing remaining TODOs...
-```
 
 
 
@@ -127,6 +98,10 @@ Verify module is connected to infrastructure. Confirm: downstream consumers exis
 ### 9. **Commit - Module Implementation**
 
 Commit format: `Implement <module> (auto via agent)`. Never include task numbers. Include: all Terraform files (*.tf) in module directory, no tasks.md. Requirements: passes validation, all TODOs addressed, follows conventions.md, matches spec.
+
+If any cross-scope issues, security observations, or deferred tech-debt items were identified
+during implementation, write them to `.llm/findings/task-NNN-slug.md` under `## Deferred Issues`
+before committing. Do not create GitHub Issues directly.
 
 ---
 
@@ -157,54 +132,6 @@ Never proceed to next task. Provide summary: task ID/description, module path, s
 ## ON COMPLETION
 
 If all tasks completed, provide summary to user and note infrastructure is ready for deployment planning.
-
----
-
-## 📋 INFRASTRUCTURE TASK FILE FORMAT
-
-Expected `./.llm/tasks.md` structure:
-
-```markdown
-# Infrastructure Implementation Tasks
-
-## Project Context
-- Infrastructure: AWS with Terraform
-- Layer Architecture: Network → Security → Compute → Data
-- State Management: S3 backend with DynamoDB locking
-- Environments: dev, staging, prod
-
-## Module Registry Reference
-
-> Check docs/spec/module-registry.md before creating modules
-
-### Network Layer
-- network/vpc: VPC with subnets (foundational)
-
-### Security Layer
-(Populated during implementation)
-
-## Rules & Tips
-
-> Maintained by infraengineer - learnings
-
-(Initially empty, populated during implementation)
-
-## Task List
-
-- [ ] 1.0 Implement Network VPC Module
-  - Context:
-    - Module Spec: docs/spec/modules/network-vpc.md
-    - Location: infra/modules/network/vpc/
-    - Foundation module - no dependencies
-    - Provides: vpc_id, subnet_ids for all other modules
-    - Constraint: Must support multi-AZ for prod
-  - Assertions: docs/spec/assertions.md #1-2
-  - [ ] 1.1 Implement VPC resource with DNS enabled
-  - [ ] 1.2 Implement public subnets (one per AZ, /24)
-  - [ ] 1.3 Implement private subnets (one per AZ, /22)
-
-- [x] 1.0 Setup Terraform Backend
-```
 
 ---
 
