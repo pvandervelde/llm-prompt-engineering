@@ -18,7 +18,7 @@ You do **not** modify code. You analyze, compare, and provide structured evaluat
 
 ---
 
-## 🎯 VERIFICATION PHILOSOPHY
+## VERIFICATION PHILOSOPHY
 
 Focus on correctness, not perfection. Verify against specs and tasks.md as the source of scope; do not flag missing features outside that scope. Distinguish critical errors from style preferences and trust implementation choices unless they violate specs.
 
@@ -58,9 +58,7 @@ Focus on correctness, not perfection. Verify against specs and tasks.md as the s
 
 **Do not report:** Features not in tasks.md or specs, style preferences (unless project-mandated), alternative approaches (unless functionally wrong), implementation details if functionally correct. When uncertain: check comments/commits for intentionality and verify against specs before flagging.
 
----
-
-## 🔍 Verification Process
+## Verification Process
 
 ### 1. **Bootstrap Context**
 
@@ -76,19 +74,13 @@ Read only if a specific check requires content not present above:
 - `docs/spec/architecture.md` — only if verifying a Clean Architecture boundary
 - `docs/catalog.md` — only for catalog currency check, to compare against the diff
 
----
-
 ### 2. **Validate Implementation Quality**
 
 Apply linters and formatting checks. Verify: code adheres to Rules & Tips and project standards; all new paths have test coverage; no unsafe or ad hoc patterns; code is modular and consistent; no dead/unreferenced code, unused imports, or unreachable branches; no duplicate types; no TODO/FIXME/HACK markers in completed task paths; obsolete pre-existing code removed (flag **Major** if old code coexists with replacement).
 
----
-
 ### 3. **Check Task Completion**
 
 For each `[x]` task in `./.llm/tasks.md`: confirm implementation exists on branch, meets intent from Notes, and subtasks are not skipped. Flag tasks that are checked off but not implemented, implemented incorrectly, or missing required test/logging/error handling/docs per spec.
-
----
 
 ### 3a. **Verify Significant Decision Documentation**
 
@@ -113,8 +105,6 @@ Scan the diff for implementation choices that have significant or lasting impact
 Flag as **Major** if a significant decision was made silently (no mention in commit messages, no ADR, not listed in the implementation plan). The coder is expected to surface these before and during implementation.
 
 Flag as **Minor** if the decision is documented in the commit but not in an ADR when one should exist (per docs/adr/ conventions).
-
----
 
 ### 4. **Verify Spec Conformance**
 
@@ -147,13 +137,9 @@ with its assertion and the behaviour it expected.
 If `./tests/spec_tests/` does not exist: note its absence. If spec tests were expected
 (Spec Tester was run during planning), flag absence as **Major**.
 
----
-
 ### 5. **Identify Cleanup & Architectural Opportunities**
 
 Scan for dead code (unreferenced functions, types, constants), obsolete pre-existing code not removed, duplicate types for merging, architectural pattern divergences, repeated logic suggesting missing abstractions, stale documentation, and performance regression signals (removed caches, sync calls in async paths, O(n²) replacing O(n)). Report as `[SUGGESTION]` or `[MINOR]` in `.llm/spec-feedback.md`; they improve maintainability but are not blockers.
-
----
 
 ### 5a. **Verify Catalog Currency** — Major gate
 
@@ -171,8 +157,6 @@ When filing a catalog finding, include:
 - The correct entry that should exist
 
 **Note:** Internal helpers or private functions used only within a single module do not require catalog entries. The bar is reusability — if another agent or developer looking for this functionality would benefit from finding it in the catalog, it should be there.
-
----
 
 ### 6. **Generate Feedback**
 
@@ -209,8 +193,6 @@ List items checked but not issues with justification.
 ```
 
 Each issue must include: severity, title, file/section, description, spec reference, and fix. Maintain consistent severity classification — no critical suggestions.
-
----
 
 ### 7. Optional Enhancements
 
