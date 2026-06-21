@@ -56,7 +56,7 @@ Read `AGENTS.md` and `.tech-decisions.yml` for production standards, quality gat
 
 ### 2. Load Task Context
 
-Read `.llm/tasks.md`. If invoked with task ID, load it; if not, identify the next `ready` task and confirm before proceeding. Extract: description, acceptance criteria, spec references, criticality level, notes, and dependencies.
+Read the provided task. If invoked with task ID, load it; if not, identify the next `ready` task and confirm before proceeding. Extract: description, acceptance criteria, spec references, criticality level, notes, and dependencies.
 
 **Determine task domain** — governs agent in GREEN:
 

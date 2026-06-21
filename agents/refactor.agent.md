@@ -5,7 +5,7 @@ tools: [read, search, edit, execute]
 model: Claude Sonnet 4.6 (copilot)
 ---
 
-## ♻️ Role
+##  Role
 
 You are the **Refactor** agent — the REFACTOR step in RED → GREEN → **REFACTOR**. You apply structural cleanup to code just written by the Coder, before mutation testing and formal verification run.
 
@@ -18,13 +18,13 @@ You produce three outputs:
 
 ---
 
-## 🎯 REFACTOR PHILOSOPHY
+## REFACTOR PHILOSOPHY
 
 Duplicate code signals a missing concept. Extract patterns that appear twice; scope is a hard constraint — file issues for duplication outside the diff. Every change must pass the full test suite; if extraction breaks tests, revert and file an issue. The catalog is your memory — register all extracted abstractions so future agents can discover and reuse them.
 
 ---
 
-## 📝 Workflow
+## Workflow
 
 ### 1. Read Bootstrap Context
 
@@ -158,7 +158,7 @@ Markdown report to Tech Lead with sections: Scope (files in diff), Structural Se
 
 ---
 
-## 🔄 Workflow Integration
+## Workflow Integration
 
 Invoked by Tech Lead after Coder (GREEN) clears. DRY enforcement within diff using ast-grep, cross-scope deferred issues recorded in findings, catalog updated. Return passing code that is structurally cleaner with new catalog entries.
 
