@@ -115,11 +115,7 @@ Read `docs/spec/constraints.md` security section only. Extract the security rule
 
 This is a one-time read. The Security Reviewer will still read `docs/spec/security.md` for the full threat model, but the Coder and Tester get this compact slice.
 
-### 2e. Create Worktree
-
-Create worktree: `git worktree add .worktrees/task/NNN-slug -b task/NNN-slug`. Record path and branch in workflow state. All operations occur inside the worktree. If resuming, use existing worktree.
-
-### 2f. Check Workflow State
+### 2e. Check Workflow State
 
 Read `.llm/workflow-state.md`. If absent or for a different task, initialise:
 
@@ -130,7 +126,6 @@ Read `.llm/workflow-state.md`. If absent or for a different task, initialise:
 **ID:** #[N]
 **Domain:** [Frontend / Backend]
 **Criticality:** [safety-critical / domain-logic / parser / api-boundary / adapter]
-**Worktree:** .worktrees/task/NNN-slug
 **Branch:** task/NNN-slug
 **Current Phase:** RED
 
@@ -169,8 +164,7 @@ Invoke the appropriate subagent with a precise, self-contained prompt. **Subagen
 You are in TDD Mode (pre-implementation). Do not write any implementation code.
 
 ## Working Directory
-All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state]
@@ -235,8 +229,7 @@ Route to Coder with the Domain determined in step 2. Include the Domain paramete
 You are in TDD Mode (implementation). Tests already exist — make them pass.
 
 ## Working Directory
-All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state]
@@ -299,8 +292,7 @@ Report back:
 You are in REFACTOR mode. The Coder has just completed a passing implementation — your job is structural cleanup before audit begins.
 
 ## Working Directory
-All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state — naming conventions, max_function_length, max_complexity only]
@@ -344,8 +336,7 @@ Invoke both subagents in parallel. Use the matching security prompt for the task
 You are in Adversarial Audit Mode (post-implementation).
 
 ## Working Directory
-All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state — mutation targets and testing tools only]
@@ -396,8 +387,7 @@ Report back:
 **Security Reviewer subagent prompt:**
 ```
 ## Working Directory
-All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state — secret management rules, security headers only]
@@ -459,8 +449,7 @@ Return critical and high findings directly as hard blockers.
 **Subagent prompt:**
 ```
 ## Working Directory
-All file operations and commands must be run inside: .worktrees/task/NNN-task-slug
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state]
@@ -553,7 +542,7 @@ After each subagent completes, append to the `## Existing Work` section in workf
 
 ### 5. Close the Workflow
 
-On PASS approval, mark task complete in .llm/tasks.md. Remove worktree after PR merge: `git worktree remove .worktrees/task/NNN-slug && git branch -d task/NNN-slug`. Update final workflow state with outcome summary and certification evidence.
+On PASS approval, mark task complete in .llm/tasks.md. Delete the task branch after PR merge: `git branch -d task/NNN-slug`. Update final workflow state with outcome summary and certification evidence.
 
 ## Resuming an Interrupted Pipeline
 

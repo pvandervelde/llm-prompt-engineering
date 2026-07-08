@@ -73,20 +73,7 @@ this task (skip unrelated layers). Write under `## Module Registry Slice` in wor
 
 ---
 
-### 4. Create Worktree
-
-```bash
-BRANCH="infra/task/$(printf '%03d' N)-$(echo 'task-title' | tr ' ' '-' | tr '[:upper:]' '[:lower:]')"
-WORKTREE=".worktrees/$BRANCH"
-git worktree add "$WORKTREE" -b "$BRANCH"
-```
-
-Record path and branch in workflow state. All subagent operations occur inside this worktree.
-If resuming, use the existing worktree.
-
----
-
-### 5. Initialise Workflow State
+### 4. Initialise Workflow State
 
 Write `.llm/infra-workflow-state.md`:
 
@@ -97,7 +84,6 @@ Write `.llm/infra-workflow-state.md`:
 **ID:** #[N]
 **Layer:** [network / security / compute / data / observability]
 **Module:** [module path]
-**Worktree:** .worktrees/infra/task/NNN-slug
 **Branch:** infra/task/NNN-slug
 **Current Phase:** IMPLEMENT
 
@@ -131,14 +117,13 @@ conversation — every prompt must include all context they need.
 
 #### Phase 1: IMPLEMENT — Infrastructure Engineer
 
-**Entry criteria:** Module spec exists and worktree is clean.
+**Entry criteria:** Module spec exists.
 
 **Subagent prompt:**
 
 ```
 ## Working Directory
-All file operations and commands must be run inside: .worktrees/infra/task/NNN-slug
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state]
@@ -199,7 +184,7 @@ to SECURITY.
 
 ```
 ## Working Directory
-All file operations and commands must be run inside: .worktrees/infra/task/NNN-slug
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state — secret management rules only]
@@ -249,7 +234,7 @@ surface to user, await remediation. No critical findings = auto-advance to VERIF
 
 ```
 ## Working Directory
-All file operations and commands must be run inside: .worktrees/infra/task/NNN-slug
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state]
@@ -298,7 +283,7 @@ After each phase, append to `## Existing Work` in workflow state (format shown i
 
 ### 8. Close the Workflow
 
-On PR merge: `git worktree remove .worktrees/infra/task/NNN-slug && git branch -d infra/task/NNN-slug`.
+On PR merge: delete the task branch: `git branch -d infra/task/NNN-slug`.
 Mark task complete in `.llm/tasks.md`.
 
 ---

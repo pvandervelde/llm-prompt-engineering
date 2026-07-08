@@ -148,13 +148,7 @@ Read `docs/spec/constraints.md` security section only. Extract the security rule
 
 This is a one-time read. The Security Reviewer will still read `docs/spec/security.md` for the full threat model, but the Coder and Tester get this compact slice.
 
-### Step 5. Create Worktree
-
-Create worktree: `git worktree add .worktrees/task/NNN-slug -b task/NNN-slug`. Record the actual path and branch in workflow state. All operations occur inside the worktree. If resuming, use existing worktree.
-
-**Record the exact worktree path in workflow state** — this path is substituted into every subagent prompt before spawning. Never pass a placeholder like `NNN-task-slug` to a subagent; always substitute the real task ID and slug.
-
-### Step 6. Initialise Workflow State
+### Step 5. Initialise Workflow State
 
 Read `.llm/workflow-state.md`. If absent or for a different task, initialise:
 
@@ -165,7 +159,6 @@ Read `.llm/workflow-state.md`. If absent or for a different task, initialise:
 **ID:** #[N]
 **Domain:** [Frontend / Backend]
 **Criticality:** [safety-critical / domain-logic / parser / api-boundary / adapter]
-**Worktree:** .worktrees/task/[NNN-actual-slug]
 **Branch:** task/[NNN-actual-slug]
 **Current Phase:** RED
 
@@ -195,8 +188,6 @@ Read `.llm/workflow-state.md`. If absent or for a different task, initialise:
 
 Invoke the appropriate subagent with a precise, self-contained prompt. **Subagents have no access to this conversation** — every prompt must include all the context they need.
 
-**Before passing any prompt to a subagent:** replace all instances of `[worktree-path]` in the prompt template with the actual worktree path recorded in workflow state (e.g., `.worktrees/task/042-can-parser`). Never pass a generic placeholder to a subagent.
-
 #### Phase 1: RED — Tester
 
 **Entry criteria:** `docs/spec/assertions.md` exists and is non-empty.
@@ -209,8 +200,7 @@ Use the Task tool to spawn the subagent named exactly **"Tester"** with the foll
 You are in TDD Mode (pre-implementation). Do not write any implementation code.
 
 ## Working Directory
-All file operations and commands must be run inside: [worktree-path]
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state]
@@ -276,8 +266,7 @@ Use the Task tool to spawn the subagent named exactly **"Coder"** with the follo
 You are in TDD Mode (implementation). Tests already exist — make them pass.
 
 ## Working Directory
-All file operations and commands must be run inside: [worktree-path]
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state]
@@ -335,7 +324,7 @@ Report back:
 
 **Entry criteria:** GREEN gate cleared. All tests passing.
 
-Before spawning, run `git diff HEAD~2..HEAD` inside the worktree and capture the output — paste this as the `## Diff` section in the prompt below.
+Before spawning, run `git diff HEAD~2..HEAD` and capture the output — paste this as the `## Diff` section in the prompt below.
 
 Use the Task tool to spawn the subagent named exactly **"Refactor"** with the following prompt.
 
@@ -345,8 +334,7 @@ Use the Task tool to spawn the subagent named exactly **"Refactor"** with the fo
 You are in REFACTOR mode. The Coder has just completed a passing implementation — your job is structural cleanup before audit begins.
 
 ## Working Directory
-All file operations and commands must be run inside: [worktree-path]
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state — naming conventions, max_function_length, max_complexity only]
@@ -395,8 +383,7 @@ Do not wait for either to complete before spawning the other — both must run c
 You are in Adversarial Audit Mode (post-implementation).
 
 ## Working Directory
-All file operations and commands must be run inside: [worktree-path]
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state — mutation targets and testing tools only]
@@ -452,8 +439,7 @@ Report back:
 You are in Security Review Mode (post-implementation).
 
 ## Working Directory
-All file operations and commands must be run inside: [worktree-path]
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state — secret management rules and security headers only]
@@ -517,8 +503,7 @@ Use the Task tool to spawn the subagent named exactly **"Verifier"** with the fo
 You are in Verification Mode. Validate the complete implementation against specs, assertions, and task acceptance criteria.
 
 ## Working Directory
-All file operations and commands must be run inside: [worktree-path]
-Do not operate on files outside this worktree.
+Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state]
@@ -612,7 +597,7 @@ After each subagent completes, append to the `## Existing Work` section in workf
 
 ### Step 9. Close the Workflow
 
-On PASS approval, mark task complete in .llm/tasks.md. Remove worktree after PR merge: `git worktree remove .worktrees/task/NNN-slug && git branch -d task/NNN-slug`. Update final workflow state with outcome summary and certification evidence.
+On PASS approval, mark task complete in .llm/tasks.md. Delete the task branch after PR merge: `git branch -d task/NNN-slug`. Update final workflow state with outcome summary and certification evidence.
 
 ## Resuming an Interrupted Pipeline
 
