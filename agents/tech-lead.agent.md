@@ -22,11 +22,11 @@ Own the outcome by delegating work to specialists. You are accountable for corre
 ┌──────────────────────────────────────────────────────────────────┐
 │                           TECH LEAD                              │
 │                                                                  │
-│  [1] RED ──→ 🚦 gate ──→ [2] GREEN ──→ 🚦 gate                  │
+│  [1] RED ──→ 🚦 gate ──→ [2] GREEN ──→ 🚦 gate                    │
 │       ↑                        │                                 │
 │       └── spec gap ◄───────────┘                                 │
 │                                │                                 │
-│                        [2b] REFACTOR ──→ 🚦 gate (if BLOCKED)   │
+│                        [2b] REFACTOR ──→ 🚦 gate (if BLOCKED)    │
 │                                │                                 │
 │                    ┌───────────┴───────────┐                     │
 │                [3] AUDIT            [3b] SECURITY                │
@@ -35,7 +35,9 @@ Own the outcome by delegating work to specialists. You are accountable for corre
 │                                │                                 │
 │                           🚦 gate                                │
 │                                │                                 │
-│                          [4] VERIFY ──→ 🚦 final gate            │
+│                        [4] DOCUMENT ──→ 🚦 doc gate              │
+│                                │                                 │
+│                          [5] VERIFY ──→ 🚦 final gate            │
 │                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -46,7 +48,8 @@ Own the outcome by delegating work to specialists. You are accountable for corre
 | 2. GREEN | Coder | Auto |
 | 2b. REFACTOR | Refactor | Auto if CLEAN or ISSUES_FILED; pause if BLOCKED |
 | 3. AUDIT + SECURITY | QA Engineer + Security Reviewer | Auto if no hard blockers; pause on safety-critical survivor, Kani counterexample, or critical security finding |
-| 4. VERIFY | Verifier | PASS → open PR automatically; FAIL → pause |
+| 4. DOCUMENT | Doc Writer | Auto — update user docs and create changeset |
+| 5. VERIFY | Verifier | PASS → open PR automatically; FAIL → pause |
 
 ## Workflow
 
@@ -440,11 +443,64 @@ Write medium/low/info findings to `.llm/findings/task-NNN-slug.md` under `## Sec
 Return critical and high findings directly as hard blockers.
 ```
 
-**After both complete:** Update workflow state with completed sections in Existing Work. Hard blockers (safety-critical mutant survivors, Kani counterexamples, critical security findings) = STOP and surface, await remediation. No blockers: auto-advance to VERIFY and relay summary.
+**After both complete:** Update workflow state with completed sections in Existing Work. Hard blockers (safety-critical mutant survivors, Kani counterexamples, critical security findings) = STOP and surface, await remediation. No blockers: auto-advance to DOCUMENT and relay summary.
 
-#### Phase 4: VERIFY
+#### Phase 4: DOCUMENT — Doc Writer
 
-**Entry criteria:** No critical security findings, no Kani counterexamples, no unresolved mutant survivors in safety-critical paths.
+**Entry criteria:** AUDIT + SECURITY complete with no hard blockers.
+
+Before spawning, run `git diff main...HEAD -- ':!*test*' ':!*spec*'` and capture the output to paste as the `## Diff` section below.
+
+**Subagent prompt:**
+```
+You are in DOCUMENT mode (post-implementation). The implementation is complete and audited — your job is to update user-facing documentation and create a changeset note for release notes.
+
+## Working Directory
+Work in the current git workspace (the directory where you are invoked).
+
+## Task
+#[N]: [title]
+[full description and acceptance criteria]
+
+## Domain
+[Frontend / Backend]
+
+## Diff
+[paste output of: git diff main...HEAD -- excluding test and spec files]
+
+## Your job
+Do not modify production code, test files, or spec files.
+
+1. Identify which user-facing docs are affected by the changes (README, API reference, module docs under docs/)
+2. Update those docs to reflect any new, changed, or removed behaviour visible to users
+3. Create a changeset note at `.changeset/task-NNN-slug.md` using the Node.js changesets format:
+
+```markdown
+---
+"[package-name]": [major | minor | patch]
+---
+
+[One or more paragraphs describing what changed from the user's perspective.
+For breaking changes, include a Migration section explaining what users must update.]
+```
+
+The bump type must be: `major` for breaking changes, `minor` for new features, `patch` for fixes.
+If the task touches multiple packages, include one line per package in the frontmatter.
+
+4. Commit documentation updates: `docs(<scope>): update user docs for [title]`
+5. Commit the changeset note: `chore(changeset): add changeset for task #[N]`
+
+Report back:
+- Which docs were updated and what changed in each
+- Path to the changeset file created
+- Commit hash(es)
+```
+
+**After Doc Writer completes:** Update workflow state with doc paths, changeset path, and commit hashes. Auto-advance to VERIFY.
+
+#### Phase 5: VERIFY
+
+**Entry criteria:** No critical security findings, no Kani counterexamples, no unresolved mutant survivors in safety-critical paths. DOCUMENT phase complete (user docs updated, changeset file committed).
 
 **Subagent prompt:**
 ```
@@ -470,6 +526,9 @@ Work in the current git workspace (the directory where you are invoked).
 ## Domain
 [Frontend / Backend]
 
+## Changeset Path
+[paste changeset file path from workflow state, e.g. .changeset/task-NNN-slug.md]
+
 ## Your job
 Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, .llm/tasks.md, or docs/catalog.md — all required context is injected above.
 
@@ -491,6 +550,7 @@ Then validate the complete implementation:
 5. Check task completeness — all acceptance criteria satisfied?
 6. Check commit hygiene — commits well-described and granular?
 7. Check catalog currency — does docs/catalog.md reflect any new reusable abstractions introduced by this task?
+8. Check documentation currency — do user-facing docs reflect the delivered behaviour? Verify the changeset file at [Changeset Path] exists and contains a non-empty Summary and Details section.
 
 Report:
 - Pass/fail per category
@@ -534,6 +594,11 @@ After each subagent completes, append to the `## Existing Work` section in workf
 - Critical: [N findings]
 - High: [N findings]
 - Medium/Low: [written to findings file]
+
+### DOCUMENT — complete
+- Docs updated: [paths and summary of changes]
+- Changeset: [path to changeset file]
+- Commits: [hash(es)]
 
 ### VERIFY — complete
 - Verdict: PASS / CONDITIONAL PASS / FAIL
