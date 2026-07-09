@@ -46,7 +46,7 @@ Own the outcome by delegating work to specialists. You are accountable for corre
 |-------|----------|----------|
 | 1. RED | Tester | Auto — pause only if spec gap blocks test writing |
 | 2. GREEN | Coder | Auto |
-| 2b. REFACTOR | Refactor | Auto if CLEAN or ISSUES_FILED; pause if BLOCKED |
+| 2b. REFACTOR | Refactor | Auto if CLEAN; pause if BLOCKED |
 | 3. AUDIT + SECURITY | QA Engineer + Security Reviewer | Auto if no hard blockers; pause on safety-critical survivor, Kani counterexample, or critical security finding |
 | 4. DOCUMENT | Doc Writer | Auto — update user docs and create changeset |
 | 5. VERIFY | Verifier | PASS → open PR automatically; FAIL → pause |
@@ -326,7 +326,7 @@ Then:
 Report back the full Refactor Report including verdict: CLEAN / ISSUES_FILED / BLOCKED
 ```
 
-**After Refactor completes:** Evaluate verdict. CLEAN/ISSUES_FILED: auto-advance to AUDIT + SECURITY. BLOCKED: human gate required (options: skip-refactor, create-task, or resolve). Update workflow state accordingly.
+**After Refactor completes:** Evaluate verdict. CLEAN: auto-advance to AUDIT + SECURITY. BLOCKED: human gate required (options: skip-refactor, create-task, or resolve). Update workflow state accordingly.
 
 #### Phase 3: AUDIT + SECURITY (Parallel)
 
@@ -580,7 +580,7 @@ After each subagent completes, append to the `## Existing Work` section in workf
 - Blockers: [list or "None"]
 
 ### REFACTOR — complete
-- Verdict: CLEAN / ISSUES_FILED / BLOCKED
+- Verdict: CLEAN / BLOCKED
 - Extractions: [list or "None"]
 - Deferred issues filed: [N]
 - Commit: [hash or "None — no refactoring needed"]
