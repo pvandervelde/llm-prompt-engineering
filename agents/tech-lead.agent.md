@@ -72,6 +72,19 @@ Read the provided task. If invoked with task ID, load it; if not, identify the n
 
 If domain cannot be determined from the signals above, ask the user once. Otherwise proceed immediately.
 
+### 2b. Check and Set Working Branch
+
+Run `git branch --show-current` to get the current branch, then apply this decision table:
+
+| Current branch | Action |
+|----------------|--------|
+| `task/NNN-*` matching this task number | Already on the right branch — use it. Record in workflow state. |
+| `task/NNN-*` for a **different** task | Ask the user before proceeding — wrong task branch. |
+| `main`, `master`, `develop`, `release/*`, or any other integration branch | Create and switch: `git switch -c task/NNN-slug`. |
+| Any other branch (feature, fix, etc.) | Ask the user: use this branch or create a new `task/NNN-slug`? |
+
+Record the resolved branch name in `.llm/workflow-state.md` under `**Branch:**` before proceeding.
+
 ### 2c. Extract Static Context
 
 Read `AGENTS.md` and `.tech-decisions.yml` once. Produce a compressed Standards block to reuse across all subagent prompts. Do not copy these files verbatim — extract only the values subagents act on.
