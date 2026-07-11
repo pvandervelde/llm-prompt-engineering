@@ -78,13 +78,13 @@ this task (skip unrelated layers). Write under `## Module Registry Slice` in wor
 Write `.llm/infra-workflow-state.md`:
 
 ```markdown
-# Infra Workflow State — Task #[N]: [title]
+# Infra Workflow State — [title]
 
 ## Task
 **ID:** #[N]
 **Layer:** [network / security / compute / data / observability]
 **Module:** [module path]
-**Branch:** infra/task/NNN-slug
+**Branch:** infra/task/[descriptive-slug]
 **Current Phase:** IMPLEMENT
 
 ## Standards
@@ -208,7 +208,7 @@ Then perform security review of the Terraform module focusing on:
 - Provider configuration — no hardcoded access keys?
 - Run: tfsec . or checkov -d . if available
 
-Write medium/low/info findings to `.llm/findings/task-NNN-slug.md` under `## Security Notes`.
+Write medium/low/info findings to `.llm/findings/[descriptive-slug].md` under `## Security Notes`.
 Return critical and high findings directly as hard blockers.
 
 Report findings by severity: critical / high / medium / low.
@@ -270,7 +270,7 @@ Report: pass/fail per check, overall verdict: PASS / CONDITIONAL PASS / FAIL.
 **After Verifier completes:**
 
 - **PASS or CONDITIONAL PASS:** Open PR from task branch to main. PR description must include:
-  security findings summary and full contents of `.llm/findings/task-NNN-slug.md`. Notify user.
+  security findings summary and full contents of `.llm/findings/[descriptive-slug].md`. Notify user.
 - **FAIL:** Surface specific failures and wait for instruction.
 
 ---
@@ -283,7 +283,7 @@ After each phase, append to `## Existing Work` in workflow state (format shown i
 
 ### 8. Close the Workflow
 
-On PR merge: delete the task branch: `git branch -d infra/task/NNN-slug`.
+On PR merge: delete the task branch: `git branch -d infra/task/[descriptive-slug]`.
 Mark task complete in `.llm/tasks.md`.
 
 ---

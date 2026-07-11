@@ -3,7 +3,7 @@ description: Drive a single task through the full TDD pipeline. Coordinate speci
 name: "Tech Lead"
 tools: [agent, read, search, edit, execute]
 model: Claude Sonnet 4.6 (copilot)
-agents: ['Tester', 'QA Engineer', 'Coder', 'Verifier', 'Security Reviewer', 'Refactor']
+agents: ['Tester', 'QA Engineer', 'Coder', 'Verifier', 'Security Reviewer', 'Refactor', 'Doc Writer']
 ---
 
 ## Role
@@ -78,10 +78,10 @@ Run `git branch --show-current` to get the current branch, then apply this decis
 
 | Current branch | Action |
 |----------------|--------|
-| `task/NNN-*` matching this task number | Already on the right branch — use it. Record in workflow state. |
-| `task/NNN-*` for a **different** task | Ask the user before proceeding — wrong task branch. |
-| `main`, `master`, `develop`, `release/*`, or any other integration branch | Create and switch: `git switch -c task/NNN-slug`. |
-| Any other branch (feature, fix, etc.) | Ask the user: use this branch or create a new `task/NNN-slug`? |
+| `task/*` matching this task | Already on the right branch — use it. Record in workflow state. |
+| `task/*` for a **different** task | Ask the user before proceeding — wrong task branch. |
+| `main`, `master`, `develop`, `release/*`, or any other integration branch | Create and switch: `git switch -c task/[descriptive-slug]`. |
+| Any other branch (feature, fix, etc.) | Ask the user: use this branch or create a new `task/[descriptive-slug]`? |
 
 Record the resolved branch name in `.llm/workflow-state.md` under `**Branch:**` before proceeding.
 
@@ -136,13 +136,13 @@ This is a one-time read. The Security Reviewer will still read `docs/spec/securi
 Read `.llm/workflow-state.md`. If absent or for a different task, initialise:
 
 ```markdown
-# Workflow State — Task #[N]: [title]
+# Workflow State — [title]
 
 ## Task
 **ID:** #[N]
 **Domain:** [Frontend / Backend]
 **Criticality:** [safety-critical / domain-logic / parser / api-boundary / adapter]
-**Branch:** task/NNN-slug
+**Branch:** task/[descriptive-slug]
 **Current Phase:** RED
 
 ## Standards
@@ -221,7 +221,6 @@ Then:
 2. Write the full adversarial test suite (Tiers 1 + 2 + 3 per criticality)
 3. Write contract tests for all interface abstractions involved
 4. Commit the test suite before any implementation exists
-5. Document the test plan in docs/spec/test-coverage.md
 
 Report back:
 - Test plan summary
@@ -230,7 +229,7 @@ Report back:
 - Commit hash
 ```
 
-**After Tester completes:** Update workflow state with test counts, spec gaps, commit hash. Auto-advance to GREEN. If spec gaps were found, write them to `.llm/findings/task-NNN-slug.md` under `## Spec Gaps` and include in the PR description — do not pause.
+**After Tester completes:** Update workflow state with test counts, spec gaps, commit hash. Auto-advance to GREEN. If spec gaps were found, write them to `.llm/findings/[descriptive-slug].md` under `## Spec Gaps` and include in the PR description — do not pause.
 
 Pause only if the Tester reports it cannot write any meaningful tests due to a spec gap that makes behaviour entirely undefined. Surface the specific undefined behaviour and wait for resolution.
 
@@ -367,7 +366,7 @@ Work in the current git workspace (the directory where you are invoked).
 [classification]
 
 ## Your job
-Do not read AGENTS.md or .tech-decisions.yml — all required context is injected above. Do not read `docs/spec/assertions.md` or `docs/spec/test-coverage.md` — the audit scope is defined by the module classification in the injected context.
+Do not read AGENTS.md or .tech-decisions.yml — all required context is injected above. Do not read `docs/spec/assertions.md` — the audit scope is defined by the module classification in the injected context.
 
 The implementation is complete and tests are passing. Probe the finished implementation for weaknesses.
 
@@ -391,7 +390,7 @@ Run tiers appropriate to criticality:
 - Tier 5: Check all event handlers and input parsers for edge cases not covered by the test suite
 - Verify no dead or unreachable component states exist
 
-Update docs/spec/test-coverage.md with results. Do NOT commit test reports or mutation test result files — write them for documentation/review only. Never stage or push these files in git.
+Do NOT commit test reports or mutation test result files — write them for documentation/review only. Never stage or push these files in git.
 
 Report back:
 - Mutation score per module
@@ -452,7 +451,7 @@ Then perform security review focusing on:
 
 Report findings by severity: critical / high / medium / low.
 Include remediation recommendation for each finding.
-Write medium/low/info findings to `.llm/findings/task-NNN-slug.md` under `## Security Notes`.
+Write medium/low/info findings to `.llm/findings/[descriptive-slug].md` under `## Security Notes`.
 Return critical and high findings directly as hard blockers.
 ```
 
@@ -486,7 +485,7 @@ Do not modify production code, test files, or spec files.
 
 1. Identify which user-facing docs are affected by the changes (README, API reference, module docs under docs/)
 2. Update those docs to reflect any new, changed, or removed behaviour visible to users
-3. Create a changeset note at `.changeset/task-NNN-slug.md` using the Node.js changesets format:
+3. Create a changeset note at `.changeset/[descriptive-slug].md` using the Node.js changesets format:
 
 ```markdown
 ---
@@ -501,7 +500,7 @@ The bump type must be: `major` for breaking changes, `minor` for new features, `
 If the task touches multiple packages, include one line per package in the frontmatter.
 
 4. Commit documentation updates: `docs(<scope>): update user docs for [title]`
-5. Commit the changeset note: `chore(changeset): add changeset for task #[N]`
+5. Commit the changeset note: `chore(changeset): add changeset for [title]`
 
 Report back:
 - Which docs were updated and what changed in each
@@ -540,7 +539,7 @@ Work in the current git workspace (the directory where you are invoked).
 [Frontend / Backend]
 
 ## Changeset Path
-[paste changeset file path from workflow state, e.g. .changeset/task-NNN-slug.md]
+[paste changeset file path from workflow state, e.g. .changeset/[descriptive-slug].md]
 
 ## Your job
 Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, .llm/tasks.md, or docs/catalog.md — all required context is injected above.
@@ -572,7 +571,7 @@ Report:
 ```
 
 **After Verifier completes:**
-- **PASS:** Open PR from task branch to main automatically. PR description must include: audit summary (mutation scores, fuzz results, Kani results), security findings summary, and full contents of `.llm/findings/task-NNN-slug.md`. Notify user that PR is open for review.
+- **PASS:** Open PR from task branch to main automatically. PR description must include: audit summary (mutation scores, fuzz results, Kani results), security findings summary, and full contents of `.llm/findings/[descriptive-slug].md`. Notify user that PR is open for review.
 - **CONDITIONAL PASS:** Open PR with a note flagging the conditional items. Do not pause.
 - **FAIL:** Surface the specific failures and wait for instruction before re-invoking Verifier.
 
@@ -620,7 +619,7 @@ After each subagent completes, append to the `## Existing Work` section in workf
 
 ### 5. Close the Workflow
 
-On PASS approval, mark task complete in .llm/tasks.md. Delete the task branch after PR merge: `git branch -d task/NNN-slug`. Update final workflow state with outcome summary and certification evidence.
+On PASS approval, mark task complete in .llm/tasks.md. Delete the task branch after PR merge: `git branch -d task/[slug]`. Update final workflow state with outcome summary and certification evidence.
 
 ## Resuming an Interrupted Pipeline
 

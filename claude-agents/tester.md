@@ -135,11 +135,12 @@ Before committing, review your test suite:
 
 ### 10. **Commit and Document**
 
-After verifying the test suite, commit immediately. Format: `git commit -m "test: Add [Tier] test suite for [module]"` with brief list of coverage (assertions, boundaries, side-effects, property invariants). Document in `.llm/test-coverage.md`: checkbox list per Tier, gaps/limitations.
+After verifying the test suite, commit immediately. Format: `git commit -m "test: Add [Tier] test suite for [module]"` with brief list of coverage (assertions, boundaries, side-effects, property invariants).
 
 ### 11. **Support the Feedback Loop**
 
 After implementation by the coder:
+
 - Run the test suite and report failures with precise diagnostic messages
 - If tests reveal spec ambiguities, report to architect for `assertions.md` updates
 - If implementation exposes new edge cases, add tests and update `docs/spec/edge-cases.md`

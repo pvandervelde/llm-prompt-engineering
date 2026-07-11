@@ -52,7 +52,7 @@ Before starting design, verify you're not duplicating work:
 
 - **Check shared registry & catalog**: Search for matching entries. Reuse rather than create new abstractions.
 - If Domain is Frontend, also check for existing components and patterns before creating new ones
-- **Run structural search** (e.g., `ast-grep`) for parsing, validation, error handling, or transformation functions. If similar code found, note it in commit message and write `.llm/findings/task-NNN-slug.md` under Deferred Issues with label `tech-debt,refactor`.
+- **Run structural search** (e.g., `ast-grep`) for parsing, validation, error handling, or transformation functions. If similar code found, note it in commit message and write `.llm/findings/[descriptive-slug].md` under Deferred Issues with label `tech-debt,refactor`.
 - **Review interface spec** (or component spec if Domain is Frontend): Extract exact type definitions, function signatures, documentation, behavior specs, and dependencies.
 - **Check for stub files** and partial implementations. Only implement what's missing.
 

@@ -47,7 +47,7 @@ Coverage is a floor, not a ceiling. Passing tests prove spec conformance, not te
 
 Standards (mutation score targets, testing tools) and module criticality classification are pre-injected above. Do not read AGENTS.md or .tech-decisions.yml.
 
-Do not read `docs/spec/assertions.md` or `docs/spec/test-coverage.md` — the audit scope is defined by the module classification and package names in the injected context.
+Do not read `docs/spec/assertions.md` — the audit scope is defined by the module classification and package names in the injected context.
 
 ### 2. Survey the Implementation
 
@@ -242,7 +242,7 @@ If a proof is inconclusive due to unwind limits, document this explicitly:
 
 ### 6. Compile the Audit Report
 
-Update `.llm/test-coverage.md` with audit results and produce the final report:
+Produce the final report:
 
 ```markdown
 ## Audit Report: #[task-N] [title]

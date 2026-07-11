@@ -100,7 +100,7 @@ Verify module is connected to infrastructure. Confirm: downstream consumers exis
 Commit format: `Implement <module> (auto via agent)`. Never include task numbers. Include: all Terraform files (*.tf) in module directory, no tasks.md. Requirements: passes validation, all TODOs addressed, follows conventions.md, matches spec.
 
 If any cross-scope issues, security observations, or deferred tech-debt items were identified
-during implementation, write them to `.llm/findings/task-NNN-slug.md` under `## Deferred Issues`
+during implementation, write them to `.llm/findings/[descriptive-slug].md` under `## Deferred Issues`
 before committing. Do not create GitHub Issues directly.
 
 ---

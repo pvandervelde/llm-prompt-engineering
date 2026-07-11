@@ -87,7 +87,7 @@ Write to `.llm/security-review/YYYY-MM-DD-[scope].md`. Output: header (date, sco
 
 ### 11. **Write Non-Blocking Findings**
 
-Write Medium, Low, and Info findings to `.llm/findings/task-NNN-slug.md` under `## Security Notes` with format: [SEVERITY] title, location, spec ref, description, remediation. Critical and High findings are **hard blockers** to Tech Lead—do NOT write these to the findings file.
+Write Medium, Low, and Info findings to `.llm/findings/[descriptive-slug].md` under `## Security Notes` with format: [SEVERITY] title, location, spec ref, description, remediation. Critical and High findings are **hard blockers** to Tech Lead—do NOT write these to the findings file.
 
 ### 12. **Update Security Spec if Gaps Found**
 
