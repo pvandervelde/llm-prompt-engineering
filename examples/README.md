@@ -1,39 +1,30 @@
 # Examples & Validation
 
-This directory contains example task files and validation procedures for the Beads-compatible task handling system.
+This directory contains example task files and validation procedures for the task handling system.
 
 ## Contents
 
 ### Example Files
 
 - **example-tasks.md** - Complete example of Markdown task format (`.llm/tasks.md`)
-- **example-tasks.json** - JSON format (Beads export or helper script output)
+- **example-tasks.json** - JSON format (helper script output)
 - **VALIDATION.md** - Comprehensive validation checklist
 
 ## Quick Start
 
 ### Using the Examples
 
-1. **For a new project without Beads:**
+1. **For a new project:**
    - Copy `example-tasks.md` to `.llm/tasks.md`
    - Customize with your project's tasks
    - AI modes will auto-detect and use it
 
-2. **For a project with Beads:**
-   - Use Beads to manage tasks: `bd create "Task description"`
-   - Helper scripts will export to JSON format
-   - AI modes will auto-detect Beads and use it
-
-3. **Converting between formats:**
+2. **Exporting to JSON:**
 
    ```bash
    # Markdown → JSON
    ./scripts/tasks-export.ps1  (Windows)
    ./scripts/tasks-export.sh   (Linux/Mac)
-
-   # JSON → Beads
-   ./scripts/tasks-import.ps1  (Windows)
-   ./scripts/tasks-import.sh   (Linux/Mac)
    ```
 
 ### Understanding the Format
@@ -109,7 +100,7 @@ jq empty < example-tasks.json        # Should succeed
 
 # Verify mode integration
 grep "tasks-export" modes/*.chatmode.md
-grep "tasks-import" prompts/*.md
+grep "tasks-export" prompts/*.md
 ```
 
 See [VALIDATION.md](./VALIDATION.md) for complete checklist.
@@ -144,15 +135,12 @@ The format is flexible. Consider adding:
 
 AI modes automatically:
 
-1. **Detect Beads:** `beads --version`
-2. **Decide format:**
-   - If Beads available → use `scripts/tasks-export.ps1`
-   - Otherwise → read `.llm/tasks.md`
-3. **Find next task:** First `[ ]` (unchecked) item
-4. **Parse content:** Extract context, assertions, subtasks
-5. **Execute:** Start implementation
+1. **Read `.llm/tasks.md`**
+2. **Find next task:** First `[ ]` (unchecked) item
+3. **Parse content:** Extract context, assertions, subtasks
+4. **Execute:** Start implementation
 
-**No configuration needed** — modes just work with whatever format is available.
+**No configuration needed** — modes work with `.llm/tasks.md` out of the box.
 
 ## References
 
@@ -166,8 +154,7 @@ AI modes automatically:
 
 1. **New project:** Copy `example-tasks.md` to `.llm/tasks.md` and customize
 2. **Existing project:** Run bootstrap: `./tools/ai-bootstrap/bootstrap-ai-repo.ps1`
-3. **With Beads:** Install and run `bd init`, tasks auto-sync
-4. **Validation:** Check [VALIDATION.md](./VALIDATION.md) checklist
+3. **Validation:** Check [VALIDATION.md](./VALIDATION.md) checklist
 
 ---
 

@@ -1,37 +1,18 @@
-# Task Sources Contract and Fallback Strategy
+# Task Sources Contract
 
 ## Overview
 
-This document defines the contract for task sources, enabling modes and prompts to optionally integrate with Beads (a task management tool) while gracefully falling back to a Markdown-based task file when Beads is unavailable.
+This document defines the contract for task sources used by modes and prompts. Tasks are stored in `.llm/tasks.md` as a Markdown checklist and optionally exported to JSON by helper scripts for tool consumption.
 
 ## Task Source Types
 
-### 1. Beads CLI (Primary)
+### 1. Markdown Tasks (Source of Truth)
 
-When Beads is installed and available on the system PATH:
-
-- **Detection**: Check for `beads --version` (exit code 0 indicates availability)
-- **Export Command**: `beads export --format=json` (produces JSON task export)
-- **Schema**: See [Beads JSON Export Schema](#beads-json-export-schema) below
-- **Behavior**: Runtime agents detect Beads CLI and invoke the export command to retrieve current task state
-
-### 2. JSON Export (Transient/Generated)
-
-A temporary JSON file (`./.llm/tasks.json`) produced by helper scripts when Beads is unavailable:
-
-- **Location**: `./.llm/tasks.json` (project root)
-- **Generation**: Created by `scripts/tasks-export.sh` (Linux/macOS) or `scripts/tasks-export.ps1` (Windows)
-- **Source**: Converted from `./.llm/tasks.md` Markdown file
-- **Schema**: See [JSON Task Format](#json-task-format) below
-- **Lifespan**: Regenerated on-demand; not committed to version control
-
-### 3. Markdown Fallback (Human-Friendly Source of Truth)
-
-The original Markdown task file used when both Beads and JSON export are unavailable:
+The Markdown task file is the primary source for all task tracking:
 
 - **Location**: `./.llm/tasks.md`
 - **Format**: Markdown checklist with optional metadata
-- **Behavior**: Agents parse first unchecked `- [ ]` task as the current task
+- **Behavior**: Agents parse the first unchecked `- [ ]` task as the current task
 - **Example**:
 
   ```markdown
@@ -46,30 +27,19 @@ The original Markdown task file used when both Beads and JSON export are unavail
   - [ ] Task four
   ```
 
+### 2. JSON Export (Transient/Generated)
+
+A temporary JSON file (`./.llm/tasks.json`) produced by helper scripts for tool consumption:
+
+- **Location**: `./.llm/tasks.json` (project root)
+- **Generation**: Created by `scripts/tasks-export.sh` (Linux/macOS) or `scripts/tasks-export.ps1` (Windows)
+- **Source**: Converted from `./.llm/tasks.md` Markdown file
+- **Schema**: See [JSON Task Format](#json-task-format) below
+- **Lifespan**: Regenerated on-demand; not committed to version control
+
 ---
 
 ## Schemas
-
-### Beads JSON Export Schema
-
-```json
-{
-  "tasks": [
-    {
-      "id": "task-id-or-name",
-      "title": "Task Title",
-      "description": "Detailed description",
-      "status": "open|in-progress|completed|blocked",
-      "priority": "low|medium|high",
-      "tags": ["tag1", "tag2"],
-      "dueDate": "YYYY-MM-DD",
-      "assignee": "user@example.com"
-    }
-  ]
-}
-```
-
-**Current Task Logic**: Beads source should return tasks in priority/status order; agents consume the first task with status `open` or `in-progress`.
 
 ### JSON Task Format
 
@@ -106,21 +76,12 @@ Intermediate format for Markdown-to-JSON conversion:
 
 ---
 
-## Runtime Detection and Fallback Logic
+## Reading Tasks
 
-Agents follow this decision tree:
+Agents follow this process:
 
 ```
-1. Check for Beads CLI:
-   - Run: beads --version
-   - If exit code == 0 → Use Beads export (see Beads JSON Export Schema)
-   - If command not found or non-zero exit → Continue to step 2
-
-2. Check for ./.llm/tasks.json:
-   - If file exists → Parse and consume (see JSON Task Format)
-   - If file missing → Continue to step 3
-
-3. Check for ./.llm/tasks.md:
+1. Check for ./.llm/tasks.md:
    - If file exists → Parse Markdown and return first unchecked task
    - If file missing → Return "No task list available"
 ```
@@ -166,26 +127,22 @@ bash scripts/tasks-export.sh
 
 Modes (`modes/*.chatmode.md`) should:
 
-1. Detect Beads availability at runtime
-2. If available, invoke `beads export --format=json` and parse output
-3. If unavailable, fall back to `./.llm/tasks.md` (via helper script if needed)
-4. Extract current task and pass to relevant prompts
+1. Read `./.llm/tasks.md`
+2. Extract the current task and pass it to relevant prompts
 
 ### Prompts
 
 Prompts (`prompts/*.prompt.md`):
 
 - Accept task input from modes (already structured)
-- Preserve human-facing task reading requirement
-- Parse JSON when provided by mode/helper; fall back to Markdown if necessary
+- Parse Markdown task format
 
 ### Bootstrap Scripts
 
 Bootstrap scripts (in `tools/ai-bootstrap/` or similar):
 
-- Detect Beads on initialization
-- If missing, call `scripts/tasks-export.sh` or `.ps1` once
-- Document fallback behavior for end users
+- Create `.llm/tasks.md` on initialization if not present
+- Document task format for end users
 
 ---
 
@@ -256,6 +213,5 @@ Bootstrap scripts (in `tools/ai-bootstrap/` or similar):
 - [ ] `scripts/tasks-export.ps1` runs successfully on Windows
 - [ ] `./.llm/tasks.md` exists in project root
 - [ ] `./.llm/tasks.json` is generated correctly from Markdown source
-- [ ] Modes detect Beads and fall back gracefully
-- [ ] Prompts parse both JSON and Markdown flows
-- [ ] No parse errors when Beads is unavailable
+- [ ] Modes read `.llm/tasks.md` and find the current task
+- [ ] No parse errors when reading `.llm/tasks.md`

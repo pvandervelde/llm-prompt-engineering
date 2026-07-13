@@ -63,82 +63,9 @@ A one-page reference for using the AI-assisted development framework.
 
 ---
 
-## 🎯 Task Tracking with Beads (Optional)
+## 📋 Task Tracking (.llm/tasks.md)
 
-### Why Beads?
-
-- **AI-friendly** - JSON output, semantic queries
-- **Git-versioned** - No external services needed
-- **Dependency-aware** - Knows what's blocking what
-- **Multi-agent safe** - Hash-based IDs prevent collisions
-
-### Installation
-
-```bash
-# Install Beads
-curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash
-
-# Initialize in your repo
-bd init
-```
-
-### Daily Workflow
-
-```bash
-# See what's ready to work on
-bd ready
-
-# Create a task
-bd create "Add user authentication" -p 1 -t feature
-
-# Start working on it
-bd update bd-abc working
-
-# Commit with task ID
-git commit -m "Implement JWT auth (bd-abc)"
-
-# Close when done
-bd close bd-abc --reason "Completed"
-```
-
-### Task Dependencies
-
-```bash
-# Create dependent tasks
-bd create "Database schema" -p 1 -t task
-bd create "API endpoints" -p 2 -t feature --blocks-on bd-abc
-
-# bd ready will show bd-abc first, bd-xyz after bd-abc is closed
-```
-
-### Integration with Framework
-
-- **ADRs**: Reference in task descriptions: "See ADR-0005 for auth approach"
-- **Constraints**: Check docs/constraints.md before closing tasks
-- **Catalog**: Update when task creates reusable component
-- **Commits**: Include task ID: `git commit -m "message (bd-abc)"`
-
-### For AI Agents
-
-```bash
-# Get tasks as JSON for parsing
-bd ready --json
-
-# Show task details
-bd show bd-abc --json
-
-# Search for related work
-bd search "authentication" --json
-
-# Check for orphaned work
-bd doctor --orphans --json
-```
-
----
-
-## 📋 Fallback Task Tracking (.llm/tasks.md)
-
-**When Beads is not available**, tasks are stored in `.llm/tasks.md` as Markdown:
+Tasks are stored in `.llm/tasks.md` as Markdown:
 
 ### Format
 
@@ -163,23 +90,15 @@ bd doctor --orphans --json
 # Export tasks from .llm/tasks.md to JSON
 ./scripts/tasks-export.ps1      # PowerShell
 ./scripts/tasks-export.sh       # Bash
-
-# Import .llm/tasks.md into Beads
-./scripts/tasks-import.ps1      # PowerShell
-./scripts/tasks-import.sh       # Bash
 ```
 
-### Auto-Detection (AI Modes)
+### Reading Tasks (AI Modes)
 
 AI modes automatically:
 
-1. Check if Beads CLI is available
-2. If yes → use Beads JSON export
-3. If no → read `.llm/tasks.md`
-4. Find first unchecked `- [ ]` task
-5. Execute that task
-
-No configuration needed—modes just work with whichever format is available.
+1. Read `.llm/tasks.md`
+2. Find first unchecked `- [ ]` task
+3. Execute that task
 
 ---
 
