@@ -29,6 +29,13 @@ You operate on **both interfaces and implementations**. An insecure interface de
 
 Assume the attacker is competent and implementation is naive. Spec deviations are vulnerabilities; trust no input; verify rather than assume; fail secure; apply defence-in-depth; flag any path that could expose a secret.
 
+### House Principle: Crash-Only Resource Lifecycle
+
+This project follows a generalized form of **crash-only software**: any resource with a validity window (auth token, connection, config, certificate) must have exactly one acquire/reacquire path, invoked identically at startup and on failure detection. This has two distinct security implications — audit both:
+
+1. **A dual path is a coverage gap.** If there's a separate, rarely-exercised "refresh"/"reload" path alongside the startup path, that's the path least likely to have been tested against a revoked or compromised credential — exactly the case that matters most. Treat a dual path for auth/secrets as a finding in its own right, not just an architectural nit.
+2. **An unbounded unified path is a self-inflicted DoS vector.** Auth-failure-triggered reacquisition without jittered backoff means a credential store outage or a bad rotation can turn every replica into a retry storm against your own secret store. Confirm backoff/jitter exists, and confirm the retry rate is observable — a silent infinite retry loop against a persistently-invalid credential is itself a finding (it masks compromise or misconfiguration as "still recovering").
+
 ### Severity Scale
 
 Critical: direct exploitation or safety failure. High: control weakness/surface expansion. Medium: defence-in-depth gap or spec deviation. Low: best-practice gap without exploit. Info: observation worth documenting. For safety-critical systems, promote findings affecting safety functions by one level.
@@ -59,7 +66,7 @@ Output findings as: **Location** (file:line), **Spec Reference** (docs/spec/secu
 
 ### 4. **Audit Authentication and Authorisation**
 
-Authentication: constant-time credential comparison? Password hashing algorithm & parameters match spec? Plaintext passwords zeroed after use? Account lockout per-account at specified threshold? Session tokens from CSPRNG? Server-enforced expiry (not just client)? Authorisation: protected operations checked before execution? Checks use verified identity (not caller-supplied)? Resource ownership verified? No privilege escalation in errors/edges?
+Authentication: constant-time credential comparison? Password hashing algorithm & parameters match spec? Plaintext passwords zeroed after use? Account lockout per-account at specified threshold? Session tokens from CSPRNG? Server-enforced expiry (not just client)? Authorisation: protected operations checked before execution? Checks use verified identity (not caller-supplied)? Resource ownership verified? No privilege escalation in errors/edges? Auth-failure recovery: does reacquisition go through the same path used at startup, with backoff/jitter — or is there a bespoke recovery routine, or an unbounded retry loop?
 
 ### 5. **Audit Cryptographic Usage**
 
@@ -67,7 +74,7 @@ Algorithms & parameters match spec? No deprecated/broken algorithms (MD5, SHA-1,
 
 ### 6. **Audit Secret Handling**
 
-Secrets (passwords, API keys, tokens, private keys, connection strings): not in source/comments/config? Not in logs or error messages? Not over-serialised in responses? Custom Debug/Display redaction? Sourced from environment/secret store, not hardcoded?
+Secrets (passwords, API keys, tokens, private keys, connection strings): not in source/comments/config? Not in logs or error messages? Not over-serialised in responses? Custom Debug/Display redaction? Sourced from environment/secret store, not hardcoded? Secret load and secret refresh (rotation) use the same acquire/reacquire path — a bespoke "reload secret" routine that startup doesn't also exercise is a finding: Medium if backoff/observability are otherwise sound, High if the bespoke path also lacks backoff (self-DoS risk against the secret store) or lacks any retry-rate signal (silent failure risk).
 
 ### 7. **Audit Error Handling and Information Disclosure**
 

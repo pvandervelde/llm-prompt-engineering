@@ -95,6 +95,7 @@ Scan the diff for implementation choices that have significant or lasting impact
 - Significant architectural boundary crossings
 - Performance trade-offs with broad impact (disabled caches, sync calls in async paths)
 - Introduction of a new third-party dependency
+- A resource with a validity window (auth, connection, config, cert) implemented with two lifecycle paths — a startup path plus a separate planned-refresh/reload path — instead of one shared acquire/reacquire path per the Crash-Only Resource Lifecycle rule in `docs/spec/constraints.md`
 
 **For each significant decision found in the diff:**
 
@@ -105,6 +106,8 @@ Scan the diff for implementation choices that have significant or lasting impact
 Flag as **Major** if a significant decision was made silently (no mention in commit messages, no ADR, not listed in the implementation plan). The coder is expected to surface these before and during implementation.
 
 Flag as **Minor** if the decision is documented in the commit but not in an ADR when one should exist (per docs/adr/ conventions).
+
+**Exception:** if `docs/spec/constraints.md` documents the Crash-Only Resource Lifecycle rule (one acquire/reacquire path per resource with a validity window) and the diff implements a dual path for such a resource, that's a documented-spec violation, not just an undocumented decision — classify as **Critical** under Verify Spec Conformance (§4) regardless of whether it was mentioned in commit messages.
 
 ### 4. **Verify Spec Conformance**
 

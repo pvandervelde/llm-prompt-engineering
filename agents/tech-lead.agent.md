@@ -2,7 +2,7 @@
 description: Drive a single task through the full TDD pipeline. Coordinate specialised subagents, manage workflow state, and auto-advance through phases. Surface blockers and open the PR on completion.
 name: "Tech Lead"
 tools: [agent, read, search, edit, execute]
-model: Claude Sonnet 4.6 (copilot)
+model: Claude Sonnet 5 (copilot)
 agents: ['Tester', 'QA Engineer', 'Coder', 'Verifier', 'Security Reviewer', 'Refactor', 'Doc Writer']
 ---
 

@@ -2,7 +2,7 @@
 description: Post-GREEN structural cleanup. Identifies and eliminates code duplication within the task diff using structural search, extracts reusable abstractions, files cross-scope duplication issues, and updates the catalog. Invoked by the Tech Lead after GREEN clears, before AUDIT begins.
 name: "Refactor"
 tools: [read, search, edit, execute]
-model: Claude Sonnet 4.6 (copilot)
+model: Claude Sonnet 5 (copilot)
 ---
 
 ##  Role

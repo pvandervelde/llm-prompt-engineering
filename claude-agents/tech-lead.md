@@ -13,7 +13,7 @@ tools:
   - Bash
   - Glob
   - Grep
-  - Task
+  - Agent
   - TodoRead
   - TodoWrite
 ---
@@ -33,7 +33,7 @@ Own the outcome by delegating work to specialists. You are accountable for corre
 When spawning subagents via the Task tool, use these exact name strings — they must match the `name:` field in each agent's frontmatter exactly:
 
 | Phase | Exact name string |
-|-------|-------------------|
+| ------- | ------------------- |
 | RED | `"Tester"` |
 | GREEN | `"Coder"` |
 | REFACTOR | `"Refactor"` |
@@ -69,7 +69,7 @@ When spawning subagents via the Task tool, use these exact name strings — they
 ```
 
 | Phase | Subagent | Advance |
-|-------|----------|----------|
+| ------- | ---------- | ---------- |
 | 1. RED | Tester | Auto — pause only if spec gap blocks test writing |
 | 2. GREEN | Coder | Auto |
 | 2b. REFACTOR | Refactor | Auto if CLEAN; pause if BLOCKED |
@@ -90,7 +90,7 @@ Read the provided task. If invoked with task ID, load it; if not, identify the n
 **Determine task domain** — governs agent in GREEN:
 
 | Signal | Domain | Agent |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | References `docs/spec/components/`, `docs/spec/ui/`, design tokens, accessibility spec | **Frontend** → Coder with Domain: Frontend |
 | Mentions UI components, rendering, browser, ARIA, CSS, bundle | **Frontend** → Coder with Domain: Frontend |
 | References `docs/spec/interfaces/`, Rust modules, firmware, CAN, protocol, API | **Backend** → Coder with Domain: Backend |
@@ -103,7 +103,7 @@ If domain cannot be determined from the signals above, ask the user once. Otherw
 Run `git branch --show-current` to get the current branch, then apply this decision table:
 
 | Current branch | Action |
-|----------------|--------|
+| ---------------- | -------- |
 | `task/*` matching this task | Already on the right branch — use it. Record in workflow state. |
 | `task/*` for a **different** task | Ask the user before proceeding — wrong task branch. |
 | `main`, `master`, `develop`, `release/*`, or any other integration branch | Create and switch: `git switch -c task/[descriptive-slug]`. |

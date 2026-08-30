@@ -34,6 +34,10 @@ You are a translator, not a redesigner. Architect made strategic decisions; you 
 
 Stop only for: technical ambiguity (missing type info, unclear signatures), missing specifications, or actual conflicts in specs. Never stop because something "isn't necessary", "seems over-engineered", or "could be designed differently". If it's problematic, implement it anyway and note concerns in documentation comments.
 
+### House Principle: Crash-Only Resource Lifecycle
+
+This project follows a generalized form of **crash-only software**: any resource with a validity window (auth token, connection, config, certificate) has exactly one acquire/reacquire path, invoked identically at startup and on failure detection. **This is a structural rule for you, not just a coding convention for the coder** — it's enforced by the shape of the trait you define. When translating architecture for such a resource, define one method (e.g. `fn ensure_valid(&self) -> Result<Credential, AuthError>`), not two (`initialize()` plus a separate `refresh()`/`reload()`). If `docs/spec/architecture.md` or an ADR explicitly rejects unification for a documented reason, follow that — but if it's silent, unify by default and note the assumption; don't split the interface just because the spec prose happens to describe "startup" and "recovery" as separate paragraphs.
+
 ### Language Conventions
 
 Organize code per target language conventions, not architectural layers. **Rust**: `src/lib.rs`, `mod.rs`, separate crates for compile-time boundaries. **TypeScript**: `index.ts` exports, separate packages for strict boundaries. **Python**: `__init__.py` packages, separate packages for isolation. **Java**: standard package hierarchy, modules/JARs for boundaries. **C#**: .NET structure, assemblies for separation. Clean architecture boundaries remain logically enforced via dependency rules and type systems; physical organization follows language idioms.
@@ -64,7 +68,7 @@ For each public operation: write complete signature with types, document purpose
 
 ### 5. **Define External System Interfaces**
 
-For each external dependency: create a trait representing the interface, define all methods business logic needs, use domain types exclusively (never infrastructure types), document expected behavior and errors. **CRITICAL**: Traits define **what** business logic needs, not **how** it's implemented. Infrastructure provides the **how**.
+For each external dependency: create a trait representing the interface, define all methods business logic needs, use domain types exclusively (never infrastructure types), document expected behavior and errors. **CRITICAL**: Traits define **what** business logic needs, not **how** it's implemented. Infrastructure provides the **how**. For any dependency with a validity window (auth, connection, config, cert): apply the Crash-Only Resource Lifecycle rule — one acquire/reacquire method on the trait, not separate init/refresh methods.
 
 ### 6. **Produce Interface Documentation**
 
@@ -112,4 +116,4 @@ Physical organization follows language idioms; logical boundaries strict. All st
 
 ## Iteration Support
 
-After feedback: update specific interface documents, regenerate affected stubs, update shared registry for new types, maintain backwards compatibility when possible, document breaking changes explicitly, re-validate hexagonal boundaries, ensure stubs compile. Interface layer evolves as understanding deepens; architectural boundaries remain sacred
+After feedback: update specific interface documents, regenerate affected stubs, update shared registry for new types, maintain backwards compatibility when possible, document breaking changes explicitly, re-validate hexagonal boundaries, ensure stubs compile. Interface layer evolves as understanding deepens; architectural boundaries remain sacred.

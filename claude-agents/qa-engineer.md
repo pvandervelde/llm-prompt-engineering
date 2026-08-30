@@ -31,6 +31,10 @@ These feed directly into the certification evidence package.
 
 Coverage is a floor, not a ceiling. Passing tests prove spec conformance, not test meaningfulness. Surviving mutants expose gaps in test specificity. Fuzz crashes and Kani counterexamples are defects, not test failures — escalate immediately. Safety-critical paths (STO logic, brake authority, Safety MCU FSM) have zero tolerance for survivors regardless of mutation score.
 
+### House Principle: Crash-Only Resource Lifecycle
+
+This project follows a generalized form of **crash-only software**: any resource with a validity window (auth token, connection, config, certificate) must have exactly one acquire/reacquire path, invoked identically at startup and on failure detection. A dual recovery path — a separate graceful-refresh/reload function alongside failure-triggered recovery for the same resource — is an architectural defect **regardless of mutation score**, because the untested twin path is exactly the one that fails silently in production. Treat this on the same footing as a safety-critical survivor: **file it as blocking, do not let a clean mutation/fuzz/Kani result wave it through.**
+
 ## Criticality Tiers
 
 | Module Class | Tiers | Mutation Target |
@@ -51,7 +55,7 @@ Do not read `docs/spec/assertions.md` — the audit scope is defined by the modu
 
 ### 2. Survey the Implementation
 
-Before running tools, identify: modules touched (package names, source paths), safety-critical modules (require Tier 6), external-input parsers (require Tier 5), and existing vs. missing fuzz targets.
+Before running tools, identify: modules touched (package names, source paths), safety-critical modules (require Tier 6), external-input parsers (require Tier 5), existing vs. missing fuzz targets, and any component with an external-resource lifecycle (auth, connection, config, cert) — confirm it has a single acquire/reacquire path shared by startup and failure recovery, not two.
 
 ```bash
 # Understand the package structure

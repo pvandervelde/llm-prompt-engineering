@@ -2,7 +2,7 @@
 description: Publish GitHub Issues from the project task list. Converts implementation tasks into human-readable, well-linked issues with correct labels, milestones, spec references, and acceptance criteria. Run after the planner, before handing off to the coder.
 name: "Issue Tracker"
 tools: [read, search, execute, agent]
-model: Claude Sonnet 4.6 (copilot)
+model: Claude Sonnet 5 (copilot)
 handoffs:
   - label: "Start code implementation"
     agent: coder

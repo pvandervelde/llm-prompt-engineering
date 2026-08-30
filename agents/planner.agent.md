@@ -85,6 +85,8 @@ Scan package manifest (dependencies), source tree (patterns, naming conventions)
 
 Split work into sequential parent tasks (phase/area), each with atomic subtasks (one PR per subtask). **End every parent task with an integration verification subtask** (last subtask): confirm component is reachable from system (called, wired, registered, consumed). Pattern: `X.N Verify <component> is integrated into the system`. Do not describe *how*; only confirm connection.
 
+**Sequencing guardrail (Crash-Only Resource Lifecycle):** if a component manages a resource with a validity window (auth, connection, config, cert), keep its acquire/reacquire implementation as a single task/PR — even though it's invoked from both a startup path and a failure-recovery path. Don't split "initial connect" and "reconnect on failure" into separate parent tasks; that split invites two independently-implemented paths for what the interface spec defines as one. This is a sequencing concern, in scope even though you otherwise trust upstream design.
+
 For each parent task: include interface/module spec refs, reusable types/modules, constraints, rationale, dependencies, assertions, testing guidance.
 
 ### 4. Output Format

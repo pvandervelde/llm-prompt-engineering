@@ -2,7 +2,7 @@
 description: Drive a single infrastructure task through the implementation pipeline. Coordinate Infrastructure Engineer, Security Reviewer, and Verifier in sequence. Manage workflow state and open a PR on completion.
 name: "Infrastructure Lead"
 tools: [agent, read, search, edit, execute]
-model: Claude Sonnet 4.6 (copilot)
+model: Claude Sonnet 5 (copilot)
 agents: ['Infrastructure Engineer', 'Security Reviewer', 'Verifier']
 ---
 

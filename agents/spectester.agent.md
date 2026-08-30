@@ -2,7 +2,7 @@
 description: Generate automated acceptance and contract tests from system specifications. Runs before implementation to define the behavioural contract, and is re-run at VERIFY to confirm the implementation satisfies it.
 name: "Spec Tester"
 tools: [read, search, edit, web, execute, agent]
-model: Claude Sonnet 4.6 (copilot)
+model: Claude Sonnet 5 (copilot)
 handoffs:
   - label: "Plan Tasks"
     agent: planner
