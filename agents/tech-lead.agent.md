@@ -92,9 +92,8 @@ Read `AGENTS.md` and `.tech-decisions.yml` once. Produce a compressed Standards 
 Extract:
 - Language and edition (e.g., Rust edition 2021)
 - Targets, if any (e.g., x86-64, ARM, STM32G4, S32K3, AM64x R5F)
-- Testing framework and tools (e.g., cargo test + proptest + cargo-mutants + cargo-fuzz + kani)
 - Coverage minimums (line %, branch %)
-- Mutation score minimums by module class (safety-critical, domain logic, parser, adapter)
+- Mutation score minimums by module class, for the resolved toolchain's mutation engine (see Step 2f)
 - Max function length and max cyclomatic complexity
 - Commit message format (type/scope/subject + body requirements; ADR trigger conditions)
 - Secret management rules (no hardcoded secrets, Vault as source)
@@ -148,6 +147,9 @@ Read `.llm/workflow-state.md`. If absent or for a different task, initialise:
 ## Standards
 [output of Step 2c — compact bulleted list]
 
+## Toolchain
+[output of Step 2f — resolved stack block]
+
 ## Relevant Assertions
 [output of Step 2d — assertion list or "None found"]
 
@@ -167,13 +169,43 @@ Read `.llm/workflow-state.md`. If absent or for a different task, initialise:
 [None]
 ```
 
+### 2f. Resolve Toolchain
+
+Read the `toolchains` block from `.tech-decisions.yml`. Resolve the active stack:
+
+1. Walk `toolchains.detect` in order; the first `if_exists` glob that matches a file in the repo root selects the toolchain.
+2. If none match, use `toolchains.default`.
+3. If the resolved toolchain has no matching key under `toolchains`, STOP and ask the user — the pipeline cannot proceed without concrete commands.
+
+Read the mutation targets for that toolchain's `mutation_engine` from `mutation_targets` (per-engine — scores are not comparable across engines).
+
+Format as:
+
+```markdown
+## Toolchain
+**Stack:** [resolved toolchain name]
+**Build:** [toolchains.<stack>.build]
+**Typecheck:** [toolchains.<stack>.typecheck]
+**Test:** [toolchains.<stack>.test]
+**Test (scoped):** [toolchains.<stack>.test_scoped]
+**Lint:** [toolchains.<stack>.lint]
+**Mutation:** [toolchains.<stack>.mutation]
+**Mutation engine:** [toolchains.<stack>.mutation_engine]
+**Property library:** [toolchains.<stack>.property_lib]
+**Fuzz:** [toolchains.<stack>.fuzz_run, or "not available for this stack" if null]
+**Formal verification:** [toolchains.<stack>.formal, or "not available for this stack; model-based testing substitutes" if null]
+**Test paths (frozen during GREEN):** [toolchains.<stack>.test_paths]
+```
+
+Write this block to the Toolchain section of `.llm/workflow-state.md`. Include it verbatim in every subagent prompt below.
+
 ### 2g. Execute the Current Phase
 
 Invoke the appropriate subagent with a precise, self-contained prompt. **Subagents have no access to this conversation** — every prompt must include all the context they need.
 
 #### Phase 1: RED — Tester
 
-**Entry criteria:** `docs/spec/assertions.md` exists and is non-empty.
+**Entry criteria:** `docs/spec/assertions.md` exists and is non-empty. Interface stubs compile / type-check cleanly under `{toolchain.typecheck}`.
 
 **Subagent prompt:**
 ```
@@ -184,6 +216,9 @@ Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state]
+
+## Toolchain
+[paste Toolchain block from workflow state]
 
 ## Relevant Assertions
 [paste Relevant Assertions from workflow state]
@@ -249,6 +284,9 @@ Work in the current git workspace (the directory where you are invoked).
 ## Standards
 [paste Standards block from workflow state]
 
+## Toolchain
+[paste Toolchain block from workflow state]
+
 ## Interface Contract
 [paste Interface Contract from workflow state]
 
@@ -311,6 +349,9 @@ Work in the current git workspace (the directory where you are invoked).
 
 ## Standards
 [paste Standards block from workflow state — naming conventions, max_function_length, max_complexity only]
+
+## Toolchain
+[paste Toolchain block from workflow state]
 
 ## Catalog Slice
 [paste Catalog Slice from workflow state]

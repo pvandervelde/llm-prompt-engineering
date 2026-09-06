@@ -502,6 +502,12 @@ Write-Success "Tech stack detection complete"
 # ============================================================================
 Write-Step "[4/5] Creating .tech-decisions.yml..."
 
+$toolchainDefault = if ($languages -contains "rust") { "rust" }
+    elseif ($languages -contains "csharp") { "dotnet" }
+    elseif ($languages -contains "typescript") { "typescript" }
+    elseif ($languages -contains "javascript") { "typescript" }
+    else { "null" }
+
 $techDecisions = @"
 # Technology Decisions and Standards
 # Generated: $(Get-Date -Format "yyyy-MM-dd")
@@ -509,6 +515,100 @@ $techDecisions = @"
 
 # Detected languages
 languages: [$($languages -join ", ")]
+
+# Toolchain resolution layer. Agents describe what they need in abstract
+# capability terms (test, mutation, fuzz, formal, ...); the Tech Lead resolves
+# this block to concrete commands for the active stack and injects them into
+# every subagent prompt as a `## Toolchain` block. Mutation scores are NOT
+# comparable across engines - see mutation_targets below.
+toolchains:
+  default: $toolchainDefault
+
+  detect:
+    - if_exists: "Cargo.toml"
+      toolchain: rust
+    - if_exists: "*.csproj|*.sln"
+      toolchain: dotnet
+    - if_exists: "package.json"
+      toolchain: typescript
+    - if_exists: "pyproject.toml"
+      toolchain: python  # no toolchain block defined yet - add one before use
+
+  rust:
+    build:             "cargo build --workspace"
+    typecheck:         "cargo check --workspace"
+    test:              "cargo test --workspace"
+    test_scoped:       "cargo test -p {package}"
+    lint:              "cargo clippy -- -D warnings"
+    format_check:      "cargo fmt --check"
+    coverage:          "cargo llvm-cov --json --output-path {out}"
+    mutation:          "cargo mutants --package {package} --timeout 60 --json"
+    mutation_engine:   "cargo-mutants"
+    fuzz_list:         "cargo fuzz list"
+    fuzz_run:          "cargo fuzz run {target} -- -max_total_time={seconds}"
+    fuzz_add:          "cargo fuzz add {target}"
+    formal:            "cargo kani --package {package}"
+    property_lib:      "proptest"
+    structural_search:  "ast-grep --lang rust"
+    test_paths:        ["tests/", "src/**/tests.rs", "src/**/*_test.rs"]
+
+  dotnet:
+    build:             "dotnet build"
+    typecheck:         "dotnet build --no-restore /p:TreatWarningsAsErrors=true"
+    test:              "dotnet test"
+    test_scoped:       "dotnet test {package}"
+    lint:              "dotnet format --verify-no-changes && dotnet roslynator analyze"
+    format_check:      "dotnet format --verify-no-changes"
+    coverage:          "dotnet test --collect:'XPlat Code Coverage'"
+    mutation:          "dotnet stryker --project {package} --reporter json --output {out}"
+    mutation_engine:   "stryker-net"
+    fuzz_list:         "ls fuzz/"
+    fuzz_run:          "dotnet run --project fuzz/{target} -- -max_total_time={seconds}"
+    fuzz_add:          null
+    formal:            null
+    property_lib:      "CsCheck"
+    structural_search:  "ast-grep --lang csharp"
+    test_paths:        ["**/*.Tests/", "**/*Tests.cs"]
+
+  typescript:
+    build:             "npm run build"
+    typecheck:         "tsc --noEmit"
+    test:              "npx vitest run"
+    test_scoped:       "npx vitest run {package}"
+    lint:              "npx eslint . --max-warnings 0"
+    format_check:      "npx prettier --check ."
+    coverage:          "npx vitest run --coverage --reporter=json"
+    mutation:          "npx stryker run --mutate '{package}/**/*.ts' --reporters json"
+    mutation_engine:   "stryker-js"
+    fuzz_list:         "ls fuzz/"
+    fuzz_run:          "npx jazzer fuzz/{target} -- -max_total_time={seconds}"
+    fuzz_add:          null
+    formal:            null
+    property_lib:      "fast-check"
+    structural_search:  "ast-grep --lang typescript"
+    test_paths:        ["**/*.test.ts", "**/*.spec.ts", "tests/"]
+
+# Mutation targets are per-engine because operator sets and denominators differ
+# and scores are not comparable across engines.
+mutation_targets:
+  cargo-mutants:
+    safety_critical: 95
+    domain_logic:    85
+    parser:          80
+    api_boundary:    80
+    adapter:         70
+  stryker-net:
+    safety_critical: 90
+    domain_logic:    80
+    parser:          75
+    api_boundary:    75
+    adapter:         65
+  stryker-js:
+    safety_critical: 90
+    domain_logic:    80
+    parser:          75
+    api_boundary:    75
+    adapter:         65
 
 # Database (customize for your project)
 database:

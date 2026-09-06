@@ -45,7 +45,7 @@ Read the diff carefully for: repeated logic blocks, similar function shapes, par
 
 ### 4. Run Structural Search
 
-After your manual scan, run a structural search (e.g. `ast-grep`) against the changed files and project-wide to catch duplicates your reading may have missed. Distinguish between:
+After your manual scan, run a structural search using the resolved toolchain's `structural_search` command (e.g. `ast-grep --lang rust`) against the changed files and project-wide to catch duplicates your reading may have missed. Distinguish between:
 - **Within-diff matches** → candidates for extraction
 - **Cross-scope matches** → candidates for extraction (treat as in-scope; likely introduced by this task)
 
@@ -68,9 +68,9 @@ For each duplication found **within the task diff**:
 1. **Name the concept** — what does this repeated logic represent? A good name is the clearest signal that an extraction is worth making.
 2. **Extract it** to the appropriate location (module, utility function, shared type, trait).
 3. **Replace all call sites** within the diff.
-4. **Run the full test suite** after each extraction:
+4. **Run the full test suite** after each extraction using the resolved toolchain's `test` command:
    ```bash
-   cargo test
+   {toolchain.test}
    ```
 5. If tests fail after an extraction, **revert it immediately** and escalate as BLOCKED.
 

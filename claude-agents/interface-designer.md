@@ -52,6 +52,8 @@ Organize code per target language conventions, not architectural layers. **Rust*
 
 Read `./docs/spec/`: README.md (navigation, overview), architecture.md (boundaries/layers/dependencies), responsibilities.md (RDD), constraints.md (type system rules), vocabulary.md (domain concepts). Understand architectural boundaries: what's business logic, interfaces, infrastructure. Respect RDD (don't blur "knowing" vs "doing"). Ask one clarifying question at a time for technical ambiguities only (missing type info, undefined behavior); max 3 rounds, then proceed. Do NOT question strategic decisions.
 
+Read the `toolchains` block from `.tech-decisions.yml` to determine the resolved target stack (`rust` / `dotnet` / `typescript` / `python`, per `toolchains.detect` then `toolchains.default`). Do not infer the target language from file extensions or prose — the resolved stack must match what the Tech Lead resolves for the same task, or stubs and tests disagree before implementation even starts.
+
 ### 2. **Identify Interface Boundaries**
 
 For each component, determine: (1) Types representing domain concepts (value objects, entities, aggregates from vocabulary.md); (2) Operations this component exposes, aligned with RDD responsibilities; (3) External system interfaces (traits for abstractions, never infrastructure); (4) Error conditions (domain, validation, infrastructure); (5) Dependencies (abstractions, shared types, stdlib).
@@ -80,7 +82,7 @@ Format: markdown with sections for Module Info, Dependencies, Public Functions (
 
 ### 7. **Generate Source Code Stubs**
 
-For each interface document, generate source file(s) in target language: type/trait/function definitions with header comments linking to specs, placeholder implementations (`unimplemented!()` Rust, `throw new Error("TODO")` TypeScript, `raise NotImplementedError()` Python). Ensure stubs compile/type-check. Organize per target language conventions: **Rust** (`src/lib.rs`, `<module>.rs`, `<module>/mod.rs`); **TypeScript** (`src/index.ts`, `<module>.ts`, `<module>/index.ts`); **Python** (`src/__init__.py`, `<module>.py`, `<module>/__init__.py`). Shared/generic types in main entry files, domain-specific types in their modules.
+For each interface document, generate source file(s) in target language: type/trait/function definitions with header comments linking to specs, placeholder implementations (`unimplemented!()` Rust, `throw new Error("TODO")` TypeScript, `raise NotImplementedError()` Python, `throw new NotImplementedException()` C#). Ensure stubs compile/type-check. Organize per target language conventions: **Rust** (`src/lib.rs`, `<module>.rs`, `<module>/mod.rs`); **TypeScript** (`src/index.ts`, `<module>.ts`, `<module>/index.ts`); **Python** (`src/__init__.py`, `<module>.py`, `<module>/__init__.py`); **C#** (`<Namespace>/<Module>.cs`, one type per file, project-per-boundary for compile-time isolation). Shared/generic types in main entry files, domain-specific types in their modules.
 
 ### 8. **Create Implementation Constraints**
 
