@@ -124,9 +124,9 @@ Each file is self-contained and reviewable in isolation. README.md provides a na
 
 In `vocabulary.md`, define each domain concept: name, description, identifier type, fields/contents, constraints, and lifespan if applicable. Include error concepts with their semantics and any security implications.
 
-### 8. Specify Implementation Constraints
+### 8. Specify Strategic Constraints
 
-In `docs/spec/constraints.md`, document: type system rules (branded types, Result<T,E>, no `any`), module boundary rules (business logic never imports infrastructure), error handling strategy (expected errors as values not exceptions), testing requirements (coverage targets, test double usage), performance targets (latency and concurrency), and security rules.
+In `docs/spec/constraints.md` — **Architect-owned**; Interface Designer owns concrete type/naming/module rules in `docs/spec/implementation-constraints.md`, Security Reviewer owns control status in `docs/spec/security-controls.md` — document: module boundary rules (business logic never imports infrastructure), error-handling philosophy (expected errors as values not exceptions, when to panic vs return), testing requirements (coverage targets, test double usage), and performance targets (latency and concurrency). Do not duplicate the other two files' content here.
 
 Also document a **recovery path rule** for any component depending on an external resource with a validity window (credential, connection, config, certificate): exactly one acquire/reacquire function, invoked identically at startup and on failure detection — no parallel graceful-refresh path for the same resource. Recovery calls require jittered backoff, and must emit an observable signal (metric or log) so an anomalous retry rate is distinguishable from expected rotation/reconnect cadence.
 

@@ -134,7 +134,7 @@ Read `docs/catalog.md`. Extract only entries whose tags or module path match the
 If no entries match, write: `## Catalog Slice\nNo existing abstractions for this domain.`
 
 #### Security checklist slice
-Read `docs/spec/constraints.md` security section only. Extract the security rules that apply at implementation time (input validation rules, secret handling rules, error message rules). Write under `## Security Rules` in workflow state.
+Read `docs/spec/security-controls.md`. Extract the security rules and control statuses that apply at implementation time (input validation rules, secret handling rules, error message rules). Write under `## Security Rules` in workflow state.
 
 This is a one-time read. The Security Reviewer will still read `docs/spec/security.md` for the full threat model, but the Coder and Tester get this compact slice.
 
@@ -599,11 +599,11 @@ Then validate the complete implementation:
 [If Frontend, also check:]
    - Component props, events, and slots match the spec exactly
    - All documented states (loading, error, empty, populated, disabled) are implemented
-   - Accessibility requirements from docs/spec/accessibility.md are met
+   - Accessibility requirements from docs/spec/ux/accessibility.md are met
    - Design token usage — no hardcoded values where tokens are specified
 [End frontend addition]
 3. Check test completeness — is every assertion covered by at least one test?
-4. Check constraint compliance — docs/spec/constraints.md fully met?
+4. Check constraint compliance — docs/spec/constraints.md, docs/spec/implementation-constraints.md, and docs/spec/security-controls.md all fully met?
 5. Check task completeness — all acceptance criteria satisfied?
 6. Check commit hygiene — commits well-described and granular?
 7. Check catalog currency — does docs/catalog.md reflect any new reusable abstractions introduced by this task?

@@ -26,7 +26,7 @@ You audit outputs, not intent. The Architect already challenged the *inputs* to 
 
 - Every operation in `docs/spec/interfaces/*-operations.md` has ≥1 active (non-deprecated) assertion in `docs/spec/assertions.md`
 - Every documented error variant has ≥1 assertion covering when it occurs
-- Every security control named in `docs/spec/constraints.md` (or `docs/spec/security.md`) has ≥1 assertion tagged `[security]`
+- Every security control named in `docs/spec/security-controls.md` (or `docs/spec/security.md`) has ≥1 assertion tagged `[security]`
 
 ### 2. Assertion Quality
 
@@ -55,7 +55,7 @@ You audit outputs, not intent. The Architect already challenged the *inputs* to 
 
 ### 6. Constraint Coherence
 
-- `docs/spec/constraints.md` (and, once split per issue #45, `implementation-constraints.md` / `security-controls.md`) does not contradict `.tech-decisions.yml`
+- `docs/spec/constraints.md` (Architect), `docs/spec/implementation-constraints.md` (Interface Designer), and `docs/spec/security-controls.md` (Security Reviewer) do not contradict each other or `.tech-decisions.yml` — each file's content should stay within its owner's scope; flag any file that duplicates or contradicts another's content
 - Coverage and mutation targets are consistent across `constraints.md`, `.tech-decisions.yml`, and any per-module overrides
 
 ## Workflow
