@@ -47,7 +47,7 @@ Own the outcome by delegating work to specialists. You are accountable for corre
 | 1. RED | Tester | Auto — pause only if spec gap blocks test writing |
 | 2. GREEN | Coder | Auto |
 | 2b. REFACTOR | Refactor | Auto if CLEAN; pause if BLOCKED |
-| 3. AUDIT + SECURITY | QA Engineer + Security Reviewer | Auto if no hard blockers; pause on safety-critical survivor, Kani counterexample, or critical security finding |
+| 3. AUDIT + SECURITY | QA Engineer + Security Reviewer | Auto if no hard blockers; pause on safety-critical survivor, Tier 6 counterexample/fail, or critical security finding |
 | 4. DOCUMENT | Doc Writer | Auto — update user docs and create changeset |
 | 5. VERIFY | Verifier | PASS → open PR automatically; FAIL → pause |
 
@@ -397,6 +397,9 @@ Work in the current git workspace (the directory where you are invoked).
 ## Standards
 [paste Standards block from workflow state — mutation targets and testing tools only]
 
+## Toolchain
+[paste Toolchain block from workflow state]
+
 ## Task
 #[N]: [title]
 
@@ -411,32 +414,23 @@ Do not read AGENTS.md or .tech-decisions.yml — all required context is injecte
 
 The implementation is complete and tests are passing. Probe the finished implementation for weaknesses.
 
-[If Backend:]
-Run tiers appropriate to criticality:
-- Tier 4: `cargo mutants --package [package]` — report mutation score and all survivors
-- Tier 5: `cargo fuzz run [target] -- -max_total_time=60` — run on all external-input parsers
-- Tier 6: `cargo kani` — run formal verification proofs on safety-critical invariants
+Run tiers appropriate to criticality, using the resolved toolchain's commands — never hardcode a tool for a different stack:
+- Tier 4: `{toolchain.mutation}` — report mutation score (engine: `{toolchain.mutation_engine}`) and all survivors
+- Tier 5: `{toolchain.fuzz_run}` — run on all external-input parsers; if `{toolchain.fuzz_add}` is null and no target exists, scaffold from the stack's harness template in `fuzz/README.md`
+- Tier 6: `{toolchain.formal}` if not null, otherwise model-based testing via `{toolchain.property_lib}` — run on safety-critical invariants
 
-For surviving mutants: write targeted kill tests, re-run to confirm killed.
+For surviving mutants: write targeted kill tests that name the assertion each defends, then re-run to confirm killed. A survivor that cannot be traced to an assertion is a spec gap — report it, do not write a shape-matching test.
 For fuzz crashes: write regression tests.
 
-Mutation score targets:
-- Safety-critical: 95% minimum
-- Domain logic: 85% minimum
-- Parser: 80% minimum
-
-[If Frontend:]
-Run tiers appropriate to criticality:
-- Tier 4: Run mutation testing with the configured JS/TS mutation tool
-- Tier 5: Check all event handlers and input parsers for edge cases not covered by the test suite
-- Verify no dead or unreachable component states exist
+Mutation score targets are per-engine (`mutation_targets.{toolchain.mutation_engine}` in Standards) — never compare a score against a different engine's target.
 
 Do NOT commit test reports or mutation test result files — write them for documentation/review only. Never stage or push these files in git.
 
 Report back:
-- Mutation score per module
+- Mutation score per module, with engine name and version
 - Surviving mutants found and killed
-- [Backend only] Fuzz results and Kani proof results
+- Fuzz results, if the resolved stack has fuzzing available
+- Tier 6 result and claim strength (proof vs. sampling)
 - Any new tests added
 ```
 
@@ -496,7 +490,7 @@ Write medium/low/info findings to `.llm/findings/[descriptive-slug].md` under `#
 Return critical and high findings directly as hard blockers.
 ```
 
-**After both complete:** Update workflow state with completed sections in Existing Work. Hard blockers (safety-critical mutant survivors, Kani counterexamples, critical security findings) = STOP and surface, await remediation. No blockers: auto-advance to DOCUMENT and relay summary.
+**After both complete:** Update workflow state with completed sections in Existing Work. Hard blockers (safety-critical mutant survivors, Tier 6 counterexamples/fails, critical security findings) = STOP and surface, await remediation. No blockers: auto-advance to DOCUMENT and relay summary.
 
 #### Phase 4: DOCUMENT — Doc Writer
 
@@ -553,7 +547,7 @@ Report back:
 
 #### Phase 5: VERIFY
 
-**Entry criteria:** No critical security findings, no Kani counterexamples, no unresolved mutant survivors in safety-critical paths. DOCUMENT phase complete (user docs updated, changeset file committed).
+**Entry criteria:** No critical security findings, no Tier 6 counterexamples/fails, no unresolved mutant survivors in safety-critical paths. DOCUMENT phase complete (user docs updated, changeset file committed).
 
 **Subagent prompt:**
 ```
@@ -612,7 +606,7 @@ Report:
 ```
 
 **After Verifier completes:**
-- **PASS:** Open PR from task branch to main automatically. PR description must include: audit summary (mutation scores, fuzz results, Kani results), security findings summary, and full contents of `.llm/findings/[descriptive-slug].md`. Notify user that PR is open for review.
+- **PASS:** Open PR from task branch to main automatically. PR description must include: audit summary (mutation scores with engine name, fuzz results, Tier 6 results with claim strength), security findings summary, and full contents of `.llm/findings/[descriptive-slug].md`. Notify user that PR is open for review.
 - **CONDITIONAL PASS:** Open PR with a note flagging the conditional items. Do not pause.
 - **FAIL:** Surface the specific failures and wait for instruction before re-invoking Verifier.
 
@@ -641,7 +635,7 @@ After each subagent completes, append to the `## Existing Work` section in workf
 ### AUDIT — complete
 - Mutation scores: [module: score% (target%)] ...
 - Fuzz: [target: Ns, N crashes] ...
-- Kani: [harness: VERIFIED/COUNTEREXAMPLE/INCONCLUSIVE] ...
+- Tier 6: [harness/property: VERIFIED/PASS/COUNTEREXAMPLE/FAIL/INCONCLUSIVE] ...
 
 ### SECURITY — complete
 - Critical: [N findings]

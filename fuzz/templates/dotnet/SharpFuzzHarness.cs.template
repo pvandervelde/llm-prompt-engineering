@@ -1,0 +1,32 @@
+// SharpFuzz harness template — copy into fuzz/<target-name>/Program.cs and adapt.
+//
+// Build normally, then instrument with the `dotnet-sharpfuzz` tool before running under
+// a libFuzzer driver:
+//   dotnet tool install --global SharpFuzz.CommandLine
+//   dotnet build -c Release
+//   sharpfuzz bin/Release/net8.0/<TargetAssembly>.dll
+//   dotnet run --project fuzz/<target-name> -- -max_total_time={seconds}
+//
+// The invariant is the same as every other stack: must not crash, must not hang, must
+// not allocate unboundedly. A typed rejection (a validation exception) is a pass.
+using SharpFuzz;
+// using <Namespace>; // the module under test
+
+public static class Program
+{
+    public static void Main(string[] args)
+    {
+        Fuzzer.LibFuzzer.Run(bytes =>
+        {
+            try
+            {
+                // Replace with the parser/deserializer under test:
+                // _ = <Module>.FromBytes(bytes);
+            }
+            catch (FormatException)
+            {
+                // A typed rejection is a pass — do not let this escape as a crash.
+            }
+        });
+    }
+}

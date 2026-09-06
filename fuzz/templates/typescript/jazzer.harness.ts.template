@@ -1,0 +1,22 @@
+// Jazzer.js harness template — copy into fuzz/<target-name>.ts and adapt.
+//
+// Run with:
+//   npx jazzer fuzz/<target-name> -- -max_total_time={seconds}
+//
+// The invariant is the same as every other stack: must not crash, must not hang, must
+// not allocate unboundedly. A typed rejection (a validation error) is a pass.
+import { FuzzedDataProvider } from '@jazzer.js/core';
+// import { Module } from '../src'; // the module under test
+
+export function fuzz(data: Buffer): void {
+  const provider = new FuzzedDataProvider(data);
+  const input = provider.consumeString(data.length);
+
+  try {
+    // Replace with the parser/deserializer under test:
+    // Module.fromString(input);
+  } catch (error) {
+    // A typed rejection is a pass — only rethrow unexpected error shapes.
+    // if (!(error instanceof ValidationError)) throw error;
+  }
+}
