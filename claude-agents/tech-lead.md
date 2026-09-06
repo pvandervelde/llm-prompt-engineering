@@ -247,7 +247,7 @@ Invoke the appropriate subagent with a precise, self-contained prompt. **Subagen
 
 #### Phase 1: RED — Tester
 
-**Entry criteria:** `docs/spec/assertions.md` exists and is non-empty. Interface stubs compile / type-check cleanly under `{toolchain.typecheck}`.
+**Entry criteria:** `docs/spec/assertions.md` exists and is non-empty. Interface stubs compile / type-check cleanly under `{toolchain.typecheck}`. If Domain is Frontend, `docs/spec/ux/ux-assertions.md` must also exist and be non-empty — a frontend task with no UX assertions has nothing for the Tester to build Tier 1 tests from, and auto-advancing anyway ships a thin suite silently.
 
 Use the Task tool to spawn the subagent named exactly **"Tester"** with the following prompt.
 

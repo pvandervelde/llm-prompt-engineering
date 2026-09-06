@@ -79,9 +79,9 @@ Additionally read (these are NOT pre-injected — too large):
 
 If Domain is Frontend, also read:
 
-- `docs/spec/components/` or `docs/spec/ui/` for component contracts
-- `docs/spec/accessibility.md` for ARIA and keyboard interaction requirements
-- `docs/spec/design-tokens.md` for token constraints
+- `docs/spec/ux/components/component-inventory.md` for component contracts
+- `docs/spec/ux/accessibility.md` for ARIA and keyboard interaction requirements
+- `docs/spec/ux/design-tokens.md` for token constraints
 
 Map injected content: assertions → spec tests, error variants → error-path tests, type constraints → boundary tests, security rules → security test scenarios.
 
