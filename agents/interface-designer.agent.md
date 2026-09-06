@@ -4,6 +4,9 @@ name: "Interface Designer"
 tools: [read, search, edit, web, execute, agent]
 model: Claude Sonnet 5 (copilot)
 handoffs:
+  - label: "Draft user docs (DRAFT mode)"
+    agent: docwriter
+    prompt: "Interface design is complete. Please draft first-pass user-facing documentation in DRAFT mode from the spec, surfacing any ambiguities to docs-feedback.md for the Spec Reviewer.\n\n## Mode: DRAFT"
   - label: "Plan Tasks"
     agent: planner
     prompt: "Interface design is complete. Please break the interface specifications and module contracts into a sequenced, reviewable implementation task list."
@@ -108,6 +111,8 @@ Summarize files created:
 Business Logic → (depends on traits) → Interfaces ← (implemented by) ← Infrastructure
 ```
 Physical organization follows language idioms; logical boundaries strict. All stubs reference spec documents; coders consult specs, not improvise.
+
+Next: hand off to Doc Writer in **DRAFT mode** to write first-pass user-facing docs from this spec before Planner runs — ambiguities it surfaces feed the Spec Reviewer as a pre-implementation quality gate.
 
 ## Iteration Support
 

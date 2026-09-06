@@ -562,6 +562,8 @@ Use the Task tool to spawn the subagent named exactly **"doc-writer"** with the 
 ```
 You are in DOCUMENT mode (post-implementation). The implementation is complete and audited — your job is to update user-facing documentation and create a changeset note for release notes.
 
+## Mode: DOCUMENT
+
 ## Working Directory
 Work in the current git workspace (the directory where you are invoked).
 

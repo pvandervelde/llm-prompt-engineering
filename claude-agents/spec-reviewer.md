@@ -64,6 +64,8 @@ You audit outputs, not intent. The Architect already challenged the *inputs* to 
 
 Read `docs/spec/` in full: `README.md`, `architecture.md`, `responsibilities.md`, `vocabulary.md`, `constraints.md`, `assertions.md`, `interfaces/*.md`, `shared-registry.md`, and `docs/spec/ux/` if the task touches Frontend. Read `.llm/tasks.md` and `.tech-decisions.yml`. Read the interface source stubs referenced by `shared-registry.md`.
 
+If `docs-feedback.md` exists (written by Doc Writer in DRAFT mode), read it — every ambiguity it lists is a candidate finding under Assertion Completeness or Assertion Quality; do not let a gap Doc Writer already surfaced go unreported here.
+
 ### 2. Run Each Check
 
 Work through Checks 1–6 in order. For each, record: checks run, pass count, fail count, and a finding for every failure (see Output below). Do not stop at the first failure within a check — enumerate all instances.

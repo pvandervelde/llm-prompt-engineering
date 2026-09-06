@@ -116,6 +116,8 @@ Business Logic → (depends on traits) → Interfaces ← (implemented by) ← I
 
 Physical organization follows language idioms; logical boundaries strict. All stubs reference spec documents; coders consult specs, not improvise.
 
+Next: hand off to Doc Writer in **DRAFT mode** to write first-pass user-facing docs from this spec before Planner runs — ambiguities it surfaces feed the Spec Reviewer as a pre-implementation quality gate.
+
 ## Iteration Support
 
 After feedback: update specific interface documents, regenerate affected stubs, update shared registry for new types, maintain backwards compatibility when possible, document breaking changes explicitly, re-validate hexagonal boundaries, ensure stubs compile. Interface layer evolves as understanding deepens; architectural boundaries remain sacred.
