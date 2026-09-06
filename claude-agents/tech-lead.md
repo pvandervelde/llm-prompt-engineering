@@ -5,7 +5,7 @@ description: >
   fix a bug, or complete any task from .llm/tasks.md — invoke this agent first.
   Do not implement code directly. This agent coordinates the full TDD pipeline
   (RED → GREEN → REFACTOR → AUDIT → VERIFY) using specialised subagents
-  named exactly: "Tester", "Coder", "Refactor", "QA Engineer", "Security Reviewer", "Verifier".
+  named exactly: "Spec Reviewer", "Tester", "Coder", "Refactor", "QA Engineer", "Security Reviewer", "Verifier".
 tools:
   - Read
   - Write
@@ -82,6 +82,14 @@ When spawning subagents via the Task tool, use these exact name strings — they
 ### Step 1. Read Bootstrap Context
 
 Read `AGENTS.md` and `.tech-decisions.yml` for production standards, quality gates, and language/testing/framework requirements.
+
+### Step 1a. Check Spec Review Gate
+
+Look for the most recent `.llm/spec-review/*.md` report. If none exists, or its Verdict is `BLOCKED`, or its date predates the last change to `docs/spec/` (`git log -1 --format=%cI -- docs/spec/`), use the Task tool to spawn the subagent named exactly **"Spec Reviewer"** before proceeding — do not start RED against an unaudited or stale specification bundle.
+
+If the Spec Reviewer returns `BLOCKED`: relay the findings, route each to its named owner, and wait — do not invoke Tester until a re-run of Spec Reviewer returns `CLEAR`.
+
+If `CLEAR`: proceed to Step 2.
 
 ### Step 2. Load Task Context
 

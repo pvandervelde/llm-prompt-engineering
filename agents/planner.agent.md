@@ -4,6 +4,9 @@ name: "Task Planner"
 tools: [read, search, edit, web, execute, agent]
 model: Claude Haiku 4.5 (copilot)
 handoffs:
+  - label: "Review spec before implementation"
+    agent: spec-reviewer
+    prompt: "The task list is ready. Please audit the specification bundle for completeness, consistency, and traceability before implementation begins."
   - label: "Start code implementation"
     agent: coder
     prompt: "The task list is ready. Please implement the next pending task using TDD."

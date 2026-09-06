@@ -3,7 +3,7 @@ description: Drive a single task through the full TDD pipeline. Coordinate speci
 name: "Tech Lead"
 tools: [agent, read, search, edit, execute]
 model: Claude Sonnet 5 (copilot)
-agents: ['Tester', 'QA Engineer', 'Coder', 'Verifier', 'Security Reviewer', 'Refactor', 'Doc Writer']
+agents: ['Spec Reviewer', 'Tester', 'QA Engineer', 'Coder', 'Verifier', 'Security Reviewer', 'Refactor', 'Doc Writer']
 ---
 
 ## Role
@@ -56,6 +56,14 @@ Own the outcome by delegating work to specialists. You are accountable for corre
 ### 1. Read Bootstrap Context
 
 Read `AGENTS.md` and `.tech-decisions.yml` for production standards, quality gates, and language/testing/framework requirements.
+
+### 1a. Check Spec Review Gate
+
+Look for the most recent `.llm/spec-review/*.md` report. If none exists, or its Verdict is `BLOCKED`, or its date predates the last change to `docs/spec/` (`git log -1 --format=%cI -- docs/spec/`), invoke the subagent named exactly **"Spec Reviewer"** before proceeding — do not start RED against an unaudited or stale specification bundle.
+
+If the Spec Reviewer returns `BLOCKED`: relay the findings, route each to its named owner, and wait — do not invoke Tester until a re-run of Spec Reviewer returns `CLEAR`.
+
+If `CLEAR`: proceed to Step 2.
 
 ### 2. Load Task Context
 
