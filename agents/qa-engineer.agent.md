@@ -91,7 +91,8 @@ Run mutation testing scoped to the modules touched by this task, using the resol
 {toolchain.mutation}
 
 # Generate structured output for CI and certification evidence
-{toolchain.mutation} > .llm/mutation-report-$(git describe --tags --always).json
+mkdir -p .llm/evidence
+{toolchain.mutation} > .llm/evidence/mutation-$(git rev-parse --short HEAD).json
 ```
 
 #### Interpreting Survivors
@@ -118,10 +119,10 @@ For each survivor, document it before writing the kill test:
 - **Resolution:** [confirmed killed: yes/no]
 ```
 
-After adding kill tests, re-run mutation testing to confirm the survivor is dead:
+After adding kill tests, re-run mutation testing to confirm the survivor is dead. Commit the kill tests first, then re-run — the report's SHA must match the commit it was generated against, since the Verifier rejects a stale one:
 
 ```bash
-{toolchain.mutation} > .llm/mutation-report-$(git describe --tags --always)-post-kill.json
+{toolchain.mutation} > .llm/evidence/mutation-$(git rev-parse --short HEAD).json
 ```
 
 After confirming the survivor is dead, commit the new kill tests immediately without waiting for Tech Lead approval. Tests are isolated on the task branch:
@@ -244,6 +245,7 @@ Produce the final report:
 
 ```markdown
 ## Audit Report: #[task-N] [title]
+**Commit:** [git rev-parse HEAD, full SHA — the Verifier confirms artefacts match this]
 
 ### Tier 4 — Mutation Testing
 **Engine:** [toolchain.mutation_engine] [version]
@@ -255,7 +257,7 @@ Produce the final report:
 **Survivors found:** [N]
 **Survivors killed:** [N]
 **New tests added:** [N]
-**Report:** .llm/mutation-report-[version].json
+**Report:** .llm/evidence/mutation-[sha].json
 
 ### Tier 5 — Fuzz Testing
 | Target | Duration | Crashes | Status |
@@ -263,12 +265,14 @@ Produce the final report:
 | [target] | [Ns] | [N] | ✅ / ❌ |
 
 **Regression tests written:** [N]
-**Artifacts:** .llm/fuzz/artifacts/ (or stack-equivalent per fuzz/README.md)
+**Artifacts:** .llm/evidence/fuzz/$(git rev-parse --short HEAD)/ (or stack-equivalent per fuzz/README.md)
 
 ### Tier 6 — Formal Verification / Model-Based Testing
 | Module | Technique | Result | Bound / Iterations | Claim strength |
 |--------|-----------|--------|---------------------|----------------|
 | [module] | [Kani / CsCheck / fast-check] | VERIFIED / PASS / COUNTEREXAMPLE / FAIL / INCONCLUSIVE | [N] | [Proof (bounded) / Sampling — not a proof] |
+
+**Report:** .llm/evidence/formal-[sha].json (write one even for model-based runs — the Verifier treats a missing artefact as a failed audit, not a missing file)
 
 ### Blocking Issues
 [List any unresolved blockers, or "None"]

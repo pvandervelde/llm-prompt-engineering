@@ -678,7 +678,7 @@ Report:
 
 ### Step 8. Update Existing Work After Phase Completion
 
-After each subagent completes, append to the `## Existing Work` section in workflow state:
+After each subagent completes, append to the `## Existing Work` section in workflow state. **For AUDIT in particular:** record artefact paths and the raw claimed values only — never a pre-digested "CLEAR" or "passed" summary. The Verifier re-derives its own verdict from the artefact files (see verifier.md §2a); a prose summary here would let a fabricated claim slip through unchecked.
 
 ```markdown
 ### RED — complete
@@ -699,9 +699,12 @@ After each subagent completes, append to the `## Existing Work` section in workf
 - Commit: [hash or "None — no refactoring needed"]
 
 ### AUDIT — complete
-- Mutation scores: [module: score% (target%)] ...
-- Fuzz: [target: Ns, N crashes] ...
-- Tier 6: [harness/property: VERIFIED/PASS/COUNTEREXAMPLE/FAIL/INCONCLUSIVE] ...
+- Commit: [full SHA the audit was run against]
+- Mutation report: `.llm/evidence/mutation-[sha].json`
+- Fuzz artefacts: `.llm/evidence/fuzz/[sha]/` (or "not applicable — no external-input parsers in scope")
+- Formal verification: `.llm/evidence/formal-[sha].json`
+- Claimed scores: [module] [N]% (target [N]%, engine [mutation_engine]) ...
+- Tier 6 claimed result: [harness/property: VERIFIED/PASS/COUNTEREXAMPLE/FAIL/INCONCLUSIVE] ...
 
 ### SECURITY — complete
 - Critical: [N findings]
