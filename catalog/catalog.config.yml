@@ -1,0 +1,228 @@
+# catalog.config.yml
+#
+# Configuration for scripts/update_catalog.py
+#
+# ── How domains work ──────────────────────────────────────────────────────────
+#
+# Each extracted symbol is assigned to a domain based on its file path.
+# Domains are checked in order — the first path pattern that matches wins.
+# The last domain entry should always be a catch-all (paths: ["**"]).
+#
+# Per-domain output files are written to docs/catalog/<domain>.md
+# A master index is written to docs/catalog/index.md
+#
+# ── How languages work ────────────────────────────────────────────────────────
+#
+# Each language entry lists:
+#   extensions:       File extensions to scan
+#   exclude_patterns: Glob patterns to skip (in addition to exclude_global)
+#   symbols:          ast-grep patterns to extract
+#
+# The $NAME metavariable in each pattern must capture the symbol name.
+# The 'kind' field becomes the Kind column in the catalog table.
+# The 'tags' field adds static tags to every symbol matched by this pattern.
+# The 'filter' field supports: "not_private" (skip names starting with _)
+
+# ── Output & state ────────────────────────────────────────────────────────────
+
+catalog:
+  output_dir: docs/catalog       # Where to write catalog markdown files
+  state_file: .codeindex/.catalog-state.json  # Tracks last-indexed commit
+
+# ── LLM settings ─────────────────────────────────────────────────────────────
+
+llm:
+  # claude-haiku-4-5-20251001 is fast and cheap — suitable for bulk description generation.
+  # Upgrade to claude-sonnet-4-6 if you want richer descriptions.
+  model: claude-haiku-4-5-20251001
+  batch_size: 20      # Symbols per API call. Reduce if you hit token limits.
+
+# ── Global exclusions ─────────────────────────────────────────────────────────
+# Applied to all languages. Use **/dir/** to exclude directories anywhere in the tree.
+
+exclude_global:
+  - "**/target/**"
+  - "**/node_modules/**"
+  - "**/.git/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/vendor/**"
+  - "**/.venv/**"
+  - "**/venv/**"
+  - "**/__pycache__/**"
+  - "**/*.min.js"
+  - "**/generated/**"
+
+# ── Language definitions ──────────────────────────────────────────────────────
+
+languages:
+
+  rust:
+    extensions: [".rs"]
+    exclude_patterns:
+      - "**/*_test.rs"
+      - "**/tests/**"
+      - "**/benches/**"
+      - "**/examples/**"
+    symbols:
+      - kind: fn
+        pattern: "pub fn $NAME($$$)"
+        tags: []
+      - kind: fn
+        pattern: "pub async fn $NAME($$$)"
+        tags: [async]
+      - kind: struct
+        pattern: "pub struct $NAME"
+        tags: []
+      - kind: enum
+        pattern: "pub enum $NAME"
+        tags: []
+      - kind: trait
+        pattern: "pub trait $NAME"
+        tags: [trait]
+      - kind: type
+        pattern: "pub type $NAME = $$$"
+        tags: []
+
+  typescript:
+    extensions: [".ts", ".tsx"]
+    exclude_patterns:
+      - "**/*.test.ts"
+      - "**/*.spec.ts"
+      - "**/*.test.tsx"
+      - "**/*.spec.tsx"
+      - "**/*.d.ts"
+      - "**/stories/**"
+      - "**/__tests__/**"
+    symbols:
+      - kind: fn
+        pattern: "export function $NAME($$$)"
+        tags: []
+      - kind: fn
+        pattern: "export async function $NAME($$$)"
+        tags: [async]
+      - kind: fn
+        # Arrow functions assigned to const exports
+        pattern: "export const $NAME = ($$$) => $$$"
+        tags: []
+      - kind: class
+        pattern: "export class $NAME"
+        tags: []
+      - kind: type
+        pattern: "export type $NAME = $$$"
+        tags: []
+      - kind: interface
+        pattern: "export interface $NAME"
+        tags: []
+
+  javascript:
+    extensions: [".js", ".mjs"]
+    exclude_patterns:
+      - "**/*.test.js"
+      - "**/*.spec.js"
+      - "**/__tests__/**"
+    symbols:
+      - kind: fn
+        pattern: "export function $NAME($$$)"
+        tags: []
+      - kind: fn
+        pattern: "export async function $NAME($$$)"
+        tags: [async]
+      - kind: class
+        pattern: "export class $NAME"
+        tags: []
+
+  python:
+    extensions: [".py"]
+    exclude_patterns:
+      - "**/test_*.py"
+      - "**/*_test.py"
+      - "**/conftest.py"
+      - "**/setup.py"
+    symbols:
+      - kind: fn
+        pattern: "def $NAME($$$):"
+        filter: "not_private"   # Skip names that start with _
+        tags: []
+      - kind: class
+        pattern: "class $NAME:"
+        filter: "not_private"
+        tags: []
+
+# ── Domain definitions ────────────────────────────────────────────────────────
+#
+# Order matters — first match wins.
+# Each entry needs: name, description, paths (list of globs), tags (list).
+# The last entry should always match "**" to catch everything else.
+#
+# CUSTOMISE THIS SECTION for your repository structure.
+
+domains:
+  - name: auth
+    description: "Authentication, authorisation, and session management"
+    paths:
+      - "**/auth/**"
+      - "**/authentication/**"
+      - "**/authorisation/**"
+      - "**/authorization/**"
+      - "**/session/**"
+    tags: [auth]
+
+  - name: can-protocol
+    description: "CAN FD frame parsing and low-level protocol handling"
+    paths:
+      - "**/can/**"
+      - "**/can_fd/**"
+      - "**/protocol/**"
+    tags: [can, protocol]
+
+  - name: safety
+    description: "Safety-critical logic: STO, brake authority, Safety MCU FSM"
+    paths:
+      - "**/safety/**"
+      - "**/sto/**"
+      - "**/brake/**"
+      - "**/safety_mcu/**"
+    tags: [safety-critical]
+
+  - name: api
+    description: "HTTP API boundary — handlers, validation, and serialisation"
+    paths:
+      - "**/api/**"
+      - "**/handlers/**"
+      - "**/routes/**"
+      - "**/endpoints/**"
+    tags: [api]
+
+  - name: core
+    description: "Shared types, error handling, and foundational utilities"
+    paths:
+      - "**/core/**"
+      - "**/shared/**"
+      - "**/common/**"
+      - "**/types/**"
+    tags: [core]
+
+  - name: infrastructure
+    description: "Database adapters, external service clients, and storage"
+    paths:
+      - "**/infra/**"
+      - "**/infrastructure/**"
+      - "**/adapters/**"
+      - "**/repositories/**"
+      - "**/store/**"
+    tags: [infrastructure]
+
+  - name: firmware
+    description: "Firmware update payloads and embedded device interfaces"
+    paths:
+      - "**/firmware/**"
+      - "**/embedded/**"
+      - "**/device/**"
+    tags: [firmware, embedded]
+
+  - name: general
+    description: "Uncategorised entries — add domain rules above to reduce this"
+    paths:
+      - "**"    # Catch-all — always keep this last
+    tags: []

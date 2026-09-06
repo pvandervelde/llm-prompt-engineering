@@ -53,18 +53,6 @@ The bootstrap scripts automate the following setup steps:
 
 ### 4. Task Tracking Setup (Optional)
 
-#### Option A: Beads (Recommended)
-
-If Beads CLI is installed and available:
-
-- Initializes Beads for AI-friendly task tracking
-- Creates initial setup tasks
-- Syncs tasks bidirectionally with `.llm/tasks.md`
-
-#### Option B: Fallback Markdown Tasks
-
-If Beads is not available:
-
 - Creates `.llm/tasks.md` template
 - AI modes auto-detect and parse this format
 - Tasks are stored as Markdown checklist items
@@ -77,31 +65,12 @@ If Beads is not available:
 
 ## Task Tracking Details
 
-### Beads Integration
-
-If Beads is installed:
-
-```bash
-# Check what's ready to work on
-beads ready
-
-# Pick a task
-beads show <task-id> --json
-
-# Track work
-beads update <task-id> working
-beads close <task-id> --reason "Completed"
-```
-
-### Fallback: Markdown Tasks (.llm/tasks.md)
-
-When Beads is unavailable:
+### Task Tracking (.llm/tasks.md)
 
 1. **Planner Mode** creates/updates `.llm/tasks.md`
 2. **Coder Mode** reads and executes first unchecked task
-3. **Helper Scripts** convert between formats:
+3. **Helper Scripts** convert to JSON:
    - `scripts/tasks-export.ps1` / `scripts/tasks-export.sh` → JSON
-   - `scripts/tasks-import.ps1` → Beads format
 
 **Markdown Format Example:**
 
@@ -121,14 +90,11 @@ When Beads is unavailable:
   - [ ] 1.2 Implement validation types
 ```
 
-### Auto-Detection Logic
+### Reading Tasks
 
-AI modes follow this priority:
+AI modes follow this process:
 
-1. **Check for Beads CLI**: `beads --version`
-   - If available → use Beads JSON export
-   - If not → fall through to step 2
-2. **Check for `.llm/tasks.md`**
+1. **Check for `.llm/tasks.md`**
    - If exists → parse Markdown format
    - If not → ask user to create it
 
@@ -154,8 +120,7 @@ AI modes follow this priority:
    - Document a key architectural decision
 
 3. **Customize Task Tracking:**
-   - If using Beads: Run `beads ready` to see setup tasks
-   - If using Markdown: Edit `.llm/tasks.md` with your project tasks
+   - Edit `.llm/tasks.md` with your project tasks
    - Update task format with project-specific sections
 
 4. **Test the Setup:**
@@ -164,7 +129,6 @@ AI modes follow this priority:
    - Verify hooks run successfully
 
 5. **Enable Optional Features:**
-   - Install Beads if task tracking is needed
    - Run `./bootstrap-ai-repo.ps1 -Force` to upgrade
    - Additional CI/CD integrations
 
@@ -196,39 +160,7 @@ AI modes follow this priority:
   - [ ] 1.2 Subtask
 ```
 
-### JSON Format (Beads or exported)
-
-```json
-{
-  "version": "1.0",
-  "tasks": [
-    {
-      "id": "bd-abc",
-      "completed": false,
-      "description": "Implement core types",
-      "priority": 1,
-      "type": "feature"
-    }
-  ],
-  "importedAt": "2026-01-30T10:00:00Z",
-  "source": "beads"
-}
-```
-
 ## Troubleshooting
-
-### Beads Installation Issues
-
-```bash
-# Install Beads (requires curl)
-curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash
-
-# Verify installation
-beads --version
-
-# Re-run bootstrap
-./tools/ai-bootstrap/bootstrap-ai-repo.sh
-```
 
 ### Tasks Not Being Found
 
@@ -255,17 +187,11 @@ chmod +x .githooks/pre-push
 
 The bootstrap enables AI modes to:
 
-1. **Planner Mode**: Create `.llm/tasks.md` or Beads tasks
-2. **Coder Mode**: Auto-detect and read next task
+1. **Planner Mode**: Create `.llm/tasks.md`
+2. **Coder Mode**: Read and execute next task
 3. **Infraengineer Mode**: Execute infrastructure tasks
-4. **Read-Task Prompt**: Parse Beads JSON or Markdown
+4. **Read-Task Prompt**: Parse `.llm/tasks.md`
 5. **Reviewer Mode**: Check tasks against implementation
-
-All modes support **graceful fallback**:
-
-- Prefer Beads when available
-- Fall back to `.llm/tasks.md` when Beads unavailable
-- Ask user if neither is available
 
 ## References
 

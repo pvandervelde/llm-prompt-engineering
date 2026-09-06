@@ -16,14 +16,11 @@ implementation by reading specifications and examining related code.
 ### Step 1: Read the Task List
 
 1. **Locate the tasks source**:
-   - First, check if Beads CLI is available by running `beads --version`
-   - If Beads is available: Run `scripts/tasks-export.ps1` or `scripts/tasks-export.sh` to export current tasks in JSON format
-   - If Beads is not available: Read `.llm/tasks.md` from the repository root
+   - Read `.llm/tasks.md` from the repository root
 
 2. **Identify the next task**:
    - Parse the task list to find the first task marked as "not started" or unchecked (`[ ]`)
-   - For Beads output (JSON): Look for first task with `"completed": false`
-   - For `.llm/tasks.md` (Markdown): Find first `- [ ]` task
+   - Find first `- [ ]` task
 
 3. **Extract task details**:
    - Task title and description
@@ -153,6 +150,30 @@ Integration Points:
 - [integration point 2]
 ```
 
+### Significant Implementation Decisions
+
+List every implementation choice that has broad or lasting impact before any code is written. For each item, state what the decision is, the intended approach, and why.
+
+**What qualifies as a significant decision:**
+- Authentication or authorization mechanisms between components or services (e.g., JWT, API keys, mTLS, OAuth flow)
+- External service integrations (adding or changing which service owns a concern)
+- Security-sensitive patterns (secret management, encryption, RBAC design)
+- New data storage structures or schema changes (new tables, ownership changes)
+- API contract changes visible to other services or clients
+- Significant architectural boundary crossings
+- Performance trade-offs with broad impact (disabling a cache, adding synchronous calls in async paths)
+- Introduction of a new third-party dependency
+
+**Format each decision as:**
+```
+Decision: [brief name]
+Approach: [what will be done]
+Rationale: [why this approach — spec reference or constraint]
+Alternatives considered: [other options and why not chosen]
+```
+
+If no significant decisions are required, state: "No significant decisions identified."
+
 ### Implementation Plan
 
 After gathering all context, create a detailed implementation plan following TDD principles:
@@ -215,8 +236,7 @@ After gathering all context, create a detailed implementation plan following TDD
 
 ## 🚨 Important Notes
 
-- If neither Beads nor `.llm/tasks.md` exists, inform the user and ask where tasks are tracked
-- If Beads is available but returns no tasks, fall back to `.llm/tasks.md`
+- If `.llm/tasks.md` does not exist, inform the user and ask where tasks are tracked
 - If no tasks are marked as pending, report that all tasks are complete or in progress
 - If critical information is missing (specs, code context), list what's needed before proceeding
 - If the task description is unclear, ask for clarification before gathering context
@@ -225,9 +245,15 @@ After gathering all context, create a detailed implementation plan following TDD
 
 ## 🎯 Final Step: Present Implementation Plan
 
-After completing all analysis and context gathering, present the implementation plan to the user and ask:
+After completing all analysis and context gathering, present the implementation plan to the user.
 
-**"I've analyzed the next task and prepared an implementation plan. Would you like me to proceed with implementation in coder mode, or would you like to review/modify the plan first?"**
+If the **Significant Implementation Decisions** section contains any items, highlight them prominently and ask:
+
+**"I've identified the following significant decisions that will shape the implementation: [list decisions]. Do you approve these approaches, or would you like to adjust any of them before I proceed? Once confirmed, I'll begin implementation in coder mode."**
+
+If no significant decisions were identified, ask:
+
+**"I've analyzed the next task and prepared an implementation plan. No significant decisions were required. Would you like me to proceed with implementation in coder mode, or would you like to review/modify the plan first?"**
 
 ---
 

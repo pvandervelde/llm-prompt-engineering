@@ -1,23 +1,18 @@
 # Task Examples & Validation Checklist
 
-This directory contains example task files and validation procedures for the task source abstraction.
+This directory contains example task files and validation procedures for the task source.
 
 ## Files
 
 - **example-tasks.md** - Complete example of `.llm/tasks.md` Markdown format
-- **example-tasks.json** - JSON export format (Beads or helper scripts)
+- **example-tasks.json** - JSON export format (helper scripts)
 - **VALIDATION.md** - Validation checklist for task system
 
 ## Quick Overview
 
 ### Markdown Format (.llm/tasks.md)
 
-Use this format when:
-
-- Beads is not installed
-- Tasks are version-controlled in git
-- Human readability is important
-- Simple checklist tracking is sufficient
+Tasks are version-controlled in `.llm/tasks.md` using a simple Markdown checklist.
 
 **Pros:**
 
@@ -26,39 +21,19 @@ Use this format when:
 - ✓ Simple Markdown syntax
 - ✓ Works offline
 
-**Cons:**
+### JSON Export Format (helper scripts)
 
-- ✗ Less structured for parsing
-- ✗ No dependency tracking
-- ✗ Limited to binary complete/incomplete
-
-### JSON Format (Beads export)
-
-Use this format when:
-
-- Beads is installed and running
-- You need structured data for tools
-- Dependency tracking is useful
-- Multiple tools need to parse tasks
+A JSON representation generated from `.llm/tasks.md` by the helper scripts, useful when tools need structured data.
 
 **Pros:**
 
 - ✓ Structured data for parsing
 - ✓ Supports complex metadata
-- ✓ Dependency relationships
 - ✓ Tool-friendly
-
-**Cons:**
-
-- ✗ Requires Beads installation
-- ✗ Less human-readable
-- ✗ External service needed
 
 ## Example Usage
 
 ### Creating Tasks
-
-**Option 1: Markdown (Beads not available)**
 
 ```bash
 # Edit .llm/tasks.md manually
@@ -68,31 +43,15 @@ vim .llm/tasks.md
 ./scripts/tasks-export.sh
 ```
 
-**Option 2: Beads (Recommended)**
-
-```bash
-# Create tasks in Beads
-bd create "Implement authentication" -p 1 -t feature
-
-# Export for AI modes
-./scripts/tasks-export.sh
-```
-
 ### AI Modes Reading Tasks
 
 All AI modes automatically:
 
-1. Check if Beads CLI available: `beads --version`
-2. If available:
-   - Run `scripts/tasks-export.ps1` or `.sh`
-   - Parse returned JSON
-   - Find first task with `"completed": false`
-3. If not available:
-   - Read `.llm/tasks.md`
-   - Find first `- [ ]` task
-   - Parse Markdown structure
+1. Read `.llm/tasks.md`
+2. Find first `- [ ]` task
+3. Parse Markdown structure
 
-### Converting Between Formats
+### Exporting to JSON
 
 **Markdown → JSON (for tooling):**
 
@@ -102,14 +61,6 @@ All AI modes automatically:
 
 # Linux/Mac
 ./scripts/tasks-export.sh
-```
-
-**JSON → Markdown (for version control):**
-
-```bash
-# Keep .llm/tasks.md as source of truth
-# Use tasks-import to sync to Beads
-.\scripts\tasks-import.ps1
 ```
 
 ## Structure Conventions
@@ -137,12 +88,12 @@ All AI modes automatically:
   - [ ] X.2 Subtask
 ```
 
-### JSON Format
+### JSON Export Format
 
 ```json
 {
   "version": "1.0",
-  "source": "markdown-export|beads",
+  "source": "markdown-export",
   "projectContext": { /* metadata */ },
   "sharedTypes": [ /* array */ ],
   "rules": [ /* array */ ],
@@ -189,7 +140,7 @@ cat .llm/tasks.md | grep "^- \[\|^- \[x\]" | wc -l
 pandoc .llm/tasks.md -t json > /dev/null
 ```
 
-### JSON Format (export or Beads)
+### JSON Export Format
 
 - [ ] File is valid JSON (use `jq` to validate)
 - [ ] Contains `version: "1.0"`
@@ -221,9 +172,7 @@ jq '.tasks | length' < example-tasks.json
 
 - [ ] `scripts/tasks-export.ps1` runs without errors
 - [ ] `scripts/tasks-export.sh` runs without errors
-- [ ] `scripts/tasks-import.ps1` runs without errors
 - [ ] Exported JSON is valid
-- [ ] Round-trip conversion preserves data
 
 **Test with:**
 
@@ -242,8 +191,7 @@ if [ -z "$output" ]; then echo "No output"; fi
 - [ ] Planner mode can create/update `.llm/tasks.md`
 - [ ] Coder mode can read first unchecked task
 - [ ] Infraengineer mode can find next task
-- [ ] read-task prompt parses both formats
-- [ ] All modes handle Beads fallback gracefully
+- [ ] read-task prompt parses `.llm/tasks.md`
 
 **Test with:**
 
@@ -251,11 +199,10 @@ if [ -z "$output" ]; then echo "No output"; fi
 # Verify helpers exist
 ls -la scripts/tasks-export.ps1
 ls -la scripts/tasks-export.sh
-ls -la scripts/tasks-import.ps1
 
 # Verify modes reference them
 grep -r "tasks-export" modes/
-grep -r "tasks-import" prompts/
+grep -r "tasks-export" prompts/
 ```
 
 ## Integration Verification
@@ -272,7 +219,6 @@ After setting up or modifying tasks, run this checklist:
 ### Pre-Push
 
 - [ ] All test runners can find next task
-- [ ] Mode auto-detection works (try both Beads and fallback)
 - [ ] Syntax validation passes
 - [ ] Helper scripts execute successfully
 
@@ -320,7 +266,7 @@ After setting up or modifying tasks, run this checklist:
 - Verify scripts/tasks-export.* exist and are executable
 - Check `.llm/tasks.md` has valid Markdown
 - Test helper scripts manually
-- Review mode/prompt code for auto-detection logic
+- Review mode/prompt code for task-reading logic
 
 ## Further Reading
 
