@@ -1113,6 +1113,207 @@ else
     Write-Success "Created .github/workflows/quality.yml"
 }
 
+# Create pipeline-gates.yml — the seven required checks the agent pipeline's own gates
+# (RED/GREEN integrity, mutation targets, security findings, evidence presence) rely on.
+# These read the same .tech-decisions.yml thresholds and .llm/evidence/ artefacts the
+# agents produce, so the gate that blocks merge is a branch protection rule, not an
+# agent's self-report. Wire these as required status checks on your default branch —
+# this script does not modify branch protection itself (a repo-admin action).
+$pipelineGatesYml = @"
+name: Pipeline Gates
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  spec-assertion-coverage:
+    name: spec/assertion-coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Every active assertion has a matching test name
+        run: |
+          set -euo pipefail
+          if [ ! -f docs/spec/assertions.md ]; then
+            echo "No docs/spec/assertions.md yet — nothing to enforce"
+            exit 0
+          fi
+          ids=`$(grep -oE '^### ASSERT-[0-9]{4}' docs/spec/assertions.md | grep -oE 'ASSERT-[0-9]{4}' | sort -u)
+          missing=0
+          for id in `$ids; do
+            lower=`$(echo "`$id" | tr '[:upper:]' '[:lower:]' | tr '-' '_')
+            if ! grep -rIlE "(`${id}|`${lower})" -- . >/dev/null 2>&1; then
+              echo "::error::No test references `$id"
+              missing=1
+            fi
+          done
+          exit `$missing
+
+  spec-traceability:
+    name: spec/traceability
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Every task references a valid assertion ID
+        run: |
+          set -euo pipefail
+          if [ ! -f .llm/tasks.md ]; then
+            echo "No .llm/tasks.md yet — nothing to enforce"
+            exit 0
+          fi
+          valid=`$(grep -oE 'ASSERT-[0-9]{4}' docs/spec/assertions.md 2>/dev/null | sort -u || true)
+          bad=0
+          for id in `$(grep -oE 'ASSERT-[0-9]{4}' .llm/tasks.md | sort -u); do
+            if ! printf '%s\n' "`$valid" | grep -qx "`$id"; then
+              echo "::error::.llm/tasks.md references `$id, which does not exist in docs/spec/assertions.md"
+              bad=1
+            fi
+          done
+          exit `$bad
+
+  test-red-green-integrity:
+    name: test/red-green-integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Test files unchanged between RED and GREEN commits
+        run: |
+          set -euo pipefail
+          base=`$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)
+          red=`$(git log --format=%H --grep='^test:' -n1 "origin/`$base"..HEAD || true)
+          green=`$(git log --format=%H --grep='^feat:\|^fix:' -n1 "origin/`$base"..HEAD || true)
+          if [ -z "`$red" ] || [ -z "`$green" ]; then
+            echo "No RED/GREEN commit pair on this branch — skipping"
+            exit 0
+          fi
+          if ! git diff --quiet "`$red" "`$green" -- tests/ '*.test.ts' '*.test.js' '*.spec.ts' '*.spec.js' '*Tests.cs' '*_test.go' 'test_*.py'; then
+            echo "::error::Test files changed between the RED commit (`$red) and the GREEN commit (`$green)"
+            exit 1
+          fi
+
+  quality-mutation:
+    name: quality/mutation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Mutation score meets the per-engine target for changed modules
+        run: |
+          set -euo pipefail
+          sha=`$(git rev-parse --short HEAD)
+          report=".llm/evidence/mutation-`${sha}.json"
+          if [ ! -f "`$report" ]; then
+            echo "::error::No mutation report at `$report for HEAD — QA Engineer audit evidence is missing"
+            exit 1
+          fi
+          # Report shape varies by mutation_engine (cargo-mutants / stryker-net / stryker-js).
+          # This checks the common case: a "modules" array with name/score/target per entry.
+          # Adjust the jq filter below to match your engine's actual report schema.
+          fail=0
+          while IFS=`$'\t' read -r module score target; do
+            [ -z "`$module" ] && continue
+            awk -v s="`$score" -v t="`$target" 'BEGIN { exit !(s+0 < t+0) }' && {
+              echo "::error::`$module mutation score `${score}% is below target `${target}%"
+              fail=1
+            }
+          done < <(jq -r '.modules[]? | [.name, .score, .target] | @tsv' "`$report" 2>/dev/null || true)
+          exit `$fail
+
+  quality-coverage-ratchet:
+    name: quality/coverage-ratchet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Coverage not below the merge-base value
+        run: |
+          set -euo pipefail
+          baseline=".llm/evidence/coverage-baseline.json"
+          current=".llm/evidence/coverage-current.json"
+          if [ ! -f "`$baseline" ] || [ ! -f "`$current" ]; then
+            echo "No baseline/current coverage evidence yet — nothing to ratchet against"
+            exit 0
+          fi
+          base_pct=`$(jq -r '.line_coverage' "`$baseline")
+          cur_pct=`$(jq -r '.line_coverage' "`$current")
+          awk -v c="`$cur_pct" -v b="`$base_pct" 'BEGIN { exit !(c+0 < b+0) }' && {
+            echo "::error::Coverage dropped from `${base_pct}% to `${cur_pct}% — ratchet only moves up"
+            exit 1
+          }
+
+  security-findings:
+    name: security/findings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: No unresolved Critical or High findings
+        run: |
+          set -euo pipefail
+          if ls .llm/findings/*.md >/dev/null 2>&1 && grep -rE '\[(CRITICAL|HIGH)\]' .llm/findings/*.md; then
+            echo "::error::Unresolved Critical/High findings in .llm/findings/ — resolve before merge"
+            exit 1
+          fi
+
+  evidence-present:
+    name: evidence/present
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Every referenced evidence artefact exists and matches HEAD's SHA
+        run: |
+          set -euo pipefail
+          sha=`$(git rev-parse --short HEAD)
+          state=".llm/workflow-state.md"
+          if [ ! -f "`$state" ]; then
+            echo "No .llm/workflow-state.md — nothing to check"
+            exit 0
+          fi
+          missing=0
+          for path in `$(grep -oE '\.llm/evidence/[A-Za-z0-9_./-]+' "`$state" | sort -u); do
+            if [ ! -e "`$path" ]; then
+              echo "::error::`$path is referenced in workflow state but does not exist"
+              missing=1
+              continue
+            fi
+            case "`$path" in
+              *"`$sha"*) : ;;
+              *) echo "::error::`$path does not match HEAD's SHA (`$sha) — stale evidence"; missing=1 ;;
+            esac
+          done
+          exit `$missing
+"@
+
+$pipelineGatesPath = Join-Path $githubDir "pipeline-gates.yml"
+if ((Test-Path $pipelineGatesPath) -and -not $Force)
+{
+    Write-Warning "pipeline-gates.yml already exists (use -Force to overwrite)"
+}
+else
+{
+    $pipelineGatesYml | Out-File -FilePath $pipelineGatesPath -Encoding UTF8
+    Write-Success "Created .github/workflows/pipeline-gates.yml"
+}
+
 # ============================================================================
 # Summary
 # ============================================================================

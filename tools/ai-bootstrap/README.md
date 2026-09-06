@@ -62,6 +62,15 @@ The bootstrap scripts automate the following setup steps:
 - Generates `.github/workflows/` for language detection
 - Creates fast-checks and comprehensive-checks pipelines
 - Language-specific: Rust, JavaScript/TypeScript, Python
+- Also creates `.github/workflows/pipeline-gates.yml` — seven required checks
+  (`spec/assertion-coverage`, `spec/traceability`, `test/red-green-integrity`,
+  `quality/mutation`, `quality/coverage-ratchet`, `security/findings`,
+  `evidence/present`) that verify the agent pipeline's own gates against
+  `.tech-decisions.yml` thresholds and `.llm/evidence/` artefacts, rather than
+  trusting the pipeline's self-report. **This script does not configure branch
+  protection** — after bootstrapping, a repo admin must add all seven jobs as
+  required status checks on the default branch (Settings → Branches → Branch
+  protection rules) for the gate to actually block merges.
 
 ## Task Tracking Details
 
