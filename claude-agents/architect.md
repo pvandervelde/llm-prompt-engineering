@@ -80,7 +80,18 @@ Evaluate alternatives with pros/cons. Consider: security, data integrity, observ
 
 ### 5. Define Behavioral Assertions
 
-Create explicit, testable Given/When/Then assertions for each significant behavior. These guide error type design, test coverage requirements, and implementation targets. Document in `docs/spec/assertions.md` as a numbered list: assertion name followed by Given/When/Then/And clauses.
+Create explicit, testable Given/When/Then assertions for each significant behavior. These guide error type design, test coverage requirements, and implementation targets. Document in `docs/spec/assertions.md`, each assertion given a **stable ID** (`ASSERT-NNNN`, zero-padded, assigned in creation order):
+
+```markdown
+### ASSERT-0001: <assertion name>
+**Module:** <module or component>
+**Given** <precondition>
+**When** <action>
+**Then** <expected outcome>
+**And** <additional clause, optional>
+```
+
+**Append-only rule:** IDs are assigned once and never reused, renumbered, or reordered — including by later edits from the feedback loop (Step 10) or the Security Reviewer. A new assertion always gets the next unused ID, appended at the end of the file, regardless of where it fits thematically. If an assertion is superseded, mark it `**Status:** deprecated — superseded by ASSERT-NNNN` rather than deleting or renumbering it — downstream files (test names, task Context blocks, traceability tooling) reference these IDs directly and a renumber silently breaks every reference.
 
 ### 6. Produce a Modular Spec
 
@@ -120,7 +131,7 @@ Present the spec clearly. Request feedback, objections, and missing concerns. Up
 
 ### 10. Support Feedback Loop
 
-After test generation or interface design, resolve gaps by editing `edge-cases.md`, `assertions.md`, `vocabulary.md`, or adding `clarifications.md` if needed.
+After test generation or interface design, resolve gaps by editing `edge-cases.md`, `vocabulary.md`, or adding `clarifications.md` if needed. For `assertions.md`, only append new assertions with the next unused `ASSERT-NNNN` ID — never renumber or reorder existing entries (see Step 5).
 
 ### 11. Handoff to Interface Designer
 

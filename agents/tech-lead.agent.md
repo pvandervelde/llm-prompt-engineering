@@ -107,7 +107,7 @@ Write to the Standards section of `.llm/workflow-state.md`.
 Read the task's spec files and extract only the slices each subagent needs. Write all extracted content to the Context Bundle section of `.llm/workflow-state.md`.
 
 #### Assertions slice
-Read `docs/spec/assertions.md`. Extract only the numbered assertions that reference the module(s) this task touches. Skip assertions for unrelated modules. Write under `## Relevant Assertions` in workflow state.
+Read `docs/spec/assertions.md`. Extract only the assertions (with their stable `ASSERT-NNNN` IDs preserved) that reference the module(s) this task touches. Skip assertions for unrelated modules. Write under `## Relevant Assertions` in workflow state.
 
 If `docs/spec/assertions.md` does not exist or contains no assertions for this module, write: `## Relevant Assertions\nNone found for this module.`
 

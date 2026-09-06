@@ -98,7 +98,7 @@ Write Medium, Low, and Info findings to `.llm/findings/[descriptive-slug].md` un
 
 ### 12. **Update Security Spec if Gaps Found**
 
-If unspecified threats or controls found: add threat entries to `docs/spec/security.md`, controls to `docs/spec/constraints.md`, assertions to `docs/spec/assertions.md`. Notify architect—new assertions may require interface changes.
+If unspecified threats or controls found: add threat entries to `docs/spec/security.md`, controls to `docs/spec/constraints.md`, assertions to `docs/spec/assertions.md` — append new assertions with the next unused `ASSERT-NNNN` ID, never renumber or reorder existing entries. Notify architect—new assertions may require interface changes.
 
 ### 13. **Support the Feedback Loop**
 

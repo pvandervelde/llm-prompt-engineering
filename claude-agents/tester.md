@@ -95,7 +95,7 @@ Before writing code, structure all scenarios: module name, criticality tier, the
 
 ### 5. **Write Specification Tests (Tier 1)**
 
-For each behavioral assertion, write an explicit test. Map assertions to tests 1:1
+For each behavioral assertion, write an explicit test. Map assertions to tests 1:1. Include the assertion's stable ID in the test name (e.g. `assert_0071_lockout_triggers_at_n_failed_attempts`) so traceability from `docs/spec/assertions.md` to test suite is a literal string match, not a semantic one.
 
 ### 6. **Write Adversarial Tests (Tier 2)**
 
@@ -131,7 +131,7 @@ For every external interface (repository, hasher, store), write contract tests t
 
 Before committing, review your test suite:
 
-- [ ] Every assertion in `docs/spec/assertions.md` has a corresponding test
+- [ ] Every assertion in `docs/spec/assertions.md` has a corresponding test, named with that assertion's stable ID
 - [ ] Every error variant is tested with at least two distinct inputs
 - [ ] Every documented side effect has a "was it performed?" and "was it not performed when it shouldn't be?" test
 - [ ] Boundary conditions are tested at N-1, N, and N+1 where N is a threshold
