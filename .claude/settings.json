@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git switch *)",
+      "Bash(mkdir -p \"f:/vcs/github/pvandervelde/llm-prompt-engineering/.llm/findings\")",
+      "Bash(mkdir -p \"f:/vcs/github/pvandervelde/llm-prompt-engineering/.claude/hooks\")",
+      "Bash(node --input-type=module --check)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/test-immutability-guard.mjs"
+          }
+        ]
+      }
+    ]
+  }
+}
