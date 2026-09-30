@@ -11,8 +11,10 @@ if [[ "$1" == "--force" ]]; then
 fi
 
 # Get script directory and repo root
+# This script lives two levels below the repo root (tools/ai-bootstrap/), so
+# ROOT needs to go up two levels, not one.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(dirname "$SCRIPT_DIR")"
+ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 # Color output
 RED='\033[0;31m'
@@ -735,6 +737,159 @@ else
 fi
 
 # ============================================================================
+# Step 5c: Deploy Task Sync Helper Scripts
+# ============================================================================
+# .llm/tasks.md (above) tells agents to run scripts/tasks-export.sh or
+# scripts/tasks-export.ps1 to sync Markdown tasks to JSON. Those scripts only
+# exist in the llm-prompt-engineering source repo, not in the repo being
+# bootstrapped — an agent reading that note on a fresh target repo would find
+# nothing there. Generate both variants directly so the target repo is
+# self-contained and doesn't depend on anything outside itself.
+print_step "[5c/6] Deploying task sync helper scripts..."
+
+SCRIPTS_DIR="$ROOT/scripts"
+mkdir -p "$SCRIPTS_DIR"
+
+TASKS_EXPORT_SH="$SCRIPTS_DIR/tasks-export.sh"
+if [ -f "$TASKS_EXPORT_SH" ] && [ $FORCE -eq 0 ]; then
+    print_warning "scripts/tasks-export.sh already exists (use --force to overwrite)"
+else
+    cat > "$TASKS_EXPORT_SH" << 'TASKS_EXPORT_SH_EOF'
+#!/bin/bash
+
+# Export tasks from Markdown to JSON format
+# Converts ./.llm/tasks.md to ./.llm/tasks.json following the task-sources contract
+
+TASKS_FILE="${1:-./.llm/tasks.md}"
+OUTPUT_FILE="${2:-./.llm/tasks.json}"
+
+# Check if the input file exists
+if [ ! -f "$TASKS_FILE" ]; then
+    echo "Error: Task file not found: $TASKS_FILE" >&2
+    exit 1
+fi
+
+# Parse Markdown checklist and convert to JSON
+TASKS_JSON='{"tasks":['
+TASK_ID=0
+FIRST_TASK=true
+
+while IFS= read -r line; do
+    # Match checklist items: - [ ] or - [x]
+    if [[ $line =~ ^[[:space:]]*-[[:space:]]+\[([[:space:]xX])\][[:space:]]+(.+)$ ]]; then
+        TASK_ID=$((TASK_ID + 1))
+        CHECKED="${BASH_REMATCH[1]}"
+        TITLE="${BASH_REMATCH[2]}"
+
+        # Determine status based on checkbox
+        if [[ "$CHECKED" == "x" || "$CHECKED" == "X" ]]; then
+            STATUS="completed"
+            CHECKED_VAL="true"
+        else
+            STATUS="open"
+            CHECKED_VAL="false"
+        fi
+
+        # Escape special characters in title
+        TITLE=$(printf '%s\n' "$TITLE" | sed 's/[\"\\]/\\&/g')
+
+        # Add comma before new task (except first)
+        if [ "$FIRST_TASK" = false ]; then
+            TASKS_JSON="$TASKS_JSON,"
+        fi
+        FIRST_TASK=false
+
+        # Add task object
+        TASKS_JSON="$TASKS_JSON{\"id\":\"task-$TASK_ID\",\"title\":\"$TITLE\",\"description\":\"\",\"status\":\"$STATUS\",\"checked\":$CHECKED_VAL}"
+    fi
+done < "$TASKS_FILE"
+
+TASKS_JSON="$TASKS_JSON]}"
+
+# Write to output file
+if ! echo "$TASKS_JSON" > "$OUTPUT_FILE"; then
+    echo "Error: Failed to write to $OUTPUT_FILE" >&2
+    exit 1
+fi
+
+echo "Successfully exported $TASK_ID task(s) to $OUTPUT_FILE"
+exit 0
+TASKS_EXPORT_SH_EOF
+    chmod +x "$TASKS_EXPORT_SH"
+    print_success "Created scripts/tasks-export.sh"
+fi
+
+TASKS_EXPORT_PS1="$SCRIPTS_DIR/tasks-export.ps1"
+if [ -f "$TASKS_EXPORT_PS1" ] && [ $FORCE -eq 0 ]; then
+    print_warning "scripts/tasks-export.ps1 already exists (use --force to overwrite)"
+else
+    cat > "$TASKS_EXPORT_PS1" << 'TASKS_EXPORT_PS1_EOF'
+# Export tasks from Markdown to JSON format
+# Converts ./.llm/tasks.md to ./.llm/tasks.json following the task-sources contract
+
+param(
+    [string]$TasksFile = ".\.llm\tasks.md",
+    [string]$OutputFile = ".\.llm\tasks.json"
+)
+
+# Check if the input file exists
+if (-not (Test-Path $TasksFile)) {
+    Write-Error "Task file not found: $TasksFile"
+    exit 1
+}
+
+# Read the Markdown file
+try {
+    $content = Get-Content $TasksFile -Raw
+} catch {
+    Write-Error "Failed to read $TasksFile : $_"
+    exit 1
+}
+
+# Parse Markdown checklist and convert to JSON
+$tasks = @()
+$taskId = 0
+$lines = $content -split "`n"
+
+foreach ($line in $lines) {
+    # Match checklist items: - [ ] or - [x]
+    if ($line -match '^\s*-\s+\[([ xX])\]\s+(.+)') {
+        $checked = $matches[1] -eq 'x' -or $matches[1] -eq 'X'
+        $title = $matches[2].Trim()
+        $taskId++
+
+        $task = @{
+            id       = "task-$taskId"
+            title    = $title
+            description = ""
+            status   = if ($checked) { "completed" } else { "open" }
+            checked  = $checked
+        }
+
+        $tasks += $task
+    }
+}
+
+# Create the JSON structure
+$jsonObject = @{
+    tasks = $tasks
+}
+
+# Convert to JSON and write to output file
+try {
+    $jsonContent = $jsonObject | ConvertTo-Json -Depth 10
+    Set-Content -Path $OutputFile -Value $jsonContent -Encoding UTF8
+    Write-Output "Successfully exported $($tasks.Count) task(s) to $OutputFile"
+    exit 0
+} catch {
+    Write-Error "Failed to write to $OutputFile : $_"
+    exit 1
+}
+TASKS_EXPORT_PS1_EOF
+    print_success "Created scripts/tasks-export.ps1"
+fi
+
+# ============================================================================
 # Step 6: Create CI Configuration
 # ============================================================================
 print_step "[6/6] Creating CI configuration..."
@@ -1057,6 +1212,133 @@ jobs:
 EOF
 
     print_success "Created .github/workflows/pipeline-gates.yml"
+fi
+
+# Create release-snapshot.yml — on merge to main/master, snapshot docs/spec/ plus
+# assertion/traceability/mutation/security evidence into .llm/evidence/releases/<version>/.
+# This is the artefact an auditor (62443-4-1, SSDF) actually wants: "the spec as it stood
+# at release" without reconstructing it from git log.
+RELEASE_SNAPSHOT_FILE="$ROOT/.github/workflows/release-snapshot.yml"
+if [ -f "$RELEASE_SNAPSHOT_FILE" ] && [ $FORCE -eq 0 ]; then
+    print_warning "release-snapshot.yml already exists (use --force to overwrite)"
+else
+    cat > "$RELEASE_SNAPSHOT_FILE" << 'EOF'
+name: Release Snapshot
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    name: Spec and evidence snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build release snapshot
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse --short HEAD)
+          version=$(git describe --tags --always)
+          out=".llm/evidence/releases/${version}"
+          mkdir -p "$out"
+
+          # 1. docs/spec/ as it stood at this merge commit
+          if [ -d docs/spec ]; then
+            tar -czf "$out/spec-snapshot.tar.gz" docs/spec
+          fi
+
+          # 2. Active assertions only, with IDs (skip anything marked deprecated)
+          if [ -f docs/spec/assertions.md ]; then
+            awk '
+              /^### ASSERT-[0-9]{4}/ {
+                if (block != "" && !deprecated) printf "%s", block
+                block=$0 "\n"; deprecated=0; next
+              }
+              { block = block $0 "\n" }
+              /\*\*Status:\*\* deprecated/ { deprecated=1 }
+              END { if (block != "" && !deprecated) printf "%s", block }
+            ' docs/spec/assertions.md > "$out/assertions-active.md"
+          else
+            touch "$out/assertions-active.md"
+          fi
+
+          # 3. Traceability: assertion_id, test_name, task_id, commit
+          echo "assertion_id,test_name,task_id,commit" > "$out/traceability.csv"
+          if [ -f docs/spec/assertions.md ]; then
+            active_ids=$(awk '
+              /^### ASSERT-[0-9]{4}/ {
+                if (id != "" && !deprecated) print id
+                match($0, /ASSERT-[0-9]{4}/); id=substr($0, RSTART, RLENGTH); deprecated=0
+              }
+              /\*\*Status:\*\* deprecated/ { deprecated=1 }
+              END { if (id != "" && !deprecated) print id }
+            ' docs/spec/assertions.md)
+
+            if [ -f .llm/tasks.md ]; then
+              awk '
+                /^- \[[ xX]\] [0-9]+(\.[0-9]+)?/ { match($0, /[0-9]+(\.[0-9]+)?/); task=substr($0, RSTART, RLENGTH) }
+                /Assertions:/ {
+                  line=$0
+                  while (match(line, /ASSERT-[0-9]{4}/)) {
+                    id=substr(line, RSTART, RLENGTH)
+                    print id "|" task
+                    line=substr(line, RSTART+RLENGTH)
+                  }
+                }
+              ' .llm/tasks.md > /tmp/assert-task-map.txt
+            else
+              : > /tmp/assert-task-map.txt
+            fi
+
+            for id in $active_ids; do
+              lower=$(echo "$id" | tr '[:upper:]' '[:lower:]' | tr '-' '_')
+              test_names=$(grep -rlE "(${id}|${lower})" \
+                --include='*test*' --include='*spec*' --include='*Tests.cs' --include='*_test.go' \
+                -- . 2>/dev/null | tr '\n' ';' || true)
+              task_id=$(grep "^${id}|" /tmp/assert-task-map.txt | cut -d'|' -f2 | paste -sd ';' -)
+              echo "${id},\"${test_names}\",${task_id},${sha}" >> "$out/traceability.csv"
+            done
+          fi
+
+          # 4. Mutation evidence already produced by QA Engineer for this commit
+          if [ -f ".llm/evidence/mutation-${sha}.json" ]; then
+            cp ".llm/evidence/mutation-${sha}.json" "$out/mutation-${sha}.json"
+          fi
+
+          # 5. Latest security report
+          latest_security=$(ls -t .llm/security-review/*.md 2>/dev/null | head -1 || true)
+          if [ -n "$latest_security" ]; then
+            cp "$latest_security" "$out/security-report.md"
+          fi
+
+          # 6. Manifest: tool versions, commit SHA, timestamp
+          printf '{\n  "commit": "%s",\n  "version": "%s",\n  "generated_at": "%s",\n  "git_version": "%s"\n}\n' \
+            "$(git rev-parse HEAD)" "$version" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(git --version | awk '{print $3}')" \
+            > "$out/manifest.json"
+
+      - name: Commit release snapshot
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .llm/evidence/releases/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(evidence): add release snapshot for $(git describe --tags --always)"
+            git push
+          else
+            echo "No snapshot changes to commit"
+          fi
+EOF
+
+    print_success "Created .github/workflows/release-snapshot.yml"
 fi
 
 # ============================================================================
