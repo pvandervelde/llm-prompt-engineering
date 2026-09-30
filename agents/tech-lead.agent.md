@@ -119,6 +119,8 @@ Read `docs/spec/assertions.md`. Extract only the assertions (with their stable `
 
 If `docs/spec/assertions.md` does not exist or contains no assertions for this module, write: `## Relevant Assertions\nNone found for this module.`
 
+Also tag each assertion as `[security]` if it references auth, validation, secrets, or error handling — these tagged assertions are the subset passed to Security Reviewer.
+
 #### Interface contract slice
 Read the interface spec file referenced in the task's Context block (e.g., `docs/spec/interfaces/auth-operations.md`). Extract:
 - Type definitions and struct/enum declarations only
@@ -159,7 +161,7 @@ Read `.llm/workflow-state.md`. If absent or for a different task, initialise:
 [output of Step 2f — resolved stack block]
 
 ## Relevant Assertions
-[output of Step 2d — assertion list or "None found"]
+[output of Step 2d — assertion list or "None found"; security-relevant assertions tagged [security]]
 
 ## Interface Contract
 [output of Step 2d — type signatures and error variants]
@@ -324,7 +326,7 @@ Additionally read:
 Then:
 1. Implement using strict TDD: red → green → commit
 2. One atomic task per TDD cycle
-3. If Domain is Frontend, document any significant decisions (auth flow, state management, security-sensitive rendering) in the commit message — do not pause for confirmation
+3. Document any significant decisions (auth flow, state management, security-sensitive choices) in the commit message — do not pause for confirmation
 4. Do NOT write new tests — that is the Tester's job
 5. Do NOT implement beyond what the tests require
 
@@ -374,14 +376,16 @@ Work in the current git workspace (the directory where you are invoked).
 [Frontend / Backend]
 
 ## Your job
-Do not read AGENTS.md, .tech-decisions.yml, docs/catalog.md, or git diff yourself — all required context is injected above.
+Do not run git diff yourself — the diff is pre-injected above.
+Do not read AGENTS.md or .tech-decisions.yml — all required context is injected.
+Read docs/catalog.md directly when updating catalog entries (step 8 of your workflow).
 
 Then:
-1. Identify duplication within the diff (manual read + ast-grep structural search)
-2. Search the wider codebase for the same patterns (ast-grep project-wide)
+1. Identify duplication within the diff (manual read + structural search using `{toolchain.structural_search}`)
+2. Search the wider codebase for the same patterns (`{toolchain.structural_search}`, project-wide)
 3. Extract duplications within scope; for cross-scope duplications, write an entry to the findings file under `## Deferred Issues` with label `tech-debt,refactor`
 4. Update docs/catalog.md with any new or modified abstractions
-5. Run the full test suite — must be green before returning
+5. Run the full test suite using `{toolchain.test}` — must be green before returning
 6. Commit if any refactoring was performed: `refactor(<scope>): ...`
 
 Report back the full Refactor Report including verdict: CLEAN / ISSUES_FILED / BLOCKED
@@ -440,6 +444,7 @@ Report back:
 - Fuzz results, if the resolved stack has fuzzing available
 - Tier 6 result and claim strength (proof vs. sampling)
 - Any new tests added
+- Verdict: CLEAR or BLOCKED (list blocking issues)
 ```
 
 **Security Reviewer subagent prompt:**
@@ -450,8 +455,8 @@ Work in the current git workspace (the directory where you are invoked).
 ## Standards
 [paste Standards block from workflow state — secret management rules, security headers only]
 
-## Relevant Assertions
-[paste Relevant Assertions from workflow state — security assertions only]
+## Relevant Assertions (security-tagged only)
+[paste only the assertions tagged [security] from workflow state]
 
 ## Task
 #[N]: [title]
