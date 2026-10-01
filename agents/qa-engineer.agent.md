@@ -157,13 +157,14 @@ Run fuzz targets for every external-input parser in scope, using the resolved to
 If a parser is in scope but no fuzz target exists:
 
 - If `{toolchain.fuzz_add}` is non-null (Rust: `cargo fuzz add [target-name]`), use it to scaffold the target.
-- If `{toolchain.fuzz_add}` is `null` (C#/.NET, TypeScript — SharpFuzz and Jazzer.js have no scaffolding command), copy and adapt the checked-in harness template for the resolved stack from `fuzz/README.md`.
+- If `{toolchain.fuzz_add}` is `null` (C#/.NET, TypeScript — SharpFuzz and Jazzer.js have no scaffolding command), look for an existing fuzz harness convention already present in this repo (a prior target for this stack, or a template the repo owner has provided) and adapt it. If none exists, print a notice that fuzz scaffolding is unavailable for this stack and skip Tier 5 for this task — do not fabricate a harness template.
 
 The invariant is identical across every stack regardless of scaffolding mechanism: **must not crash, must not hang, must not allocate unboundedly; a typed rejection is a pass.**
 
 ```rust
-// fuzz/fuzz_targets/[target_name].rs — Rust example; see fuzz/README.md for
-// the C# (SharpFuzz) and TypeScript (Jazzer.js) harness templates.
+// fuzz/fuzz_targets/[target_name].rs — Rust example (cargo-fuzz convention).
+// For C#/TypeScript, adapt whatever fuzz harness convention this repo
+// already uses for that stack.
 #![no_main]
 use libfuzzer_sys::fuzz_target;
 use [crate]::[Module];
@@ -177,7 +178,7 @@ fuzz_target!(|data: &[u8]| {
 
 If the fuzz campaign finds a crash:
 
-1. The crash input is saved automatically to `fuzz/artifacts/[target]/crash-[hash]` (or the stack-equivalent location documented in `fuzz/README.md`)
+1. The crash input is saved automatically to `fuzz/artifacts/[target]/crash-[hash]` (or the stack-equivalent location per this repo's own fuzz harness convention)
 2. Reproduce it to confirm, re-running `{toolchain.fuzz_run}` against the saved crash input
 3. Write a regression test that exercises the same input path
 4. Fix the defect (if it is in your scope) or file a blocking issue (if it requires the coder)
@@ -265,7 +266,7 @@ Produce the final report:
 | [target] | [Ns] | [N] | ✅ / ❌ |
 
 **Regression tests written:** [N]
-**Artifacts:** .llm/evidence/fuzz/$(git rev-parse --short HEAD)/ (or stack-equivalent per fuzz/README.md)
+**Artifacts:** .llm/evidence/fuzz/$(git rev-parse --short HEAD)/ (or stack-equivalent per this repo's own fuzz harness convention)
 
 ### Tier 6 — Formal Verification / Model-Based Testing
 | Module | Technique | Result | Bound / Iterations | Claim strength |

@@ -10,11 +10,13 @@ if [[ "$1" == "--force" ]]; then
     FORCE=1
 fi
 
-# Get script directory and repo root
-# This script lives two levels below the repo root (tools/ai-bootstrap/), so
-# ROOT needs to go up two levels, not one.
+# Get script directory (for locating sibling tool files, e.g. create-llm-memory.sh)
+# and repo root. This script may be installed globally (e.g. a user's Claude
+# agent tools directory) and invoked against any repo as the current working
+# directory, so the repo root must come from git, never from where this
+# script itself happens to live.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 
 # Color output
 RED='\033[0;31m'
@@ -53,7 +55,7 @@ function print_error() {
 print_header
 
 # Verify we're in a git repository
-if [ ! -d "$ROOT/.git" ]; then
+if [ -z "$ROOT" ]; then
     print_error "Not in a git repository. Initialize git first: git init"
     exit 1
 fi
@@ -61,7 +63,7 @@ fi
 # ============================================================================
 # Step 1: Create AI Memory Structure
 # ============================================================================
-print_step "[1/5] Creating AI memory structure..."
+print_step "[1/6] Creating AI memory structure..."
 
 MEMORY_SCRIPT="$SCRIPT_DIR/create-llm-memory.sh"
 if [ -f "$MEMORY_SCRIPT" ]; then
@@ -85,7 +87,7 @@ fi
 # ============================================================================
 # Step 2: Create Git Hooks
 # ============================================================================
-print_step "[2/5] Creating git hooks..."
+print_step "[2/6] Creating git hooks..."
 
 HOOKS_DIR="$ROOT/.githooks"
 mkdir -p "$HOOKS_DIR"
@@ -331,7 +333,7 @@ print_success "Git configured to use .githooks/"
 # ============================================================================
 # Step 3: Detect Tech Stack
 # ============================================================================
-print_step "[3/5] Detecting tech stack..."
+print_step "[3/6] Detecting tech stack..."
 
 LANGUAGES=()
 
@@ -375,7 +377,7 @@ print_success "Tech stack detection complete"
 # ============================================================================
 # Step 4: Create .tech-decisions.yml
 # ============================================================================
-print_step "[4/5] Creating .tech-decisions.yml..."
+print_step "[4/6] Creating .tech-decisions.yml..."
 
 TECH_FILE="$ROOT/.tech-decisions.yml"
 if [ -f "$TECH_FILE" ] && [ $FORCE -eq 0 ]; then
@@ -688,9 +690,9 @@ else
 fi
 
 # ============================================================================
-# Step 5b: Initialize Fallback Task Structure
+# Step 6: Initialize Fallback Task Structure
 # ============================================================================
-print_step "[5b/6] Initializing fallback task structure (.llm/tasks.md)..."
+print_step "[6/6] Initializing fallback task structure (.llm/tasks.md)..."
 
 LLM_DIR="$ROOT/.llm"
 if [ ! -d "$LLM_DIR" ]; then
@@ -705,7 +707,8 @@ if [ ! -f "$TASKS_FILE" ]; then
 # Implementation Tasks
 
 > **Note**: This file serves as the fallback task source when Beads is not available.
-> If Beads is installed and initialized, tasks can be synced using: `scripts/tasks-export.ps1` or `scripts/tasks-export.sh`
+> If Beads is installed and initialized, tasks can be synced to JSON using the
+> task-export tool provided by the agent framework.
 
 ## Project Context
 
@@ -737,611 +740,6 @@ else
 fi
 
 # ============================================================================
-# Step 5c: Deploy Task Sync Helper Scripts
-# ============================================================================
-# .llm/tasks.md (above) tells agents to run scripts/tasks-export.sh or
-# scripts/tasks-export.ps1 to sync Markdown tasks to JSON. Those scripts only
-# exist in the llm-prompt-engineering source repo, not in the repo being
-# bootstrapped — an agent reading that note on a fresh target repo would find
-# nothing there. Generate both variants directly so the target repo is
-# self-contained and doesn't depend on anything outside itself.
-print_step "[5c/6] Deploying task sync helper scripts..."
-
-SCRIPTS_DIR="$ROOT/scripts"
-mkdir -p "$SCRIPTS_DIR"
-
-TASKS_EXPORT_SH="$SCRIPTS_DIR/tasks-export.sh"
-if [ -f "$TASKS_EXPORT_SH" ] && [ $FORCE -eq 0 ]; then
-    print_warning "scripts/tasks-export.sh already exists (use --force to overwrite)"
-else
-    cat > "$TASKS_EXPORT_SH" << 'TASKS_EXPORT_SH_EOF'
-#!/bin/bash
-
-# Export tasks from Markdown to JSON format
-# Converts ./.llm/tasks.md to ./.llm/tasks.json following the task-sources contract
-
-TASKS_FILE="${1:-./.llm/tasks.md}"
-OUTPUT_FILE="${2:-./.llm/tasks.json}"
-
-# Check if the input file exists
-if [ ! -f "$TASKS_FILE" ]; then
-    echo "Error: Task file not found: $TASKS_FILE" >&2
-    exit 1
-fi
-
-# Parse Markdown checklist and convert to JSON
-TASKS_JSON='{"tasks":['
-TASK_ID=0
-FIRST_TASK=true
-
-while IFS= read -r line; do
-    # Match checklist items: - [ ] or - [x]
-    if [[ $line =~ ^[[:space:]]*-[[:space:]]+\[([[:space:]xX])\][[:space:]]+(.+)$ ]]; then
-        TASK_ID=$((TASK_ID + 1))
-        CHECKED="${BASH_REMATCH[1]}"
-        TITLE="${BASH_REMATCH[2]}"
-
-        # Determine status based on checkbox
-        if [[ "$CHECKED" == "x" || "$CHECKED" == "X" ]]; then
-            STATUS="completed"
-            CHECKED_VAL="true"
-        else
-            STATUS="open"
-            CHECKED_VAL="false"
-        fi
-
-        # Escape special characters in title
-        TITLE=$(printf '%s\n' "$TITLE" | sed 's/[\"\\]/\\&/g')
-
-        # Add comma before new task (except first)
-        if [ "$FIRST_TASK" = false ]; then
-            TASKS_JSON="$TASKS_JSON,"
-        fi
-        FIRST_TASK=false
-
-        # Add task object
-        TASKS_JSON="$TASKS_JSON{\"id\":\"task-$TASK_ID\",\"title\":\"$TITLE\",\"description\":\"\",\"status\":\"$STATUS\",\"checked\":$CHECKED_VAL}"
-    fi
-done < "$TASKS_FILE"
-
-TASKS_JSON="$TASKS_JSON]}"
-
-# Write to output file
-if ! echo "$TASKS_JSON" > "$OUTPUT_FILE"; then
-    echo "Error: Failed to write to $OUTPUT_FILE" >&2
-    exit 1
-fi
-
-echo "Successfully exported $TASK_ID task(s) to $OUTPUT_FILE"
-exit 0
-TASKS_EXPORT_SH_EOF
-    chmod +x "$TASKS_EXPORT_SH"
-    print_success "Created scripts/tasks-export.sh"
-fi
-
-TASKS_EXPORT_PS1="$SCRIPTS_DIR/tasks-export.ps1"
-if [ -f "$TASKS_EXPORT_PS1" ] && [ $FORCE -eq 0 ]; then
-    print_warning "scripts/tasks-export.ps1 already exists (use --force to overwrite)"
-else
-    cat > "$TASKS_EXPORT_PS1" << 'TASKS_EXPORT_PS1_EOF'
-# Export tasks from Markdown to JSON format
-# Converts ./.llm/tasks.md to ./.llm/tasks.json following the task-sources contract
-
-param(
-    [string]$TasksFile = ".\.llm\tasks.md",
-    [string]$OutputFile = ".\.llm\tasks.json"
-)
-
-# Check if the input file exists
-if (-not (Test-Path $TasksFile)) {
-    Write-Error "Task file not found: $TasksFile"
-    exit 1
-}
-
-# Read the Markdown file
-try {
-    $content = Get-Content $TasksFile -Raw
-} catch {
-    Write-Error "Failed to read $TasksFile : $_"
-    exit 1
-}
-
-# Parse Markdown checklist and convert to JSON
-$tasks = @()
-$taskId = 0
-$lines = $content -split "`n"
-
-foreach ($line in $lines) {
-    # Match checklist items: - [ ] or - [x]
-    if ($line -match '^\s*-\s+\[([ xX])\]\s+(.+)') {
-        $checked = $matches[1] -eq 'x' -or $matches[1] -eq 'X'
-        $title = $matches[2].Trim()
-        $taskId++
-
-        $task = @{
-            id       = "task-$taskId"
-            title    = $title
-            description = ""
-            status   = if ($checked) { "completed" } else { "open" }
-            checked  = $checked
-        }
-
-        $tasks += $task
-    }
-}
-
-# Create the JSON structure
-$jsonObject = @{
-    tasks = $tasks
-}
-
-# Convert to JSON and write to output file
-try {
-    $jsonContent = $jsonObject | ConvertTo-Json -Depth 10
-    Set-Content -Path $OutputFile -Value $jsonContent -Encoding UTF8
-    Write-Output "Successfully exported $($tasks.Count) task(s) to $OutputFile"
-    exit 0
-} catch {
-    Write-Error "Failed to write to $OutputFile : $_"
-    exit 1
-}
-TASKS_EXPORT_PS1_EOF
-    print_success "Created scripts/tasks-export.ps1"
-fi
-
-# ============================================================================
-# Step 6: Create CI Configuration
-# ============================================================================
-print_step "[6/6] Creating CI configuration..."
-
-mkdir -p "$ROOT/.github/workflows"
-CI_FILE="$ROOT/.github/workflows/quality.yml"
-
-if [ -f "$CI_FILE" ] && [ $FORCE -eq 0 ]; then
-    print_warning "quality.yml already exists (use --force to overwrite)"
-else
-    cat > "$CI_FILE" << 'EOF'
-name: Quality Checks
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-
-jobs:
-  fast-checks:
-    name: Fast Quality Checks
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Task tracking validation (if Beads is used)
-      - name: Check task tracking
-        continue-on-error: true
-        run: |
-          if command -v bd >/dev/null 2>&1; then
-            # Check if commit has task ID
-            if ! git log --format=%s -1 | grep -E '\(bd-[a-z0-9]+\)'; then
-              echo "::warning::No task ID in commit message. Consider: (bd-xxx)"
-            fi
-
-            # Check for orphaned work (commits without closed tasks)
-            if bd doctor --orphans --json 2>/dev/null | grep -q "orphans"; then
-              echo "::warning::Found commits with task IDs but tasks not closed"
-              bd doctor --orphans
-            fi
-          fi
-
-      - name: Check for secrets
-        run: |
-          pip install detect-secrets
-          if [ -f ".secrets.baseline" ]; then
-            detect-secrets scan --baseline .secrets.baseline
-          fi
-EOF
-
-    # Add language-specific checks
-    for lang in "${LANGUAGES[@]}"; do
-        case $lang in
-            rust)
-                cat >> "$CI_FILE" << 'EOF'
-
-      - name: Rust - Setup
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
-
-      - name: Rust - Format check
-        run: cargo fmt -- --check
-
-      - name: Rust - Clippy
-        run: cargo clippy --all-targets -- -D warnings
-
-      - name: Rust - Unit tests
-        run: cargo test --lib
-EOF
-                ;;
-            javascript|typescript)
-                cat >> "$CI_FILE" << 'EOF'
-
-      - name: Node - Setup
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Node - Install dependencies
-        run: npm ci
-
-      - name: Node - Format check
-        run: npx prettier --check .
-
-      - name: Node - Lint
-        run: npx eslint .
-
-      - name: Node - Unit tests
-        run: npm test
-EOF
-                ;;
-            python)
-                cat >> "$CI_FILE" << 'EOF'
-
-      - name: Python - Setup
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Python - Install dependencies
-        run: |
-          pip install black ruff pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Python - Format check
-        run: black --check .
-
-      - name: Python - Lint
-        run: ruff check .
-
-      - name: Python - Unit tests
-        run: pytest tests/
-EOF
-                ;;
-        esac
-    done
-
-    print_success "Created .github/workflows/quality.yml"
-fi
-
-# Create pipeline-gates.yml — the seven required checks the agent pipeline's own gates
-# (RED/GREEN integrity, mutation targets, security findings, evidence presence) rely on.
-# These read the same .tech-decisions.yml thresholds and .llm/evidence/ artefacts the
-# agents produce, so the gate that blocks merge is a branch protection rule, not an
-# agent's self-report. Wire these as required status checks on your default branch —
-# this script does not modify branch protection itself (a repo-admin action).
-PIPELINE_GATES_FILE="$ROOT/.github/workflows/pipeline-gates.yml"
-if [ -f "$PIPELINE_GATES_FILE" ] && [ $FORCE -eq 0 ]; then
-    print_warning "pipeline-gates.yml already exists (use --force to overwrite)"
-else
-    cat > "$PIPELINE_GATES_FILE" << 'EOF'
-name: Pipeline Gates
-
-on:
-  pull_request:
-    branches: [main, master]
-
-permissions:
-  contents: read
-
-jobs:
-  spec-assertion-coverage:
-    name: spec/assertion-coverage
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Every active assertion has a matching test name
-        run: |
-          set -euo pipefail
-          if [ ! -f docs/spec/assertions.md ]; then
-            echo "No docs/spec/assertions.md yet — nothing to enforce"
-            exit 0
-          fi
-          ids=$(grep -oE '^### ASSERT-[0-9]{4}' docs/spec/assertions.md | grep -oE 'ASSERT-[0-9]{4}' | sort -u)
-          missing=0
-          for id in $ids; do
-            lower=$(echo "$id" | tr '[:upper:]' '[:lower:]' | tr '-' '_')
-            if ! grep -rIlE "(${id}|${lower})" -- . >/dev/null 2>&1; then
-              echo "::error::No test references $id"
-              missing=1
-            fi
-          done
-          exit $missing
-
-  spec-traceability:
-    name: spec/traceability
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Every task references a valid assertion ID
-        run: |
-          set -euo pipefail
-          if [ ! -f .llm/tasks.md ]; then
-            echo "No .llm/tasks.md yet — nothing to enforce"
-            exit 0
-          fi
-          valid=$(grep -oE 'ASSERT-[0-9]{4}' docs/spec/assertions.md 2>/dev/null | sort -u || true)
-          bad=0
-          for id in $(grep -oE 'ASSERT-[0-9]{4}' .llm/tasks.md | sort -u); do
-            if ! printf '%s\n' "$valid" | grep -qx "$id"; then
-              echo "::error::.llm/tasks.md references $id, which does not exist in docs/spec/assertions.md"
-              bad=1
-            fi
-          done
-          exit $bad
-
-  test-red-green-integrity:
-    name: test/red-green-integrity
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Test files unchanged between RED and GREEN commits
-        run: |
-          set -euo pipefail
-          base=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)
-          red=$(git log --format=%H --grep='^test:' -n1 "origin/$base"..HEAD || true)
-          green=$(git log --format=%H --grep='^feat:\|^fix:' -n1 "origin/$base"..HEAD || true)
-          if [ -z "$red" ] || [ -z "$green" ]; then
-            echo "No RED/GREEN commit pair on this branch — skipping"
-            exit 0
-          fi
-          if ! git diff --quiet "$red" "$green" -- tests/ '*.test.ts' '*.test.js' '*.spec.ts' '*.spec.js' '*Tests.cs' '*_test.go' 'test_*.py'; then
-            echo "::error::Test files changed between the RED commit ($red) and the GREEN commit ($green)"
-            exit 1
-          fi
-
-  quality-mutation:
-    name: quality/mutation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Mutation score meets the per-engine target for changed modules
-        run: |
-          set -euo pipefail
-          sha=$(git rev-parse --short HEAD)
-          report=".llm/evidence/mutation-${sha}.json"
-          if [ ! -f "$report" ]; then
-            echo "::error::No mutation report at $report for HEAD — QA Engineer audit evidence is missing"
-            exit 1
-          fi
-          # Report shape varies by mutation_engine (cargo-mutants / stryker-net / stryker-js).
-          # This checks the common case: a "modules" array with name/score/target per entry.
-          # Adjust the jq filter below to match your engine's actual report schema.
-          fail=0
-          while IFS=$'\t' read -r module score target; do
-            [ -z "$module" ] && continue
-            awk -v s="$score" -v t="$target" 'BEGIN { exit !(s+0 < t+0) }' && {
-              echo "::error::$module mutation score ${score}% is below target ${target}%"
-              fail=1
-            }
-          done < <(jq -r '.modules[]? | [.name, .score, .target] | @tsv' "$report" 2>/dev/null || true)
-          exit $fail
-
-  quality-coverage-ratchet:
-    name: quality/coverage-ratchet
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Coverage not below the merge-base value
-        run: |
-          set -euo pipefail
-          baseline=".llm/evidence/coverage-baseline.json"
-          current=".llm/evidence/coverage-current.json"
-          if [ ! -f "$baseline" ] || [ ! -f "$current" ]; then
-            echo "No baseline/current coverage evidence yet — nothing to ratchet against"
-            exit 0
-          fi
-          base_pct=$(jq -r '.line_coverage' "$baseline")
-          cur_pct=$(jq -r '.line_coverage' "$current")
-          awk -v c="$cur_pct" -v b="$base_pct" 'BEGIN { exit !(c+0 < b+0) }' && {
-            echo "::error::Coverage dropped from ${base_pct}% to ${cur_pct}% — ratchet only moves up"
-            exit 1
-          }
-
-  security-findings:
-    name: security/findings
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: No unresolved Critical or High findings
-        run: |
-          set -euo pipefail
-          if ls .llm/findings/*.md >/dev/null 2>&1 && grep -rE '\[(CRITICAL|HIGH)\]' .llm/findings/*.md; then
-            echo "::error::Unresolved Critical/High findings in .llm/findings/ — resolve before merge"
-            exit 1
-          fi
-
-  evidence-present:
-    name: evidence/present
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Every referenced evidence artefact exists and matches HEAD's SHA
-        run: |
-          set -euo pipefail
-          sha=$(git rev-parse --short HEAD)
-          state=".llm/workflow-state.md"
-          if [ ! -f "$state" ]; then
-            echo "No .llm/workflow-state.md — nothing to check"
-            exit 0
-          fi
-          missing=0
-          for path in $(grep -oE '\.llm/evidence/[A-Za-z0-9_./-]+' "$state" | sort -u); do
-            if [ ! -e "$path" ]; then
-              echo "::error::$path is referenced in workflow state but does not exist"
-              missing=1
-              continue
-            fi
-            case "$path" in
-              *"$sha"*) : ;;
-              *) echo "::error::$path does not match HEAD's SHA ($sha) — stale evidence"; missing=1 ;;
-            esac
-          done
-          exit $missing
-EOF
-
-    print_success "Created .github/workflows/pipeline-gates.yml"
-fi
-
-# Create release-snapshot.yml — on merge to main/master, snapshot docs/spec/ plus
-# assertion/traceability/mutation/security evidence into .llm/evidence/releases/<version>/.
-# This is the artefact an auditor (62443-4-1, SSDF) actually wants: "the spec as it stood
-# at release" without reconstructing it from git log.
-RELEASE_SNAPSHOT_FILE="$ROOT/.github/workflows/release-snapshot.yml"
-if [ -f "$RELEASE_SNAPSHOT_FILE" ] && [ $FORCE -eq 0 ]; then
-    print_warning "release-snapshot.yml already exists (use --force to overwrite)"
-else
-    cat > "$RELEASE_SNAPSHOT_FILE" << 'EOF'
-name: Release Snapshot
-
-on:
-  push:
-    branches: [main, master]
-
-permissions:
-  contents: write
-
-jobs:
-  snapshot:
-    name: Spec and evidence snapshot
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Build release snapshot
-        run: |
-          set -euo pipefail
-          sha=$(git rev-parse --short HEAD)
-          version=$(git describe --tags --always)
-          out=".llm/evidence/releases/${version}"
-          mkdir -p "$out"
-
-          # 1. docs/spec/ as it stood at this merge commit
-          if [ -d docs/spec ]; then
-            tar -czf "$out/spec-snapshot.tar.gz" docs/spec
-          fi
-
-          # 2. Active assertions only, with IDs (skip anything marked deprecated)
-          if [ -f docs/spec/assertions.md ]; then
-            awk '
-              /^### ASSERT-[0-9]{4}/ {
-                if (block != "" && !deprecated) printf "%s", block
-                block=$0 "\n"; deprecated=0; next
-              }
-              { block = block $0 "\n" }
-              /\*\*Status:\*\* deprecated/ { deprecated=1 }
-              END { if (block != "" && !deprecated) printf "%s", block }
-            ' docs/spec/assertions.md > "$out/assertions-active.md"
-          else
-            touch "$out/assertions-active.md"
-          fi
-
-          # 3. Traceability: assertion_id, test_name, task_id, commit
-          echo "assertion_id,test_name,task_id,commit" > "$out/traceability.csv"
-          if [ -f docs/spec/assertions.md ]; then
-            active_ids=$(awk '
-              /^### ASSERT-[0-9]{4}/ {
-                if (id != "" && !deprecated) print id
-                match($0, /ASSERT-[0-9]{4}/); id=substr($0, RSTART, RLENGTH); deprecated=0
-              }
-              /\*\*Status:\*\* deprecated/ { deprecated=1 }
-              END { if (id != "" && !deprecated) print id }
-            ' docs/spec/assertions.md)
-
-            if [ -f .llm/tasks.md ]; then
-              awk '
-                /^- \[[ xX]\] [0-9]+(\.[0-9]+)?/ { match($0, /[0-9]+(\.[0-9]+)?/); task=substr($0, RSTART, RLENGTH) }
-                /Assertions:/ {
-                  line=$0
-                  while (match(line, /ASSERT-[0-9]{4}/)) {
-                    id=substr(line, RSTART, RLENGTH)
-                    print id "|" task
-                    line=substr(line, RSTART+RLENGTH)
-                  }
-                }
-              ' .llm/tasks.md > /tmp/assert-task-map.txt
-            else
-              : > /tmp/assert-task-map.txt
-            fi
-
-            for id in $active_ids; do
-              lower=$(echo "$id" | tr '[:upper:]' '[:lower:]' | tr '-' '_')
-              test_names=$(grep -rlE "(${id}|${lower})" \
-                --include='*test*' --include='*spec*' --include='*Tests.cs' --include='*_test.go' \
-                -- . 2>/dev/null | tr '\n' ';' || true)
-              task_id=$(grep "^${id}|" /tmp/assert-task-map.txt | cut -d'|' -f2 | paste -sd ';' -)
-              echo "${id},\"${test_names}\",${task_id},${sha}" >> "$out/traceability.csv"
-            done
-          fi
-
-          # 4. Mutation evidence already produced by QA Engineer for this commit
-          if [ -f ".llm/evidence/mutation-${sha}.json" ]; then
-            cp ".llm/evidence/mutation-${sha}.json" "$out/mutation-${sha}.json"
-          fi
-
-          # 5. Latest security report
-          latest_security=$(ls -t .llm/security-review/*.md 2>/dev/null | head -1 || true)
-          if [ -n "$latest_security" ]; then
-            cp "$latest_security" "$out/security-report.md"
-          fi
-
-          # 6. Manifest: tool versions, commit SHA, timestamp
-          printf '{\n  "commit": "%s",\n  "version": "%s",\n  "generated_at": "%s",\n  "git_version": "%s"\n}\n' \
-            "$(git rev-parse HEAD)" "$version" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(git --version | awk '{print $3}')" \
-            > "$out/manifest.json"
-
-      - name: Commit release snapshot
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .llm/evidence/releases/
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(evidence): add release snapshot for $(git describe --tags --always)"
-            git push
-          else
-            echo "No snapshot changes to commit"
-          fi
-EOF
-
-    print_success "Created .github/workflows/release-snapshot.yml"
-fi
-
-# ============================================================================
 # Summary
 # ============================================================================
 echo ""
@@ -1353,7 +751,6 @@ echo -e "${CYAN}Created:${NC}"
 print_info "✓ AI memory structure (AGENTS.md, docs/)"
 print_info "✓ Git hooks (.githooks/)"
 print_info "✓ Tech decisions (.tech-decisions.yml)"
-print_info "✓ CI configuration (.github/workflows/)"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
 echo -e "  ${NC}1. Review and customize:${NC}"

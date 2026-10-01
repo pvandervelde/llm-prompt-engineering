@@ -428,7 +428,7 @@ The implementation is complete and tests are passing. Probe the finished impleme
 
 Run tiers appropriate to criticality, using the resolved toolchain's commands — never hardcode a tool for a different stack:
 - Tier 4: `{toolchain.mutation}` — report mutation score (engine: `{toolchain.mutation_engine}`) and all survivors
-- Tier 5: `{toolchain.fuzz_run}` — run on all external-input parsers; if `{toolchain.fuzz_add}` is null and no target exists, scaffold from the stack's harness template in `fuzz/README.md`
+- Tier 5: `{toolchain.fuzz_run}` — run on all external-input parsers; if `{toolchain.fuzz_add}` is null and no target exists, adapt an existing fuzz harness convention already in this repo, or print a notice and skip if none exists
 - Tier 6: `{toolchain.formal}` if not null, otherwise model-based testing via `{toolchain.property_lib}` — run on safety-critical invariants
 
 For surviving mutants: write targeted kill tests that name the assertion each defends, then re-run to confirm killed. A survivor that cannot be traced to an assertion is a spec gap — report it, do not write a shape-matching test.

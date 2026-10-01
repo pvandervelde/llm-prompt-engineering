@@ -57,20 +57,10 @@ The bootstrap scripts automate the following setup steps:
 - AI modes auto-detect and parse this format
 - Tasks are stored as Markdown checklist items
 
-### 5. CI Configuration
-
-- Generates `.github/workflows/` for language detection
-- Creates fast-checks and comprehensive-checks pipelines
-- Language-specific: Rust, JavaScript/TypeScript, Python
-- Also creates `.github/workflows/pipeline-gates.yml` — seven required checks
-  (`spec/assertion-coverage`, `spec/traceability`, `test/red-green-integrity`,
-  `quality/mutation`, `quality/coverage-ratchet`, `security/findings`,
-  `evidence/present`) that verify the agent pipeline's own gates against
-  `.tech-decisions.yml` thresholds and `.llm/evidence/` artefacts, rather than
-  trusting the pipeline's self-report. **This script does not configure branch
-  protection** — after bootstrapping, a repo admin must add all seven jobs as
-  required status checks on the default branch (Settings → Branches → Branch
-  protection rules) for the gate to actually block merges.
+This script does not generate CI configuration. A repo is not assumed to be
+hosted on GitHub, nor to be CI-less — pipeline gating (assertion coverage,
+traceability, mutation score, etc.) is guidance for wiring into whatever CI
+the repo already has, not a file this script writes for you.
 
 ## Task Tracking Details
 
@@ -78,8 +68,9 @@ The bootstrap scripts automate the following setup steps:
 
 1. **Planner Mode** creates/updates `.llm/tasks.md`
 2. **Coder Mode** reads and executes first unchecked task
-3. **Helper Scripts** convert to JSON:
-   - `scripts/tasks-export.ps1` / `scripts/tasks-export.sh` → JSON
+3. **Helper Scripts** convert to JSON via the task-export tool provided by
+   the agent framework (installed alongside the agent definitions, not part
+   of this repo's workspace)
 
 **Markdown Format Example:**
 
@@ -137,9 +128,8 @@ AI modes follow this process:
    - Commit with conventional commit format
    - Verify hooks run successfully
 
-5. **Enable Optional Features:**
-   - Run `./bootstrap-ai-repo.ps1 -Force` to upgrade
-   - Additional CI/CD integrations
+5. **Re-run After Updating:**
+   - Run `./bootstrap-ai-repo.ps1 -Force` to re-apply after upgrading the framework
 
 ## Task Format Reference
 
@@ -175,7 +165,7 @@ AI modes follow this process:
 
 1. Check `.llm/tasks.md` exists: `ls .llm/tasks.md`
 2. Verify format is correct (checklist items with `- [ ]`)
-3. Check modes have access to scripts/tasks-export.* helpers
+3. Check the agent framework's task-export tool is installed and on PATH
 
 ### Git Hooks Not Running
 
