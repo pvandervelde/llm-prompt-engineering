@@ -103,6 +103,21 @@ state that prevents double-submission), accessibility interactions (keyboard-onl
 navigation completeness), and state transitions that are easily missed. Write to
 `docs/spec/ux/ux-assertions.md`.
 
+### 8a. Define Accessibility Baseline and Design Tokens
+
+Write `docs/spec/ux/accessibility.md`: WCAG target level (from `.tech-decisions.yml`),
+global rules that apply across every screen (focus management on route change, skip-to-content
+link, minimum colour contrast ratio, reduced-motion handling, focus-visible styling), and a
+consolidated table of per-screen/per-component ARIA and keyboard requirements already
+documented in Steps 5 and 6 (reference screen/component IDs — do not re-describe them, index them).
+
+Write `docs/spec/ux/design-tokens.md`: token categories (colour, spacing, typography, radius,
+shadow, breakpoints) with token names and semantic usage guidance (e.g. `color.text.error` —
+used for validation error copy and destructive action labels). Reference actual values from
+the design system if one exists; otherwise define the semantic names components must use so
+the Coder never hardcodes a value. Every component's props/states from Step 6 that reference
+colour, spacing, or typography must cite a token from this file, not a raw value.
+
 ### 9. Write Output Files
 
 ```
@@ -113,7 +128,9 @@ docs/spec/ux/
 ├── flows/                 — one .md per user goal with Mermaid diagram
 ├── screens/               — one .md per screen (SCR-NNN format)
 ├── components/
-│   └── component-inventory.md
+│   └── component-inventory.md  — CMP-NNN format
+├── accessibility.md       — WCAG target, global rules, per-screen/component ARIA index
+├── design-tokens.md       — token names and semantic usage guidance
 ├── navigation.md
 ├── ux-assertions.md
 └── copy.md                — all user-facing strings in one place
@@ -124,7 +141,8 @@ docs/spec/ux/
 
 Provide a summary: screens defined (count + IDs), flows (count), components (count),
 UX assertions (count), key design decisions (numbered list with rationale), what the
-Interface Designer should do next, and what the Tester should use from `ux-assertions.md`.
+Interface Designer should do next, and what the Tester should use from `ux-assertions.md`,
+`accessibility.md`, and `design-tokens.md`.
 
 ## Workflow Integration
 

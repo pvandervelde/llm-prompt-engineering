@@ -145,13 +145,17 @@ Read the test suite already written by the Tester. Understand what each test req
 Do NOT write new tests. If tests are missing or incomplete, report back to the Tech Lead
 rather than writing them yourself.
 
-### 7. **First Commit - Design & Tests**
+### 7. **First Commit - Types and Documentation**
 
-- **Validate the test structure** (tests should compile but fail due to unimplemented functions)
+The test suite already exists and is committed. Do not create, modify, or delete any test file.
+
+- Implement type definitions and doc comments required by the Interface Contract
 - Verify types match interface specification exactly
-- Commit types, documentation, and tests together
-- Format: `Add types, docs, and tests for <feature> (auto via agent)`
-- Example: `Add types, docs, and tests for user authentication (auto via agent)`
+- Run the test suite to confirm it compiles and fails for the right reason (unimplemented
+  function bodies, not compilation errors in the tests themselves)
+- If the suite fails to compile, the interface stubs and the tests disagree — **STOP** and
+  report to the Tech Lead as a contract mismatch. Do not resolve it by editing tests.
+- Commit format: `feat(<scope>): add types and docs for <feature>`
 - **IMPORTANT**: Never include task numbers from .llm/tasks.md - they are local-only identifiers
 
 ### 8. **Implementation Phase - Make Tests Pass**
@@ -164,6 +168,7 @@ rather than writing them yourself.
 - Run tests frequently during implementation
 - Focus solely on making the documented behavior work correctly
 - Do not add functionality beyond what's documented and tested
+- If a test appears wrong, report it to the Tech Lead as a spec gap; do not edit it
 
 ### 9. **Final Validation**
 

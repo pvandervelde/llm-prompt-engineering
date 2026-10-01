@@ -4,6 +4,9 @@ name: "Task Planner"
 tools: [read, search, edit, web, execute, agent]
 model: Claude Haiku 4.5 (copilot)
 handoffs:
+  - label: "Review spec before implementation"
+    agent: spec-reviewer
+    prompt: "The task list is ready. Please audit the specification bundle for completeness, consistency, and traceability before implementation begins."
   - label: "Start code implementation"
     agent: coder
     prompt: "The task list is ready. Please implement the next pending task using TDD."
@@ -103,7 +106,7 @@ Generate `./.llm/tasks.md` markdown file.
 ```
 - [ ] 1.0 Title
   - Context: spec refs, file locations, dependencies, constraints
-  - Assertions: reference to spec
+  - Assertions: ASSERT-NNNN, ASSERT-NNNN, ... (stable IDs from docs/spec/assertions.md, not descriptions)
   - [ ] 1.1 Subtask (atomic, one PR)
   - [ ] 1.2 Subtask
   - [ ] 1.3 Verify <component> is integrated into the system
@@ -117,7 +120,7 @@ Generate `./.llm/tasks.md` markdown file.
 
 ### 6. Context Annotation
 
-Link to spec/module files. Reference registries for reuse. Pull constraints. Link assertions. Note dependencies and sequencing. Include performance/security constraints.
+Link to spec/module files. Reference registries for reuse. Pull constraints. Link assertions by their stable `ASSERT-NNNN` ID, not a paraphrase. Note dependencies and sequencing. Include performance/security constraints.
 
 ### 7. Subtask Granularity
 

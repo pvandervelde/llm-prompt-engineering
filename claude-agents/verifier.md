@@ -79,7 +79,7 @@ All context required for verification is pre-injected above:
 * `## Standards` — quality and commit standards to verify against
 * `## Relevant Assertions` — the behavioral assertions this implementation must satisfy
 * `## Interface Contract` — the type signatures and contracts the implementation must honour
-* `## Existing Work` — full audit trail (test counts, mutation scores, fuzz results, Kani results, security findings) from all preceding phases
+* `## Existing Work` — artefact paths and claimed scores from all preceding phases (test counts, mutation report path, fuzz artefact path, formal verification report path, security findings) — **paths and raw claimed values only, not a pre-digested verdict.** See 2a below: you re-derive the verdict yourself.
 
 Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, .llm/tasks.md, or docs/catalog.md.
 
@@ -87,6 +87,16 @@ Read only if a specific check requires content not present above:
 
 * `docs/spec/architecture.md` — only if verifying a Clean Architecture boundary
 * `docs/catalog.md` — only for catalog currency check, to compare against the diff
+
+### 2a. **Re-derive Audit Evidence** — Critical gate
+
+Do not trust the claimed scores in `## Existing Work`. Read the referenced artefact files directly and re-compute:
+
+* Parse the mutation report JSON at the path given in `## Existing Work` (e.g. `.llm/evidence/mutation-<sha>.json`). Compute score per module. Compare against the target for that module's criticality class (`mutation_targets.<engine>` in Standards — the engine name must also be present in the report). Any module below target → **Critical**.
+* Confirm the report's commit SHA matches `git rev-parse HEAD`. A report generated against an older commit is stale → **Critical**.
+* Confirm every surviving mutant listed in the report has a corresponding kill test commit (`git log --oneline` for a `test(mutation):` commit referencing that survivor).
+* If a fuzz artefact directory or formal-verification report is referenced but does not exist at the given path → **Critical**. A missing artefact is a failed audit, not a missing file.
+* If the formal-verification report shows COUNTEREXAMPLE/FAIL for any safety-critical module → **Critical**, regardless of what the Tech Lead's summary claimed.
 
 ### 2. **Validate Implementation Quality**
 

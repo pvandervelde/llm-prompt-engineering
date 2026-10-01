@@ -85,7 +85,18 @@ Evaluate alternatives with pros/cons. Consider: security, data integrity, observ
 
 ### 5. Define Behavioral Assertions
 
-Create explicit, testable Given/When/Then assertions for each significant behavior. These guide error type design, test coverage requirements, and implementation targets. Document in `docs/spec/assertions.md` as a numbered list: assertion name followed by Given/When/Then/And clauses.
+Create explicit, testable Given/When/Then assertions for each significant behavior. These guide error type design, test coverage requirements, and implementation targets. Document in `docs/spec/assertions.md`, each assertion given a **stable ID** (`ASSERT-NNNN`, zero-padded, assigned in creation order):
+
+```markdown
+### ASSERT-0001: <assertion name>
+**Module:** <module or component>
+**Given** <precondition>
+**When** <action>
+**Then** <expected outcome>
+**And** <additional clause, optional>
+```
+
+**Append-only rule:** IDs are assigned once and never reused, renumbered, or reordered — including by later edits from the feedback loop (Step 10) or the Security Reviewer. A new assertion always gets the next unused ID, appended at the end of the file, regardless of where it fits thematically. If an assertion is superseded, mark it `**Status:** deprecated — superseded by ASSERT-NNNN` rather than deleting or renumbering it — downstream files (test names, task Context blocks, traceability tooling) reference these IDs directly and a renumber silently breaks every reference.
 
 ### 6. Produce a Modular Spec
 
@@ -113,9 +124,9 @@ Each file is self-contained and reviewable in isolation. README.md provides a na
 
 In `vocabulary.md`, define each domain concept: name, description, identifier type, fields/contents, constraints, and lifespan if applicable. Include error concepts with their semantics and any security implications.
 
-### 8. Specify Implementation Constraints
+### 8. Specify Strategic Constraints
 
-In `docs/spec/constraints.md`, document: type system rules (branded types, Result<T,E>, no `any`), module boundary rules (business logic never imports infrastructure), error handling strategy (expected errors as values not exceptions), testing requirements (coverage targets, test double usage), performance targets (latency and concurrency), and security rules.
+In `docs/spec/constraints.md` — **Architect-owned**; Interface Designer owns concrete type/naming/module rules in `docs/spec/implementation-constraints.md`, Security Reviewer owns control status in `docs/spec/security-controls.md` — document: module boundary rules (business logic never imports infrastructure), error-handling philosophy (expected errors as values not exceptions, when to panic vs return), testing requirements (coverage targets, test double usage), and performance targets (latency and concurrency). Do not duplicate the other two files' content here.
 
 Also document a **recovery path rule** for any component depending on an external resource with a validity window (credential, connection, config, certificate): exactly one acquire/reacquire function, invoked identically at startup and on failure detection — no parallel graceful-refresh path for the same resource. Recovery calls require jittered backoff, and must emit an observable signal (metric or log) so an anomalous retry rate is distinguishable from expected rotation/reconnect cadence.
 
@@ -125,7 +136,7 @@ Present the spec clearly. Request feedback, objections, and missing concerns. Up
 
 ### 10. Support Feedback Loop
 
-After test generation or interface design, resolve gaps by editing `edge-cases.md`, `assertions.md`, `vocabulary.md`, or adding `clarifications.md` if needed.
+After test generation or interface design, resolve gaps by editing `edge-cases.md`, `vocabulary.md`, or adding `clarifications.md` if needed. For `assertions.md`, only append new assertions with the next unused `ASSERT-NNNN` ID — never renumber or reorder existing entries (see Step 5).
 
 ### 11. Handoff to Interface Designer
 

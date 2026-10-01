@@ -3,7 +3,7 @@
 .SYNOPSIS
     Bootstrap AI-assisted development framework for a repository
 .DESCRIPTION
-    Sets up AI memory structure, commit hooks, CI configuration, and tech stack detection
+    Sets up AI memory structure, commit hooks, tech stack detection, and task tracking
 .PARAMETER Force
     Overwrite existing files
 .EXAMPLE
@@ -18,8 +18,21 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# $scriptDir locates sibling tool files (e.g. create-llm-memory.ps1). This
+# script may be installed globally (e.g. a user's Claude agent tools
+# directory) and invoked against any repo as the current working directory,
+# so the repo root must come from git, never from where this script itself
+# happens to live.
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$root = Split-Path -Parent $scriptDir
+$root = $null
+try
+{
+    $root = (& git rev-parse --show-toplevel 2>$null)
+}
+catch
+{
+    $root = $null
+}
 
 # Color output helpers
 function Write-Step
@@ -57,7 +70,7 @@ Write-Host "║  AI-Assisted Development Framework Bootstrap              ║" -
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 
 # Verify we're in a git repository
-if (-not (Test-Path "$root/.git"))
+if (-not $root)
 {
     Write-Error "Not in a git repository. Initialize git first: git init"
     exit 1
@@ -66,7 +79,7 @@ if (-not (Test-Path "$root/.git"))
 # ============================================================================
 # Step 1: Create AI Memory Structure
 # ============================================================================
-Write-Step "[1/5] Creating AI memory structure..."
+Write-Step "[1/6] Creating AI memory structure..."
 
 $memoryScript = Join-Path $scriptDir "create-llm-memory.ps1"
 if (Test-Path $memoryScript)
@@ -175,7 +188,7 @@ When in doubt, look at existing code in the repository as examples of these patt
 # ============================================================================
 # Step 2: Create Git Hooks
 # ============================================================================
-Write-Step "[2/5] Creating git hooks..."
+Write-Step "[2/6] Creating git hooks..."
 
 $hooksDir = Join-Path $root ".githooks"
 
@@ -444,7 +457,7 @@ catch
 # ============================================================================
 # Step 3: Detect Tech Stack
 # ============================================================================
-Write-Step "[3/5] Detecting tech stack..."
+Write-Step "[3/6] Detecting tech stack..."
 
 $languages = @()
 $frameworks = @()
@@ -500,7 +513,13 @@ Write-Success "Tech stack detection complete"
 # ============================================================================
 # Step 4: Create .tech-decisions.yml
 # ============================================================================
-Write-Step "[4/5] Creating .tech-decisions.yml..."
+Write-Step "[4/6] Creating .tech-decisions.yml..."
+
+$toolchainDefault = if ($languages -contains "rust") { "rust" }
+    elseif ($languages -contains "csharp") { "dotnet" }
+    elseif ($languages -contains "typescript") { "typescript" }
+    elseif ($languages -contains "javascript") { "typescript" }
+    else { "null" }
 
 $techDecisions = @"
 # Technology Decisions and Standards
@@ -509,6 +528,100 @@ $techDecisions = @"
 
 # Detected languages
 languages: [$($languages -join ", ")]
+
+# Toolchain resolution layer. Agents describe what they need in abstract
+# capability terms (test, mutation, fuzz, formal, ...); the Tech Lead resolves
+# this block to concrete commands for the active stack and injects them into
+# every subagent prompt as a `## Toolchain` block. Mutation scores are NOT
+# comparable across engines - see mutation_targets below.
+toolchains:
+  default: $toolchainDefault
+
+  detect:
+    - if_exists: "Cargo.toml"
+      toolchain: rust
+    - if_exists: "*.csproj|*.sln"
+      toolchain: dotnet
+    - if_exists: "package.json"
+      toolchain: typescript
+    - if_exists: "pyproject.toml"
+      toolchain: python  # no toolchain block defined yet - add one before use
+
+  rust:
+    build:             "cargo build --workspace"
+    typecheck:         "cargo check --workspace"
+    test:              "cargo test --workspace"
+    test_scoped:       "cargo test -p {package}"
+    lint:              "cargo clippy -- -D warnings"
+    format_check:      "cargo fmt --check"
+    coverage:          "cargo llvm-cov --json --output-path {out}"
+    mutation:          "cargo mutants --package {package} --timeout 60 --json"
+    mutation_engine:   "cargo-mutants"
+    fuzz_list:         "cargo fuzz list"
+    fuzz_run:          "cargo fuzz run {target} -- -max_total_time={seconds}"
+    fuzz_add:          "cargo fuzz add {target}"
+    formal:            "cargo kani --package {package}"
+    property_lib:      "proptest"
+    structural_search:  "ast-grep --lang rust"
+    test_paths:        ["tests/", "src/**/tests.rs", "src/**/*_test.rs"]
+
+  dotnet:
+    build:             "dotnet build"
+    typecheck:         "dotnet build --no-restore /p:TreatWarningsAsErrors=true"
+    test:              "dotnet test"
+    test_scoped:       "dotnet test {package}"
+    lint:              "dotnet format --verify-no-changes && dotnet roslynator analyze"
+    format_check:      "dotnet format --verify-no-changes"
+    coverage:          "dotnet test --collect:'XPlat Code Coverage'"
+    mutation:          "dotnet stryker --project {package} --reporter json --output {out}"
+    mutation_engine:   "stryker-net"
+    fuzz_list:         "ls fuzz/"
+    fuzz_run:          "dotnet run --project fuzz/{target} -- -max_total_time={seconds}"
+    fuzz_add:          null
+    formal:            null
+    property_lib:      "CsCheck"
+    structural_search:  "ast-grep --lang csharp"
+    test_paths:        ["**/*.Tests/", "**/*Tests.cs"]
+
+  typescript:
+    build:             "npm run build"
+    typecheck:         "tsc --noEmit"
+    test:              "npx vitest run"
+    test_scoped:       "npx vitest run {package}"
+    lint:              "npx eslint . --max-warnings 0"
+    format_check:      "npx prettier --check ."
+    coverage:          "npx vitest run --coverage --reporter=json"
+    mutation:          "npx stryker run --mutate '{package}/**/*.ts' --reporters json"
+    mutation_engine:   "stryker-js"
+    fuzz_list:         "ls fuzz/"
+    fuzz_run:          "npx jazzer fuzz/{target} -- -max_total_time={seconds}"
+    fuzz_add:          null
+    formal:            null
+    property_lib:      "fast-check"
+    structural_search:  "ast-grep --lang typescript"
+    test_paths:        ["**/*.test.ts", "**/*.spec.ts", "tests/"]
+
+# Mutation targets are per-engine because operator sets and denominators differ
+# and scores are not comparable across engines.
+mutation_targets:
+  cargo-mutants:
+    safety_critical: 95
+    domain_logic:    85
+    parser:          80
+    api_boundary:    80
+    adapter:         70
+  stryker-net:
+    safety_critical: 90
+    domain_logic:    80
+    parser:          75
+    api_boundary:    75
+    adapter:         65
+  stryker-js:
+    safety_critical: 90
+    domain_logic:    80
+    parser:          75
+    api_boundary:    75
+    adapter:         65
 
 # Database (customize for your project)
 database:
@@ -779,9 +892,9 @@ else
 }
 
 # ============================================================================
-# Step 5b: Initialize Fallback Task Structure
+# Step 6: Initialize Fallback Task Structure
 # ============================================================================
-Write-Step "[5b/6] Initializing fallback task structure (.llm/tasks.md)..."
+Write-Step "[6/6] Initializing fallback task structure (.llm/tasks.md)..."
 
 $llmDir = Join-Path $root ".llm"
 if (-not (Test-Path $llmDir))
@@ -798,7 +911,8 @@ if (-not (Test-Path $tasksFile))
 # Implementation Tasks
 
 > **Note**: This file serves as the fallback task source when Beads is not available.
-> If Beads is installed and initialized, tasks can be synced using: `scripts/tasks-export.ps1` or `scripts/tasks-export.sh`
+> If Beads is installed and initialized, tasks can be synced to JSON using the
+> task-export tool provided by the agent framework.
 
 ## Project Context
 
@@ -833,187 +947,6 @@ else
 }
 
 # ============================================================================
-# Step 6: Create CI Configuration
-# ============================================================================
-Write-Step "[6/6] Creating CI configuration..."
-
-$githubDir = Join-Path $root ".github/workflows"
-if (-not (Test-Path $githubDir))
-{
-    New-Item -ItemType Directory -Path $githubDir -Force | Out-Null
-}
-
-# Create quality.yml
-$qualityYml = @"
-name: Quality Checks
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-
-jobs:
-  fast-checks:
-    name: Fast Quality Checks
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Task tracking validation (if Beads is used)
-      - name: Check task tracking
-        continue-on-error: true
-        run: |
-          if command -v bd >/dev/null 2>&1; then
-            # Check if commit has task ID
-            if ! git log --format=%s -1 | grep -E '\(bd-[a-z0-9]+\)'; then
-              echo "::warning::No task ID in commit message. Consider: (bd-xxx)"
-            fi
-
-            # Check for orphaned work (commits without closed tasks)
-            if bd doctor --orphans --json 2>/dev/null | grep -q "orphans"; then
-              echo "::warning::Found commits with task IDs but tasks not closed"
-              bd doctor --orphans
-            fi
-          fi
-
-      # Re-run all pre-commit checks (in case bypassed locally)
-      - name: Check for secrets
-        run: |
-          pip install detect-secrets
-          if [ -f ".secrets.baseline" ]; then
-            detect-secrets scan --baseline .secrets.baseline
-          else
-            echo "No .secrets.baseline found, creating one..."
-            detect-secrets scan --baseline .secrets.baseline
-          fi
-
-      # Language-specific checks
-$(if ($languages -contains "rust") {@"
-
-      - name: Rust - Setup
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
-
-      - name: Rust - Format check
-        run: cargo fmt -- --check
-
-      - name: Rust - Clippy
-        run: cargo clippy --all-targets -- -D warnings
-
-      - name: Rust - Build
-        run: cargo build --all-targets
-
-      - name: Rust - Unit tests
-        run: cargo test --lib
-"@})
-$(if ($languages -contains "javascript" -or $languages -contains "typescript") {@"
-
-      - name: Node - Setup
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Node - Install dependencies
-        run: npm ci
-
-      - name: Node - Format check
-        run: npx prettier --check .
-
-      - name: Node - Lint
-        run: npx eslint .
-
-      - name: Node - Type check
-        if: hashFiles('tsconfig.json') != ''
-        run: npx tsc --noEmit
-
-      - name: Node - Unit tests
-        run: npm test -- --coverage=false
-"@})
-$(if ($languages -contains "python") {@"
-
-      - name: Python - Setup
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Python - Install dependencies
-        run: |
-          pip install black ruff mypy pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Python - Format check
-        run: black --check .
-
-      - name: Python - Lint
-        run: ruff check .
-
-      - name: Python - Type check
-        run: mypy src/ || true
-
-      - name: Python - Unit tests
-        run: pytest tests/
-"@})
-
-  comprehensive-checks:
-    name: Comprehensive Validation
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: fast-checks
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-$(if ($languages -contains "rust") {@"
-      - name: Rust - Setup
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Rust - Full test suite with coverage
-        run: |
-          cargo install cargo-tarpaulin
-          cargo tarpaulin --out Xml --all-features
-
-      - name: Rust - Check coverage threshold
-        run: |
-          coverage=`$(xmllint --xpath "string(//coverage/@line-rate)" cobertura.xml)`
-          if (( `$(echo "`$coverage < 0.80" | bc -l) )); then
-            echo "Coverage `$coverage is below 80%"
-            exit 1
-          fi
-
-      - name: Rust - Dependency audit
-        run: |
-          cargo install cargo-audit
-          cargo audit
-"@})
-
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
-"@
-
-$qualityPath = Join-Path $githubDir "quality.yml"
-if ((Test-Path $qualityPath) -and -not $Force)
-{
-    Write-Warning "quality.yml already exists (use -Force to overwrite)"
-}
-else
-{
-    $qualityYml | Out-File -FilePath $qualityPath -Encoding UTF8
-    Write-Success "Created .github/workflows/quality.yml"
-}
-
-# ============================================================================
 # Summary
 # ============================================================================
 Write-Host ""
@@ -1025,7 +958,6 @@ Write-Host "Created:" -ForegroundColor Cyan
 Write-Info "✓ AI memory structure (AGENTS.md, docs/)"
 Write-Info "✓ Git hooks (.githooks/)"
 Write-Info "✓ Tech decisions (.tech-decisions.yml)"
-Write-Info "✓ CI configuration (.github/workflows/)"
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Review and customize:" -ForegroundColor White

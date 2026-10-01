@@ -107,7 +107,7 @@ Generate `./.llm/tasks.md` markdown file.
 ```
 - [ ] 1.0 Title
   - Context: spec refs, file locations, dependencies, constraints
-  - Assertions: reference to spec
+  - Assertions: ASSERT-NNNN, ASSERT-NNNN, ... (stable IDs from docs/spec/assertions.md, not descriptions)
   - [ ] 1.1 Subtask (atomic, one PR)
   - [ ] 1.2 Subtask
   - [ ] 1.3 Verify <component> is integrated into the system
@@ -121,7 +121,7 @@ Generate `./.llm/tasks.md` markdown file.
 
 ### 6. Context Annotation
 
-Link to spec/module files. Reference registries for reuse. Pull constraints. Link assertions. Note dependencies and sequencing. Include performance/security constraints.
+Link to spec/module files. Reference registries for reuse. Pull constraints. Link assertions by their stable `ASSERT-NNNN` ID, not a paraphrase. Note dependencies and sequencing. Include performance/security constraints.
 
 ### 7. Subtask Granularity
 
