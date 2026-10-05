@@ -160,23 +160,25 @@ init_fixture_git() {
     git -C "$dir" commit -q -m "fixture" >/dev/null 2>&1
 }
 
-make_fixture_repo() {
+populate_fixture_agents() {
     local dir="$1"
     mkdir -p "$dir/agents" "$dir/claude-agents"
     printf 'FIXTURE AGENT ALPHA CONTENT\n' > "$dir/agents/alpha.agent.md"
     printf 'FIXTURE AGENT BETA CONTENT\n'  > "$dir/agents/beta.agent.md"
     printf 'FIXTURE CLAUDE ALPHA CONTENT\n' > "$dir/claude-agents/alpha.md"
     printf 'FIXTURE CLAUDE BETA CONTENT\n'  > "$dir/claude-agents/beta.md"
+}
+
+make_fixture_repo() {
+    local dir="$1"
+    populate_fixture_agents "$dir"
     init_fixture_git "$dir"
 }
 
 make_fixture_repo_with_skills() {
     local dir="$1"
-    mkdir -p "$dir/agents" "$dir/claude-agents" "$dir/skills/demo-skill"
-    printf 'FIXTURE AGENT ALPHA CONTENT\n' > "$dir/agents/alpha.agent.md"
-    printf 'FIXTURE AGENT BETA CONTENT\n'  > "$dir/agents/beta.agent.md"
-    printf 'FIXTURE CLAUDE ALPHA CONTENT\n' > "$dir/claude-agents/alpha.md"
-    printf 'FIXTURE CLAUDE BETA CONTENT\n'  > "$dir/claude-agents/beta.md"
+    populate_fixture_agents "$dir"
+    mkdir -p "$dir/skills/demo-skill"
     printf 'FIXTURE SKILL MD\n' > "$dir/skills/demo-skill/SKILL.md"
     printf 'FIXTURE HELPER\n'   > "$dir/skills/demo-skill/helper.txt"
     init_fixture_git "$dir"

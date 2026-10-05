@@ -112,6 +112,25 @@ function Copy-OneFile
     }
 }
 
+# Copy-GlobFiles copies every file directly under SrcDir matching Filter
+# (non-recursive) into DstDir via Copy-OneFile. Does nothing if SrcDir does
+# not exist.
+function Copy-GlobFiles
+{
+    param([string]$SrcDir, [string]$Filter, [string]$DstDir)
+
+    if (-not (Test-Path $SrcDir -PathType Container))
+    {
+        return
+    }
+
+    $files = Get-ChildItem -Path $SrcDir -Filter $Filter -File -ErrorAction SilentlyContinue
+    foreach ($f in $files)
+    {
+        Copy-OneFile -Src $f.FullName -Dst (Join-Path $DstDir $f.Name)
+    }
+}
+
 # Copy-Tree recursively copies every file under SrcDir into DstDir,
 # preserving the relative directory structure, applying the same -Force
 # semantics to each file via Copy-OneFile.
@@ -133,30 +152,12 @@ Write-Host "Installing agents and skills..."
 # ----------------------------------------------------------------------------
 # Copilot agents: agents/*.agent.md -> $copilotHome/agents/
 # ----------------------------------------------------------------------------
-$agentsDir = Join-Path $root "agents"
-if (Test-Path $agentsDir -PathType Container)
-{
-    $destAgentsDir = Join-Path $copilotHome "agents"
-    $agentFiles = Get-ChildItem -Path $agentsDir -Filter "*.agent.md" -File -ErrorAction SilentlyContinue
-    foreach ($f in $agentFiles)
-    {
-        Copy-OneFile -Src $f.FullName -Dst (Join-Path $destAgentsDir $f.Name)
-    }
-}
+Copy-GlobFiles -SrcDir (Join-Path $root "agents") -Filter "*.agent.md" -DstDir (Join-Path $copilotHome "agents")
 
 # ----------------------------------------------------------------------------
 # Claude agents: claude-agents/*.md -> $claudeHome/agents/
 # ----------------------------------------------------------------------------
-$claudeAgentsDir = Join-Path $root "claude-agents"
-if (Test-Path $claudeAgentsDir -PathType Container)
-{
-    $destClaudeAgentsDir = Join-Path $claudeHome "agents"
-    $claudeFiles = Get-ChildItem -Path $claudeAgentsDir -Filter "*.md" -File -ErrorAction SilentlyContinue
-    foreach ($f in $claudeFiles)
-    {
-        Copy-OneFile -Src $f.FullName -Dst (Join-Path $destClaudeAgentsDir $f.Name)
-    }
-}
+Copy-GlobFiles -SrcDir (Join-Path $root "claude-agents") -Filter "*.md" -DstDir (Join-Path $claudeHome "agents")
 
 # ----------------------------------------------------------------------------
 # Skills: skills/<name>/ -> both $claudeHome/skills/<name>/ and

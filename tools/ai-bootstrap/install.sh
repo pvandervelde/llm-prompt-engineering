@@ -94,6 +94,25 @@ copy_file() {
     return 0
 }
 
+# copy_glob <src_dir> <pattern> <dst_dir>
+# Copies every file directly under src_dir matching pattern (non-recursive)
+# into dst_dir via copy_file, creating dst_dir as needed. Skipped silently
+# if src_dir does not exist.
+copy_glob() {
+    local src_dir="$1"
+    local pattern="$2"
+    local dst_dir="$3"
+    local f
+
+    [ -d "$src_dir" ] || return 0
+
+    mkdir -p "$dst_dir"
+    for f in "$src_dir"/$pattern; do
+        [ -e "$f" ] || continue
+        copy_file "$f" "$dst_dir/$(basename "$f")"
+    done
+}
+
 # copy_tree <src_dir> <dst_dir>
 # Recursively copies every file under src_dir into dst_dir, preserving the
 # relative directory structure, applying the same --force semantics to each
@@ -114,24 +133,12 @@ echo "Installing agents and skills..."
 # ----------------------------------------------------------------------------
 # Copilot agents: agents/*.agent.md -> $COPILOT_HOME_DIR/agents/
 # ----------------------------------------------------------------------------
-if [ -d "$ROOT/agents" ]; then
-    mkdir -p "$COPILOT_HOME_DIR/agents"
-    for f in "$ROOT"/agents/*.agent.md; do
-        [ -e "$f" ] || continue
-        copy_file "$f" "$COPILOT_HOME_DIR/agents/$(basename "$f")"
-    done
-fi
+copy_glob "$ROOT/agents" "*.agent.md" "$COPILOT_HOME_DIR/agents"
 
 # ----------------------------------------------------------------------------
 # Claude agents: claude-agents/*.md -> $CLAUDE_HOME_DIR/agents/
 # ----------------------------------------------------------------------------
-if [ -d "$ROOT/claude-agents" ]; then
-    mkdir -p "$CLAUDE_HOME_DIR/agents"
-    for f in "$ROOT"/claude-agents/*.md; do
-        [ -e "$f" ] || continue
-        copy_file "$f" "$CLAUDE_HOME_DIR/agents/$(basename "$f")"
-    done
-fi
+copy_glob "$ROOT/claude-agents" "*.md" "$CLAUDE_HOME_DIR/agents"
 
 # ----------------------------------------------------------------------------
 # Skills: skills/<name>/ -> both $CLAUDE_HOME_DIR/skills/<name>/ and

@@ -226,6 +226,19 @@ function Initialize-FixtureGit
     }
 }
 
+# Write-FixtureFile writes Content to Path followed by exactly one trailing
+# "`n", regardless of platform newline conventions. Set-Content alone cannot
+# produce this precisely (its own -NoNewline still appends the host EOL via
+# Value handling quirks on some PowerShell builds), so callers rely on this
+# helper rather than repeating the Set-Content + Add-Content pairing inline.
+function Write-FixtureFile
+{
+    param([string]$Path, [string]$Content)
+
+    Set-Content -Path $Path -Value $Content -NoNewline
+    Add-Content -Path $Path -Value "`n" -NoNewline
+}
+
 function New-FixtureRepo
 {
     param([string]$Dir, [switch]$WithSkills)
@@ -233,22 +246,16 @@ function New-FixtureRepo
     New-Item -ItemType Directory -Path (Join-Path $Dir "agents") -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $Dir "claude-agents") -Force | Out-Null
 
-    Set-Content -Path (Join-Path $Dir "agents/alpha.agent.md") -Value "FIXTURE AGENT ALPHA CONTENT" -NoNewline
-    Add-Content -Path (Join-Path $Dir "agents/alpha.agent.md") -Value "`n" -NoNewline
-    Set-Content -Path (Join-Path $Dir "agents/beta.agent.md") -Value "FIXTURE AGENT BETA CONTENT" -NoNewline
-    Add-Content -Path (Join-Path $Dir "agents/beta.agent.md") -Value "`n" -NoNewline
-    Set-Content -Path (Join-Path $Dir "claude-agents/alpha.md") -Value "FIXTURE CLAUDE ALPHA CONTENT" -NoNewline
-    Add-Content -Path (Join-Path $Dir "claude-agents/alpha.md") -Value "`n" -NoNewline
-    Set-Content -Path (Join-Path $Dir "claude-agents/beta.md") -Value "FIXTURE CLAUDE BETA CONTENT" -NoNewline
-    Add-Content -Path (Join-Path $Dir "claude-agents/beta.md") -Value "`n" -NoNewline
+    Write-FixtureFile -Path (Join-Path $Dir "agents/alpha.agent.md") -Content "FIXTURE AGENT ALPHA CONTENT"
+    Write-FixtureFile -Path (Join-Path $Dir "agents/beta.agent.md") -Content "FIXTURE AGENT BETA CONTENT"
+    Write-FixtureFile -Path (Join-Path $Dir "claude-agents/alpha.md") -Content "FIXTURE CLAUDE ALPHA CONTENT"
+    Write-FixtureFile -Path (Join-Path $Dir "claude-agents/beta.md") -Content "FIXTURE CLAUDE BETA CONTENT"
 
     if ($WithSkills)
     {
         New-Item -ItemType Directory -Path (Join-Path $Dir "skills/demo-skill") -Force | Out-Null
-        Set-Content -Path (Join-Path $Dir "skills/demo-skill/SKILL.md") -Value "FIXTURE SKILL MD" -NoNewline
-        Add-Content -Path (Join-Path $Dir "skills/demo-skill/SKILL.md") -Value "`n" -NoNewline
-        Set-Content -Path (Join-Path $Dir "skills/demo-skill/helper.txt") -Value "FIXTURE HELPER" -NoNewline
-        Add-Content -Path (Join-Path $Dir "skills/demo-skill/helper.txt") -Value "`n" -NoNewline
+        Write-FixtureFile -Path (Join-Path $Dir "skills/demo-skill/SKILL.md") -Content "FIXTURE SKILL MD"
+        Write-FixtureFile -Path (Join-Path $Dir "skills/demo-skill/helper.txt") -Content "FIXTURE HELPER"
     }
 
     Initialize-FixtureGit -Dir $Dir
