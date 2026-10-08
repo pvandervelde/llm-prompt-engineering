@@ -40,6 +40,15 @@
         19 Test-NoWritesOutsideDestinationTree
         20 Test-SourceRepoUntouchedAfterInstall
         21 Test-DestinationPathWithSpacesIsHandled
+
+      Tier 3 - QA adversarial audit (post-implementation, issue #68 follow-up)
+        22 Test-DanglingSymlinkInAgentsFailsLoudly
+        23 Test-SymlinkInSkillsTreeRejectedWithoutLeakingContent
+        24 Test-DestinationDirIsSymlinkWritesThroughToTarget
+        25 Test-CopilotHomeEnvPointingAtFileFailsLoudly
+        26 Test-WeirdSourceFilenamesSurviveByteForByte
+        27 Test-SourceRepoPathWithSpacesIsHandled
+        28 Test-SymlinkEscapingSourceTreeDoesNotLeakExternalContent
 #>
 
 Set-StrictMode -Version Latest
@@ -259,6 +268,32 @@ function New-FixtureRepo
     }
 
     Initialize-FixtureGit -Dir $Dir
+}
+
+# Try-NewSymlink attempts to create a real OS-level symbolic link (not a
+# plain copy). On Windows this requires either Developer Mode or an
+# elevated/admin token (SeCreateSymbolicLinkPrivilege); without it,
+# New-Item -ItemType SymbolicLink throws. Returns $true only when a genuine
+# symlink was created, so callers can skip symlink-dependent scenarios with
+# a clear notice on hosts that cannot exercise this path, rather than
+# silently passing against something that isn't actually a symlink.
+function Try-NewSymlink
+{
+    param([string]$Path, [string]$Target)
+    try
+    {
+        New-Item -ItemType SymbolicLink -Path $Path -Target $Target -ErrorAction Stop | Out-Null
+        $item = Get-Item -Path $Path -Force -ErrorAction SilentlyContinue
+        if ($item -and ($item.LinkType -eq "SymbolicLink"))
+        {
+            return $true
+        }
+        return $false
+    }
+    catch
+    {
+        return $false
+    }
 }
 
 $fixtureRepo = Join-Path $scratchRoot "fixture-repo"
@@ -592,6 +627,154 @@ function Test-DestinationPathWithSpacesIsHandled
 }
 
 # ===========================================================================
+# Tier 3 - QA adversarial audit (post-implementation, issue #68 follow-up)
+# ===========================================================================
+
+function Test-DanglingSymlinkInAgentsFailsLoudly
+{
+    $dir = Join-Path $scratchRoot "t22/repo"
+    $home1 = Join-Path $scratchRoot "t22/home"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    New-FixtureRepo -Dir $dir
+    if (-not (Try-NewSymlink -Path (Join-Path $dir "agents/dangling.agent.md") -Target (Join-Path $dir "agents/does-not-exist.agent.md")))
+    {
+        Write-Note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return $true
+    }
+    $result = Invoke-Install -Cwd $dir -HomeDir $home1
+    if ($result.Code -eq 0) { Write-Note "expected non-zero exit when a source glob match is a dangling symlink, got 0"; return $false }
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".copilot/agents/alpha.agent.md") (Join-Path $dir "agents/alpha.agent.md"))) { return $false }
+    if (Test-Path (Join-Path $home1 ".copilot/agents/dangling.agent.md")) { Write-Note "dangling.agent.md should not exist at destination"; return $false }
+    return $true
+}
+
+function Test-SymlinkInSkillsTreeRejectedWithoutLeakingContent
+{
+    # Security regression test: a symlink inside skills/ - even one whose
+    # target is a perfectly valid file - must be rejected, not followed.
+    # Earlier drafts of this installer dereferenced the symlink and copied
+    # its target's content verbatim into both ~/.claude and ~/.copilot,
+    # which is exactly the vector a planted symlink could use to exfiltrate
+    # an arbitrary file into a tree a future AI agent session reads back as
+    # trusted content. See .llm/findings/global-installer-68.md.
+    $dir = Join-Path $scratchRoot "t23/repo"
+    $home1 = Join-Path $scratchRoot "t23/home"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    New-FixtureRepo -Dir $dir
+    New-Item -ItemType Directory -Path (Join-Path $dir "skills/demo-skill") -Force | Out-Null
+    Write-FixtureFile -Path (Join-Path $dir "skills/demo-skill/real.txt") -Content "REAL SKILL FILE"
+    if (-not (Try-NewSymlink -Path (Join-Path $dir "skills/demo-skill/linked.txt") -Target (Join-Path $dir "skills/demo-skill/real.txt")))
+    {
+        Write-Note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return $true
+    }
+    Initialize-FixtureGit -Dir $dir
+    $result = Invoke-Install -Cwd $dir -HomeDir $home1
+    if ($result.Code -eq 0) { Write-Note "expected non-zero exit when skills/ contained a symlink, got 0"; return $false }
+    if ($result.Output -notmatch '(?i)symlink') { Write-Note "expected a symlink-rejection notice in output, got: $($result.Output)"; return $false }
+    if (Test-Path (Join-Path $home1 ".claude/skills/demo-skill/linked.txt")) { Write-Note "linked.txt should not exist at .claude destination"; return $false }
+    if (Test-Path (Join-Path $home1 ".copilot/skills/demo-skill/linked.txt")) { Write-Note "linked.txt should not exist at .copilot destination"; return $false }
+    # The real, non-symlinked sibling must still be installed correctly -
+    # rejecting one symlinked entry must not abort the whole skill copy.
+    if (-not (Assert-FileContent (Join-Path $home1 ".claude/skills/demo-skill/real.txt") "REAL SKILL FILE")) { return $false }
+    if (-not (Assert-FileContent (Join-Path $home1 ".copilot/skills/demo-skill/real.txt") "REAL SKILL FILE")) { return $false }
+    return $true
+}
+
+function Test-DestinationDirIsSymlinkWritesThroughToTarget
+{
+    $home1 = Join-Path $scratchRoot "t24/home"
+    $realTarget = Join-Path $scratchRoot "t24/real-copilot-target"
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    New-Item -ItemType Directory -Path $realTarget -Force | Out-Null
+    if (-not (Try-NewSymlink -Path (Join-Path $home1 ".copilot") -Target $realTarget))
+    {
+        Write-Note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return $true
+    }
+    $result = Invoke-Install -Cwd $fixtureRepo -HomeDir $home1
+    if ($result.Code -ne 0) { Write-Note "install exited $($result.Code) when the destination dir was a symlink: $($result.Output)"; return $false }
+    if (-not (Assert-FilesEqual (Join-Path $realTarget "agents/alpha.agent.md") (Join-Path $fixtureRepo "agents/alpha.agent.md"))) { return $false }
+    $item = Get-Item -Path (Join-Path $home1 ".copilot") -Force
+    if ($item.LinkType -ne "SymbolicLink") { Write-Note "expected $home1/.copilot to remain a symlink"; return $false }
+    return $true
+}
+
+function Test-CopilotHomeEnvPointingAtFileFailsLoudly
+{
+    $home1 = Join-Path $scratchRoot "t25/home"
+    $copilotHomeFile = Join-Path $scratchRoot "t25/copilot-home-as-a-file"
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    Set-Content -Path $copilotHomeFile -Value "NOT A DIRECTORY" -NoNewline
+    $result = Invoke-Install -Cwd $fixtureRepo -HomeDir $home1 -CopilotHome $copilotHomeFile
+    if ($result.Code -eq 0) { Write-Note "expected non-zero exit when `$env:COPILOT_HOME points at a file, got 0"; return $false }
+    return Assert-FileContent $copilotHomeFile "NOT A DIRECTORY"
+}
+
+function Test-WeirdSourceFilenamesSurviveByteForByte
+{
+    $dir = Join-Path $scratchRoot "t26/repo"
+    $home1 = Join-Path $scratchRoot "t26/home"
+    New-Item -ItemType Directory -Path (Join-Path $dir "agents") -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $dir "claude-agents") -Force | Out-Null
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    Write-FixtureFile -Path (Join-Path $dir "agents/with space.agent.md") -Content "SPACE NAME"
+    Write-FixtureFile -Path (Join-Path $dir "agents/café.agent.md") -Content "UNICODE NAME"
+    Write-FixtureFile -Path (Join-Path $dir "agents/-leadingdash.agent.md") -Content "DASH NAME"
+    Write-FixtureFile -Path (Join-Path $dir "claude-agents/normal.md") -Content "CLAUDE NORMAL"
+    Initialize-FixtureGit -Dir $dir
+    $result = Invoke-Install -Cwd $dir -HomeDir $home1
+    if ($result.Code -ne 0) { Write-Note "install exited $($result.Code) with space/unicode/leading-dash source filenames: $($result.Output)"; return $false }
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".copilot/agents/with space.agent.md") (Join-Path $dir "agents/with space.agent.md"))) { return $false }
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".copilot/agents/café.agent.md") (Join-Path $dir "agents/café.agent.md"))) { return $false }
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".copilot/agents/-leadingdash.agent.md") (Join-Path $dir "agents/-leadingdash.agent.md"))) { return $false }
+    return $true
+}
+
+function Test-SourceRepoPathWithSpacesIsHandled
+{
+    $dir = Join-Path $scratchRoot "t27/repo with spaces in its path"
+    $home1 = Join-Path $scratchRoot "t27/home"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    New-FixtureRepo -Dir $dir
+    $result = Invoke-Install -Cwd $dir -HomeDir $home1
+    if ($result.Code -ne 0) { Write-Note "install exited $($result.Code) with a spaced source repo path: $($result.Output)"; return $false }
+    return Assert-FilesEqual (Join-Path $home1 ".copilot/agents/alpha.agent.md") (Join-Path $dir "agents/alpha.agent.md")
+}
+
+function Test-SymlinkEscapingSourceTreeDoesNotLeakExternalContent
+{
+    # Direct reproduction of the HIGH-severity finding from the security
+    # audit: a symlink inside agents/ pointing OUTSIDE the repo entirely
+    # (e.g. simulating a path under the user's profile) must never have its
+    # content copied into the destination tree.
+    $dir = Join-Path $scratchRoot "t28/repo"
+    $home1 = Join-Path $scratchRoot "t28/home"
+    $secret = Join-Path $scratchRoot "t28/outside-repo-secret.txt"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    New-FixtureRepo -Dir $dir
+    Set-Content -Path $secret -Value "SUPER-SECRET-SSH-KEY-CONTENT-DO-NOT-LEAK" -NoNewline
+    if (-not (Try-NewSymlink -Path (Join-Path $dir "agents/evil.agent.md") -Target $secret))
+    {
+        Write-Note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return $true
+    }
+    $result = Invoke-Install -Cwd $dir -HomeDir $home1
+    if ($result.Code -eq 0) { Write-Note "expected non-zero exit when a source symlink escapes the repo, got 0"; return $false }
+    $leaked = Get-ChildItem -Path $home1 -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
+        (Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue) -match "SUPER-SECRET-SSH-KEY-CONTENT-DO-NOT-LEAK"
+    }
+    if ($leaked) { Write-Note "SECURITY: external secret content leaked into the destination tree: $($leaked.FullName -join ', ')"; return $false }
+    if (Test-Path (Join-Path $home1 ".copilot/agents/evil.agent.md")) { Write-Note "evil.agent.md should not exist at destination"; return $false }
+    # Legitimate sibling files must still install correctly.
+    return Assert-FilesEqual (Join-Path $home1 ".copilot/agents/alpha.agent.md") (Join-Path $dir "agents/alpha.agent.md")
+}
+
+# ===========================================================================
 # Run all scenarios
 # ===========================================================================
 
@@ -619,6 +802,14 @@ try
     Invoke-Case "Test-NoWritesOutsideDestinationTree" { Test-NoWritesOutsideDestinationTree }
     Invoke-Case "Test-SourceRepoUntouchedAfterInstall" { Test-SourceRepoUntouchedAfterInstall }
     Invoke-Case "Test-DestinationPathWithSpacesIsHandled" { Test-DestinationPathWithSpacesIsHandled }
+
+    Invoke-Case "Test-DanglingSymlinkInAgentsFailsLoudly" { Test-DanglingSymlinkInAgentsFailsLoudly }
+    Invoke-Case "Test-SymlinkInSkillsTreeRejectedWithoutLeakingContent" { Test-SymlinkInSkillsTreeRejectedWithoutLeakingContent }
+    Invoke-Case "Test-DestinationDirIsSymlinkWritesThroughToTarget" { Test-DestinationDirIsSymlinkWritesThroughToTarget }
+    Invoke-Case "Test-CopilotHomeEnvPointingAtFileFailsLoudly" { Test-CopilotHomeEnvPointingAtFileFailsLoudly }
+    Invoke-Case "Test-WeirdSourceFilenamesSurviveByteForByte" { Test-WeirdSourceFilenamesSurviveByteForByte }
+    Invoke-Case "Test-SourceRepoPathWithSpacesIsHandled" { Test-SourceRepoPathWithSpacesIsHandled }
+    Invoke-Case "Test-SymlinkEscapingSourceTreeDoesNotLeakExternalContent" { Test-SymlinkEscapingSourceTreeDoesNotLeakExternalContent }
 }
 finally
 {

@@ -73,6 +73,19 @@ copy_file() {
     local dst_dir
     dst_dir="$(dirname "$dst")"
 
+    # Security: never follow a symlink out of the source tree. A symlink
+    # planted inside agents/, claude-agents/, or skills/ (valid or dangling)
+    # could otherwise be used to read and exfiltrate an arbitrary file the
+    # invoking user can access (e.g. ~/.ssh/id_rsa) into ~/.claude/skills/,
+    # which a future AI agent session would read back as trusted content.
+    # Reject every symlinked source entry explicitly rather than
+    # dereferencing it, regardless of whether its target exists.
+    if [ -L "$src" ]; then
+        print_error "Refusing to follow symlink (security): $src"
+        FAILED=1
+        return 1
+    fi
+
     if ! mkdir -p "$dst_dir"; then
         print_error "Failed to create directory: $dst_dir"
         FAILED=1
@@ -108,7 +121,14 @@ copy_glob() {
 
     mkdir -p "$dst_dir"
     for f in "$src_dir"/$pattern; do
-        [ -e "$f" ] || continue
+        # [ -e ] alone would also filter out a symlinked glob match (since
+        # -e dereferences and a broken symlink's target doesn't exist),
+        # making the installer silently skip it with no notice. Also accept
+        # [ -L ] so every symlink (valid or dangling) reaches copy_file,
+        # which explicitly rejects symlinked sources (security: never
+        # dereference a source-tree symlink - see copy_file) instead of the
+        # entry vanishing with no notice at all.
+        [ -e "$f" ] || [ -L "$f" ] || continue
         copy_file "$f" "$dst_dir/$(basename "$f")"
     done
 }
@@ -125,7 +145,13 @@ copy_tree() {
     while IFS= read -r -d '' file; do
         rel="${file#"$src_dir"/}"
         copy_file "$file" "$dst_dir/$rel"
-    done < <(find "$src_dir" -type f -print0)
+    done < <(find "$src_dir" \( -type f -o -type l \) -print0)
+    # Deliberately NOT `find -L ... -type f`: that would silently *dereference*
+    # a valid symlink (defeating the security rejection in copy_file, which
+    # never even sees it as a symlink) while also silently dropping a broken
+    # one from the result set entirely (no copy attempt, no notice). Matching
+    # by the entry's own type (-type l) regardless of target validity means
+    # every symlinked entry reaches copy_file, which explicitly rejects it.
 }
 
 echo "Installing agents and skills..."

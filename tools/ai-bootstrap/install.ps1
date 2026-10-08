@@ -79,6 +79,24 @@ function Copy-OneFile
 {
     param([string]$Src, [string]$Dst)
 
+    # Security: never follow a symlink (or junction) out of the source
+    # tree. A reparse point planted inside agents/, claude-agents/, or
+    # skills/ (valid or dangling) could otherwise be used to read and
+    # exfiltrate an arbitrary file the invoking user can access into
+    # ~/.claude/skills/, which a future AI agent session would read back as
+    # trusted content. Reject every symlinked/junction source entry
+    # explicitly rather than dereferencing it, regardless of whether its
+    # target exists. Hard links are not reparse points and are not rejected
+    # here (same posture as `[ -L ]` in install.sh, which does not catch
+    # hard links either).
+    $srcItem = Get-Item -Path $Src -Force -ErrorAction SilentlyContinue
+    if ($srcItem -and ($srcItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint))
+    {
+        Write-Err "Refusing to follow symlink (security): $Src"
+        $script:Failed = $true
+        return
+    }
+
     $dstDir = Split-Path -Parent $Dst
     try
     {

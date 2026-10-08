@@ -36,6 +36,15 @@
 #     19 no_writes_outside_destination_tree
 #     20 source_repo_untouched_after_install
 #     21 destination_path_with_spaces_is_handled
+#
+#   Tier 3 - QA adversarial audit (post-implementation, issue #68 follow-up)
+#     22 dangling_symlink_in_agents_fails_loudly
+#     23 symlink_in_skills_tree_rejected_without_leaking_content
+#     24 destination_dir_is_symlink_writes_through_to_target
+#     25 copilot_home_env_pointing_at_file_fails_loudly
+#     26 weird_source_filenames_survive_byte_for_byte
+#     27 source_repo_path_with_spaces_is_handled
+#     28 symlink_escaping_source_tree_does_not_leak_external_content
 
 set -uo pipefail
 # Deliberately NOT using `set -e` globally: each scenario must be able to
@@ -182,6 +191,26 @@ make_fixture_repo_with_skills() {
     printf 'FIXTURE SKILL MD\n' > "$dir/skills/demo-skill/SKILL.md"
     printf 'FIXTURE HELPER\n'   > "$dir/skills/demo-skill/helper.txt"
     init_fixture_git "$dir"
+}
+
+# try_symlink <target> <link>
+# Attempts to create a real OS-level symlink (not a plain-copy fallback).
+# On Windows, MSYS's `ln -s` silently falls back to copying the target
+# instead of creating a symlink unless MSYS=winsymlinks:nativestrict is set
+# AND the process holds symlink-creation privilege (Developer Mode or an
+# elevated/admin token). Returns 0 and leaves a genuine symlink at <link>
+# only when that privilege is available; returns 1 (and removes any partial
+# artifact) otherwise, so callers can skip symlink-dependent scenarios with
+# a clear notice on hosts that cannot exercise this path, rather than
+# silently passing against a plain file copy that defeats the scenario's
+# purpose.
+try_symlink() {
+    local target="$1" link="$2"
+    if MSYS=winsymlinks:nativestrict ln -s "$target" "$link" 2>/dev/null && [ -L "$link" ]; then
+        return 0
+    fi
+    rm -f "$link" 2>/dev/null || true
+    return 1
 }
 
 FIXTURE_REPO="$SCRATCH_ROOT/fixture-repo"
@@ -483,6 +512,173 @@ destination_path_with_spaces_is_handled() {
 }
 
 # ===========================================================================
+# Tier 3 - QA adversarial audit (post-implementation, issue #68 follow-up)
+# ===========================================================================
+
+dangling_symlink_in_agents_fails_loudly() {
+    local dir="$SCRATCH_ROOT/t22/repo"
+    local home="$SCRATCH_ROOT/t22/home"
+    mkdir -p "$dir" "$home"
+    populate_fixture_agents "$dir"
+    if ! try_symlink "does-not-exist.agent.md" "$dir/agents/dangling.agent.md"; then
+        note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return 0
+    fi
+    init_fixture_git "$dir"
+    invoke_install "$dir" "$home" "" >/dev/null 2>&1
+    local code=$?
+    if [ "$code" -eq 0 ]; then
+        note "expected non-zero exit when a source glob match is a dangling symlink, got 0"
+        return 1
+    fi
+    assert_files_equal "$home/.copilot/agents/alpha.agent.md" "$dir/agents/alpha.agent.md" || return 1
+    assert_file_absent "$home/.copilot/agents/dangling.agent.md" || return 1
+    return 0
+}
+
+symlink_in_skills_tree_rejected_without_leaking_content() {
+    # Security regression test: a symlink inside skills/ - even one whose
+    # target is a perfectly valid file - must be rejected, not followed.
+    # Earlier drafts of this installer dereferenced the symlink and copied
+    # its target's content verbatim into both ~/.claude and ~/.copilot,
+    # which is exactly the vector a planted symlink could use to exfiltrate
+    # an arbitrary file into a tree a future AI agent session reads back as
+    # trusted content. See .llm/findings/global-installer-68.md.
+    local dir="$SCRATCH_ROOT/t23/repo"
+    local home="$SCRATCH_ROOT/t23/home"
+    mkdir -p "$dir" "$home"
+    populate_fixture_agents "$dir"
+    mkdir -p "$dir/skills/demo-skill"
+    printf 'REAL SKILL FILE\n' > "$dir/skills/demo-skill/real.txt"
+    if ! try_symlink "real.txt" "$dir/skills/demo-skill/linked.txt"; then
+        note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return 0
+    fi
+    init_fixture_git "$dir"
+    local output
+    output="$(invoke_install "$dir" "$home" "" 2>&1)"
+    local code=$?
+    if [ "$code" -eq 0 ]; then
+        note "expected non-zero exit when skills/ contained a symlink, got 0"
+        return 1
+    fi
+    if ! printf '%s' "$output" | grep -qiE 'symlink'; then
+        note "expected a symlink-rejection notice in output, got: $output"
+        return 1
+    fi
+    assert_file_absent "$home/.claude/skills/demo-skill/linked.txt" || return 1
+    assert_file_absent "$home/.copilot/skills/demo-skill/linked.txt" || return 1
+    # The real, non-symlinked sibling must still be installed correctly -
+    # rejecting one symlinked entry must not abort the whole skill copy.
+    assert_file_content "$home/.claude/skills/demo-skill/real.txt" "REAL SKILL FILE" || return 1
+    assert_file_content "$home/.copilot/skills/demo-skill/real.txt" "REAL SKILL FILE" || return 1
+    return 0
+}
+
+destination_dir_is_symlink_writes_through_to_target() {
+    local home="$SCRATCH_ROOT/t24/home"
+    local real_target="$SCRATCH_ROOT/t24/real-copilot-target"
+    mkdir -p "$home" "$real_target"
+    if ! try_symlink "$real_target" "$home/.copilot"; then
+        note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return 0
+    fi
+    invoke_install "$FIXTURE_REPO" "$home" "" >/dev/null 2>&1
+    local code=$?
+    if [ "$code" -ne 0 ]; then
+        note "install exited $code when the destination dir was a symlink"
+        return 1
+    fi
+    assert_files_equal "$real_target/agents/alpha.agent.md" "$FIXTURE_REPO/agents/alpha.agent.md" || return 1
+    [ -L "$home/.copilot" ] || { note "expected $home/.copilot to remain a symlink"; return 1; }
+    return 0
+}
+
+copilot_home_env_pointing_at_file_fails_loudly() {
+    local home="$SCRATCH_ROOT/t25/home"
+    local copilot_home_file="$SCRATCH_ROOT/t25/copilot-home-as-a-file"
+    mkdir -p "$home"
+    printf 'NOT A DIRECTORY\n' > "$copilot_home_file"
+    invoke_install "$FIXTURE_REPO" "$home" "$copilot_home_file" >/dev/null 2>&1
+    local code=$?
+    if [ "$code" -eq 0 ]; then
+        note "expected non-zero exit when \$COPILOT_HOME points at a file, got 0"
+        return 1
+    fi
+    assert_file_content "$copilot_home_file" "NOT A DIRECTORY" || return 1
+    return 0
+}
+
+weird_source_filenames_survive_byte_for_byte() {
+    local dir="$SCRATCH_ROOT/t26/repo"
+    local home="$SCRATCH_ROOT/t26/home"
+    mkdir -p "$dir/agents" "$dir/claude-agents" "$home"
+    printf 'SPACE NAME\n' > "$dir/agents/with space.agent.md"
+    printf 'UNICODE NAME\n' > "$dir/agents/café.agent.md"
+    printf 'DASH NAME\n' > "$dir/agents/-leadingdash.agent.md"
+    printf 'CLAUDE NORMAL\n' > "$dir/claude-agents/normal.md"
+    init_fixture_git "$dir"
+    invoke_install "$dir" "$home" "" >/dev/null 2>&1
+    local code=$?
+    if [ "$code" -ne 0 ]; then
+        note "install exited $code with space/unicode/leading-dash source filenames"
+        return 1
+    fi
+    assert_files_equal "$home/.copilot/agents/with space.agent.md" "$dir/agents/with space.agent.md" || return 1
+    assert_files_equal "$home/.copilot/agents/café.agent.md" "$dir/agents/café.agent.md" || return 1
+    assert_files_equal "$home/.copilot/agents/-leadingdash.agent.md" "$dir/agents/-leadingdash.agent.md" || return 1
+    return 0
+}
+
+source_repo_path_with_spaces_is_handled() {
+    local dir="$SCRATCH_ROOT/t27/repo with spaces in its path"
+    local home="$SCRATCH_ROOT/t27/home"
+    mkdir -p "$dir" "$home"
+    populate_fixture_agents "$dir"
+    init_fixture_git "$dir"
+    invoke_install "$dir" "$home" "" >/dev/null 2>&1
+    local code=$?
+    if [ "$code" -ne 0 ]; then
+        note "install exited $code with a spaced source repo path"
+        return 1
+    fi
+    assert_files_equal "$home/.copilot/agents/alpha.agent.md" "$dir/agents/alpha.agent.md" || return 1
+    return 0
+}
+
+symlink_escaping_source_tree_does_not_leak_external_content() {
+    # Direct reproduction of the HIGH-severity finding from the security
+    # audit: a symlink inside agents/ pointing OUTSIDE the repo entirely
+    # (e.g. simulating ~/.ssh/id_rsa or /etc/passwd) must never have its
+    # content copied into the destination tree.
+    local dir="$SCRATCH_ROOT/t28/repo"
+    local home="$SCRATCH_ROOT/t28/home"
+    local secret="$SCRATCH_ROOT/t28/outside-repo-secret.txt"
+    mkdir -p "$dir" "$home"
+    populate_fixture_agents "$dir"
+    printf 'SUPER-SECRET-SSH-KEY-CONTENT-DO-NOT-LEAK\n' > "$secret"
+    if ! try_symlink "$secret" "$dir/agents/evil.agent.md"; then
+        note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return 0
+    fi
+    init_fixture_git "$dir"
+    invoke_install "$dir" "$home" "" >/dev/null 2>&1
+    local code=$?
+    if [ "$code" -eq 0 ]; then
+        note "expected non-zero exit when a source symlink escapes the repo, got 0"
+        return 1
+    fi
+    if grep -qr "SUPER-SECRET-SSH-KEY-CONTENT-DO-NOT-LEAK" "$home" 2>/dev/null; then
+        note "SECURITY: external secret content leaked into the destination tree"
+        return 1
+    fi
+    assert_file_absent "$home/.copilot/agents/evil.agent.md" || return 1
+    # Legitimate sibling files must still install correctly.
+    assert_files_equal "$home/.copilot/agents/alpha.agent.md" "$dir/agents/alpha.agent.md" || return 1
+    return 0
+}
+
+# ===========================================================================
 # Run all scenarios
 # ===========================================================================
 
@@ -508,6 +704,14 @@ run_case invocation_outside_any_git_repo_fails_non_zero
 run_case no_writes_outside_destination_tree
 run_case source_repo_untouched_after_install
 run_case destination_path_with_spaces_is_handled
+
+run_case dangling_symlink_in_agents_fails_loudly
+run_case symlink_in_skills_tree_rejected_without_leaking_content
+run_case destination_dir_is_symlink_writes_through_to_target
+run_case copilot_home_env_pointing_at_file_fails_loudly
+run_case weird_source_filenames_survive_byte_for_byte
+run_case source_repo_path_with_spaces_is_handled
+run_case symlink_escaping_source_tree_does_not_leak_external_content
 
 # ===========================================================================
 # Summary
