@@ -1,8 +1,44 @@
 # AI-Assisted Development Bootstrap
 
-This directory contains scripts and documentation for setting up AI-assisted development in a repository.
+This directory contains two distinct kinds of script, serving two distinct jobs:
 
-## Quick Start
+- **`install.*`** — global, one-time: copies this repo's own agent/skill definitions onto
+  your machine (`~/.claude`, `~/.copilot`), so your AI tools can see them. Run from inside
+  this repo's checkout; where you run it from has no bearing on which repo gets configured.
+- **`bootstrap-ai-repo.*`** — per-target-repo: configures *whatever repo you're currently
+  standing in* for AI-assisted development (`AGENTS.md`, git hooks, `.tech-decisions.yml`,
+  etc.). This is the one documented in most of the rest of this file.
+
+## Install Agent/Skill Definitions (`install.sh` / `install.ps1`)
+
+Installs this repo's agent and skill sources into the global locations your AI tools read
+from:
+
+- `agents/*.agent.md` -> `~/.copilot/agents/` (or `$COPILOT_HOME/agents/` if set)
+- `claude-agents/*.md` -> `~/.claude/agents/`
+- `skills/<name>/` (once any exist) -> both `~/.claude/skills/<name>/` and
+  `~/.copilot/skills/<name>/`
+
+```bash
+# Linux / macOS / Git Bash
+./tools/ai-bootstrap/install.sh
+./tools/ai-bootstrap/install.sh --force   # overwrite existing destination files
+
+# Windows PowerShell
+.\tools\ai-bootstrap\install.ps1
+.\tools\ai-bootstrap\install.ps1 -Force   # overwrite existing destination files
+```
+
+Without `--force`/`-Force`, a destination file that already exists is left alone and a
+notice is printed instead of overwriting it. The repo root is always resolved via
+`git rev-parse --show-toplevel` from the current working directory — never relative to the
+script's own install path — so this works correctly whether you run it from a checkout or
+from wherever it ends up installed. As a security measure, both scripts refuse to follow
+any symlink found in the source tree (`agents/`, `claude-agents/`, or `skills/`); a symlinked
+entry is rejected with an error rather than dereferenced, closing off a path by which a
+planted symlink could cause an unrelated file to be copied into `~/.claude` or `~/.copilot`.
+
+## Bootstrap a Target Repo (`bootstrap-ai-repo.sh` / `bootstrap-ai-repo.ps1`)
 
 Choose your platform:
 
@@ -100,8 +136,10 @@ AI modes follow this process:
 
 ## Files in This Directory
 
-- **bootstrap-ai-repo.ps1** - PowerShell bootstrap script (Windows)
-- **bootstrap-ai-repo.sh** - Bash bootstrap script (Linux/macOS)
+- **install.ps1** - PowerShell global installer (agent/skill definitions -> `~/.claude`, `~/.copilot`)
+- **install.sh** - Bash global installer (agent/skill definitions -> `~/.claude`, `~/.copilot`)
+- **bootstrap-ai-repo.ps1** - PowerShell bootstrap script (Windows) — configures a target repo
+- **bootstrap-ai-repo.sh** - Bash bootstrap script (Linux/macOS) — configures a target repo
 - **overview.md** - Comprehensive documentation of the framework
 - **quick-reference.md** - Quick lookup for common tasks
 - **ai-assisted-development-framework.md** - Detailed framework guide
