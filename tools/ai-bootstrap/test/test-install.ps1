@@ -67,6 +67,12 @@ $ErrorActionPreference = "Stop"
 
 # ---------------------------------------------------------------------------
 # Locate the real repo + the script under test
+#
+# Deliberately resolved via this script's own path ($MyInvocation), not via
+# cwd. This harness must find itself (and the sibling install.ps1 it tests)
+# regardless of the caller's cwd. That's a different concern from the
+# cwd-based root resolution install.ps1 itself is being tested for below -
+# see AGENTS.md's "Scope of this rule" note.
 # ---------------------------------------------------------------------------
 $thisDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $realRepoRoot = $null

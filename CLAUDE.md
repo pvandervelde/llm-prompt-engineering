@@ -17,5 +17,10 @@ directory** — never relative to the script's own path (`$0`, `$BASH_SOURCE`,
 `tools/ai-bootstrap/bootstrap-ai-repo.sh` / `bootstrap-ai-repo.ps1` already follow this rule
 and are the reference examples.
 
+This applies to distributed scripts, not to this repo's own dev-only test harnesses under
+`tools/ai-bootstrap/test/` — those legitimately resolve their own location to find the sibling
+script they test, which is a different concern from the cwd-based resolution they then exercise
+on that script.
+
 See [AGENTS.md](./AGENTS.md) for the full explanation and
 [tools/ai-bootstrap/README.md](./tools/ai-bootstrap/README.md) for what these scripts do.

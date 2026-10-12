@@ -63,6 +63,12 @@ set -uo pipefail
 
 # ---------------------------------------------------------------------------
 # Locate the real repo + the script under test
+#
+# Deliberately resolved via this script's own path (BASH_SOURCE), not via
+# cwd. This harness must find itself (and the sibling install.sh it tests)
+# regardless of the caller's cwd. That's a different concern from the
+# cwd-based root resolution install.sh itself is being tested for below -
+# see AGENTS.md's "Scope of this rule" note.
 # ---------------------------------------------------------------------------
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REAL_REPO_ROOT="$(git -C "$THIS_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
