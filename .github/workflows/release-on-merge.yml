@@ -59,7 +59,7 @@ jobs:
       - name: Create GitHub Release
         id: create_release
         if: github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.new_tag }}
           name: Release ${{ steps.version.outputs.new_tag }}
@@ -70,7 +70,7 @@ jobs:
 
       - name: Upload Copilot zip to Release
         if: github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.new_tag }}
           files: artifacts/copilot.zip
@@ -79,7 +79,7 @@ jobs:
 
       - name: Upload Cline zip to Release
         if: github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.new_tag }}
           files: artifacts/cline.zip
@@ -88,7 +88,7 @@ jobs:
 
       - name: Upload Roo zip to Release
         if: github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.new_tag }}
           files: artifacts/roo.zip
