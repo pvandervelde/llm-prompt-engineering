@@ -64,6 +64,28 @@ CLAUDE_HOME_DIR="$HOME_DIR/.claude"
 
 FAILED=0
 
+# reject_symlink <path>
+# Security chokepoint shared by every place a source entry (file or
+# directory) is about to be read or enumerated: never follow a symlink out
+# of the source tree. A symlink planted inside agents/, claude-agents/, or
+# skills/ (valid or dangling, pointing at a file OR a directory) could
+# otherwise be used to read and exfiltrate arbitrary content the invoking
+# user can access (e.g. ~/.ssh/id_rsa, or an entire directory) into
+# ~/.claude/skills/, which a future AI agent session would read back as
+# trusted content. Reject every symlinked source entry explicitly rather
+# than dereferencing it, regardless of whether its target exists. Prints
+# the standard rejection notice and sets FAILED when $1 is a symlink;
+# returns 1 in that case, 0 otherwise, so callers can `if reject_symlink
+# "$x"; then return 1; fi` (or similar) at each enumeration point.
+reject_symlink() {
+    if [ -L "$1" ]; then
+        print_error "Refusing to follow symlink (security): $1"
+        FAILED=1
+        return 0
+    fi
+    return 1
+}
+
 # copy_file <src> <dst>
 # Copies a single file, honoring --force skip/overwrite semantics and
 # creating destination directories as needed.
@@ -73,18 +95,7 @@ copy_file() {
     local dst_dir
     dst_dir="$(dirname "$dst")"
 
-    # Security: never follow a symlink out of the source tree. A symlink
-    # planted inside agents/, claude-agents/, or skills/ (valid or dangling)
-    # could otherwise be used to read and exfiltrate an arbitrary file the
-    # invoking user can access (e.g. ~/.ssh/id_rsa) into ~/.claude/skills/,
-    # which a future AI agent session would read back as trusted content.
-    # Reject every symlinked source entry explicitly rather than
-    # dereferencing it, regardless of whether its target exists.
-    if [ -L "$src" ]; then
-        print_error "Refusing to follow symlink (security): $src"
-        FAILED=1
-        return 1
-    fi
+    reject_symlink "$src" && return 1
 
     if ! mkdir -p "$dst_dir"; then
         print_error "Failed to create directory: $dst_dir"
@@ -117,6 +128,13 @@ copy_glob() {
     local dst_dir="$3"
     local f
 
+    # Security: reject a symlinked source directory before ever globbing
+    # into it - see reject_symlink. Without this, [ -d "$src_dir" ] below
+    # dereferences the symlink and happily globs through it, and every
+    # resulting file path is a *regular* path (not itself a symlink), so
+    # copy_file's own [ -L "$src" ] check never trips.
+    reject_symlink "$src_dir" && return 1
+
     [ -d "$src_dir" ] || return 0
 
     mkdir -p "$dst_dir"
@@ -140,18 +158,41 @@ copy_glob() {
 copy_tree() {
     local src_dir="$1"
     local dst_dir="$2"
-    local file rel
+    local file rel find_list find_status
 
-    while IFS= read -r -d '' file; do
-        rel="${file#"$src_dir"/}"
-        copy_file "$file" "$dst_dir/$rel"
-    done < <(find "$src_dir" \( -type f -o -type l \) -print0)
+    # Security: reject a symlinked source directory before ever walking it -
+    # see reject_symlink. Without this, `find "$src_dir" ...` below would
+    # dereference the symlink and enumerate every file underneath it as a
+    # *regular* path, so copy_file's own [ -L "$src" ] check never trips.
+    reject_symlink "$src_dir" && return 1
+
     # Deliberately NOT `find -L ... -type f`: that would silently *dereference*
     # a valid symlink (defeating the security rejection in copy_file, which
     # never even sees it as a symlink) while also silently dropping a broken
     # one from the result set entirely (no copy attempt, no notice). Matching
     # by the entry's own type (-type l) regardless of target validity means
     # every symlinked entry reaches copy_file, which explicitly rejects it.
+    #
+    # Deliberately NOT `while read ... done < <(find ...)`: piping find
+    # through process substitution discards find's own exit status - the
+    # while loop's exit status reflects only the last `read`, so a `find`
+    # failure (permission denied, directory vanished mid-walk, etc.) would
+    # be silently swallowed, with the installer still reporting success.
+    # Capture find's output to a temp file first so its exit code can be
+    # checked explicitly.
+    find_list="$(mktemp)"
+    find "$src_dir" \( -type f -o -type l \) -print0 > "$find_list"
+    find_status=$?
+    if [ "$find_status" -ne 0 ]; then
+        print_error "Failed to fully enumerate $src_dir (find exited $find_status)"
+        FAILED=1
+    fi
+
+    while IFS= read -r -d '' file; do
+        rel="${file#"$src_dir"/}"
+        copy_file "$file" "$dst_dir/$rel"
+    done < "$find_list"
+    rm -f "$find_list"
 }
 
 echo "Installing agents and skills..."
@@ -171,10 +212,16 @@ copy_glob "$ROOT/claude-agents" "*.md" "$CLAUDE_HOME_DIR/agents"
 # $COPILOT_HOME_DIR/skills/<name>/, unchanged. Skipped silently if skills/
 # does not exist in the repo.
 # ----------------------------------------------------------------------------
-if [ -d "$ROOT/skills" ]; then
+if reject_symlink "$ROOT/skills"; then
+    : # rejected: skills/ itself is a symlink - do not enumerate into it.
+elif [ -d "$ROOT/skills" ]; then
     for skill_path in "$ROOT"/skills/*/; do
-        [ -d "$skill_path" ] || continue
         skill_path="${skill_path%/}"
+        [ -e "$skill_path" ] || [ -L "$skill_path" ] || continue
+        if reject_symlink "$skill_path"; then
+            continue
+        fi
+        [ -d "$skill_path" ] || continue
         skill_name="$(basename "$skill_path")"
         copy_tree "$skill_path" "$CLAUDE_HOME_DIR/skills/$skill_name"
         copy_tree "$skill_path" "$COPILOT_HOME_DIR/skills/$skill_name"

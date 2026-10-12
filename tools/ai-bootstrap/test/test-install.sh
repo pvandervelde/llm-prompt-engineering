@@ -45,6 +45,17 @@
 #     26 weird_source_filenames_survive_byte_for_byte
 #     27 source_repo_path_with_spaces_is_handled
 #     28 symlink_escaping_source_tree_does_not_leak_external_content
+#
+#   Tier 4 - symlinked source *directories* (Copilot review follow-up,
+#   issue #68, 2026-10-12): the Tier 3 fix only rejected symlinked
+#   individual *files*; a symlinked source *directory* (agents/,
+#   claude-agents/, skills/, or an individual skills/<name>/ entry) bypassed
+#   that check entirely because `-d`/`find` dereference directories before
+#   any per-file check ever runs.
+#     29 agents_dir_itself_is_symlink_rejected_without_leaking_content
+#     30 claude_agents_dir_itself_is_symlink_rejected_without_leaking_content
+#     31 skills_root_itself_is_symlink_rejected_without_leaking_content
+#     32 skill_entry_itself_is_symlink_rejected_without_leaking_content
 
 set -uo pipefail
 # Deliberately NOT using `set -e` globally: each scenario must be able to
@@ -679,6 +690,165 @@ symlink_escaping_source_tree_does_not_leak_external_content() {
 }
 
 # ===========================================================================
+# Tier 4 - symlinked source *directories* (Copilot review follow-up, #68)
+# ===========================================================================
+
+agents_dir_itself_is_symlink_rejected_without_leaking_content() {
+    # The existing per-file symlink check ([ -L "$src" ] in copy_file) never
+    # even runs here: `[ -d "$src_dir" ]` in copy_glob dereferences a
+    # symlinked agents/ directory, the glob expands straight through it,
+    # and every resulting path is a *regular* file path, not a symlink.
+    local dir="$SCRATCH_ROOT/t29/repo"
+    local home="$SCRATCH_ROOT/t29/home"
+    local external="$SCRATCH_ROOT/t29/external-agents-dir"
+    mkdir -p "$dir" "$home" "$external"
+    printf 'LEAKED-AGENTS-DIR-SECRET\n' > "$external/leaked.agent.md"
+    populate_fixture_agents "$dir"
+    rm -rf "$dir/agents"
+    if ! try_symlink "$external" "$dir/agents"; then
+        note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return 0
+    fi
+    init_fixture_git "$dir"
+    local output
+    output="$(invoke_install "$dir" "$home" "" 2>&1)"
+    local code=$?
+    if [ "$code" -eq 0 ]; then
+        note "expected non-zero exit when agents/ itself is a symlink, got 0"
+        return 1
+    fi
+    if ! printf '%s' "$output" | grep -qiE 'symlink'; then
+        note "expected a symlink-rejection notice in output, got: $output"
+        return 1
+    fi
+    if grep -qr "LEAKED-AGENTS-DIR-SECRET" "$home" 2>/dev/null; then
+        note "SECURITY: external agents/ symlink target content leaked into the destination tree"
+        return 1
+    fi
+    assert_dir_absent "$home/.copilot/agents" || return 1
+    # Aggregate failure, not early abort: claude-agents/ (a sibling source
+    # directory, not itself a symlink) must still install normally in the
+    # same run.
+    assert_files_equal "$home/.claude/agents/alpha.md" "$dir/claude-agents/alpha.md" || return 1
+    assert_files_equal "$home/.claude/agents/beta.md" "$dir/claude-agents/beta.md" || return 1
+    return 0
+}
+
+claude_agents_dir_itself_is_symlink_rejected_without_leaking_content() {
+    local dir="$SCRATCH_ROOT/t30/repo"
+    local home="$SCRATCH_ROOT/t30/home"
+    local external="$SCRATCH_ROOT/t30/external-claude-agents-dir"
+    mkdir -p "$dir" "$home" "$external"
+    printf 'LEAKED-CLAUDE-AGENTS-DIR-SECRET\n' > "$external/leaked.md"
+    populate_fixture_agents "$dir"
+    rm -rf "$dir/claude-agents"
+    if ! try_symlink "$external" "$dir/claude-agents"; then
+        note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return 0
+    fi
+    init_fixture_git "$dir"
+    local output
+    output="$(invoke_install "$dir" "$home" "" 2>&1)"
+    local code=$?
+    if [ "$code" -eq 0 ]; then
+        note "expected non-zero exit when claude-agents/ itself is a symlink, got 0"
+        return 1
+    fi
+    if ! printf '%s' "$output" | grep -qiE 'symlink'; then
+        note "expected a symlink-rejection notice in output, got: $output"
+        return 1
+    fi
+    if grep -qr "LEAKED-CLAUDE-AGENTS-DIR-SECRET" "$home" 2>/dev/null; then
+        note "SECURITY: external claude-agents/ symlink target content leaked into the destination tree"
+        return 1
+    fi
+    assert_dir_absent "$home/.claude/agents" || return 1
+    # Aggregate failure, not early abort: agents/ (a sibling source
+    # directory, not itself a symlink) must still install normally.
+    assert_files_equal "$home/.copilot/agents/alpha.agent.md" "$dir/agents/alpha.agent.md" || return 1
+    assert_files_equal "$home/.copilot/agents/beta.agent.md" "$dir/agents/beta.agent.md" || return 1
+    return 0
+}
+
+skills_root_itself_is_symlink_rejected_without_leaking_content() {
+    local dir="$SCRATCH_ROOT/t31/repo"
+    local home="$SCRATCH_ROOT/t31/home"
+    local external="$SCRATCH_ROOT/t31/external-skills-root"
+    mkdir -p "$dir" "$home" "$external"
+    printf 'LEAKED-SKILLS-ROOT-SECRET\n' > "$external/leaked.txt"
+    populate_fixture_agents "$dir"
+    if ! try_symlink "$external" "$dir/skills"; then
+        note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return 0
+    fi
+    init_fixture_git "$dir"
+    local output
+    output="$(invoke_install "$dir" "$home" "" 2>&1)"
+    local code=$?
+    if [ "$code" -eq 0 ]; then
+        note "expected non-zero exit when skills/ itself is a symlink, got 0"
+        return 1
+    fi
+    if ! printf '%s' "$output" | grep -qiE 'symlink'; then
+        note "expected a symlink-rejection notice in output, got: $output"
+        return 1
+    fi
+    if grep -qr "LEAKED-SKILLS-ROOT-SECRET" "$home" 2>/dev/null; then
+        note "SECURITY: external skills/ symlink target content leaked into the destination tree"
+        return 1
+    fi
+    assert_dir_absent "$home/.claude/skills" || return 1
+    assert_dir_absent "$home/.copilot/skills" || return 1
+    # Aggregate failure, not early abort: agents/ and claude-agents/ must
+    # still install normally in the same run.
+    assert_files_equal "$home/.copilot/agents/alpha.agent.md" "$dir/agents/alpha.agent.md" || return 1
+    assert_files_equal "$home/.claude/agents/alpha.md" "$dir/claude-agents/alpha.md" || return 1
+    return 0
+}
+
+skill_entry_itself_is_symlink_rejected_without_leaking_content() {
+    # skills/ itself is a real directory; one individual entry underneath
+    # it (skills/evil-skill) is a symlink to a directory entirely outside
+    # the repo. A sibling, non-symlinked skill (skills/demo-skill) must
+    # still install correctly in the same run.
+    local dir="$SCRATCH_ROOT/t32/repo"
+    local home="$SCRATCH_ROOT/t32/home"
+    local external="$SCRATCH_ROOT/t32/external-evil-skill"
+    mkdir -p "$dir" "$home" "$external"
+    printf 'LEAKED-SKILL-ENTRY-SECRET\n' > "$external/leaked.txt"
+    populate_fixture_agents "$dir"
+    mkdir -p "$dir/skills/demo-skill"
+    printf 'REAL SKILL FILE\n' > "$dir/skills/demo-skill/real.txt"
+    if ! try_symlink "$external" "$dir/skills/evil-skill"; then
+        note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return 0
+    fi
+    init_fixture_git "$dir"
+    local output
+    output="$(invoke_install "$dir" "$home" "" 2>&1)"
+    local code=$?
+    if [ "$code" -eq 0 ]; then
+        note "expected non-zero exit when a skills/<name> entry itself is a symlink, got 0"
+        return 1
+    fi
+    if ! printf '%s' "$output" | grep -qiE 'symlink'; then
+        note "expected a symlink-rejection notice in output, got: $output"
+        return 1
+    fi
+    if grep -qr "LEAKED-SKILL-ENTRY-SECRET" "$home" 2>/dev/null; then
+        note "SECURITY: external skills/<name> symlink target content leaked into the destination tree"
+        return 1
+    fi
+    assert_dir_absent "$home/.claude/skills/evil-skill" || return 1
+    assert_dir_absent "$home/.copilot/skills/evil-skill" || return 1
+    # Aggregate failure, not early abort: the real sibling skill must still
+    # install correctly.
+    assert_file_content "$home/.claude/skills/demo-skill/real.txt" "REAL SKILL FILE" || return 1
+    assert_file_content "$home/.copilot/skills/demo-skill/real.txt" "REAL SKILL FILE" || return 1
+    return 0
+}
+
+# ===========================================================================
 # Run all scenarios
 # ===========================================================================
 
@@ -712,6 +882,11 @@ run_case copilot_home_env_pointing_at_file_fails_loudly
 run_case weird_source_filenames_survive_byte_for_byte
 run_case source_repo_path_with_spaces_is_handled
 run_case symlink_escaping_source_tree_does_not_leak_external_content
+
+run_case agents_dir_itself_is_symlink_rejected_without_leaking_content
+run_case claude_agents_dir_itself_is_symlink_rejected_without_leaking_content
+run_case skills_root_itself_is_symlink_rejected_without_leaking_content
+run_case skill_entry_itself_is_symlink_rejected_without_leaking_content
 
 # ===========================================================================
 # Summary

@@ -49,6 +49,17 @@
         26 Test-WeirdSourceFilenamesSurviveByteForByte
         27 Test-SourceRepoPathWithSpacesIsHandled
         28 Test-SymlinkEscapingSourceTreeDoesNotLeakExternalContent
+
+      Tier 4 - symlinked source *directories* (Copilot review follow-up,
+      issue #68, 2026-10-12): the Tier 3 fix only rejected symlinked
+      individual *files*; a symlinked source *directory* (agents/,
+      claude-agents/, skills/, or an individual skills/<name>/ entry)
+      bypassed that check entirely because Test-Path/Get-ChildItem
+      dereference directories before any per-file check ever runs.
+        29 Test-AgentsDirItselfIsSymlinkRejectedWithoutLeakingContent
+        30 Test-ClaudeAgentsDirItselfIsSymlinkRejectedWithoutLeakingContent
+        31 Test-SkillsRootItselfIsSymlinkRejectedWithoutLeakingContent
+        32 Test-SkillEntryItselfIsSymlinkRejectedWithoutLeakingContent
 #>
 
 Set-StrictMode -Version Latest
@@ -775,6 +786,148 @@ function Test-SymlinkEscapingSourceTreeDoesNotLeakExternalContent
 }
 
 # ===========================================================================
+# Tier 4 - symlinked source *directories* (Copilot review follow-up, #68)
+# ===========================================================================
+
+function Test-NoSecretLeaked
+{
+    param([string]$HomeDir, [string]$Secret)
+    $leaked = Get-ChildItem -Path $HomeDir -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
+        (Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue) -match [regex]::Escape($Secret)
+    }
+    if ($leaked)
+    {
+        Write-Note "SECURITY: external symlink target content leaked into the destination tree: $($leaked.FullName -join ', ')"
+        return $false
+    }
+    return $true
+}
+
+function Test-AgentsDirItselfIsSymlinkRejectedWithoutLeakingContent
+{
+    # The existing per-file symlink check (Copy-OneFile's ReparsePoint
+    # check) never even runs here: Test-Path -PathType Container in
+    # Copy-GlobFiles dereferences a symlinked agents/ directory, the
+    # enumeration proceeds straight through it, and every resulting path is
+    # a *regular* file path, not a reparse point.
+    $dir = Join-Path $scratchRoot "t29/repo"
+    $home1 = Join-Path $scratchRoot "t29/home"
+    $external = Join-Path $scratchRoot "t29/external-agents-dir"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    New-Item -ItemType Directory -Path $external -Force | Out-Null
+    Write-FixtureFile -Path (Join-Path $external "leaked.agent.md") -Content "LEAKED-AGENTS-DIR-SECRET"
+    New-FixtureRepo -Dir $dir
+    Remove-Item -Path (Join-Path $dir "agents") -Recurse -Force
+    if (-not (Try-NewSymlink -Path (Join-Path $dir "agents") -Target $external))
+    {
+        Write-Note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return $true
+    }
+    $result = Invoke-Install -Cwd $dir -HomeDir $home1
+    if ($result.Code -eq 0) { Write-Note "expected non-zero exit when agents/ itself is a symlink, got 0"; return $false }
+    if ($result.Output -notmatch '(?i)symlink') { Write-Note "expected a symlink-rejection notice in output, got: $($result.Output)"; return $false }
+    if (-not (Test-NoSecretLeaked -HomeDir $home1 -Secret "LEAKED-AGENTS-DIR-SECRET")) { return $false }
+    if (-not (Assert-DirAbsent (Join-Path $home1 ".copilot/agents"))) { return $false }
+    # Aggregate failure, not early abort: claude-agents/ (a sibling source
+    # directory, not itself a symlink) must still install normally.
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".claude/agents/alpha.md") (Join-Path $dir "claude-agents/alpha.md"))) { return $false }
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".claude/agents/beta.md") (Join-Path $dir "claude-agents/beta.md"))) { return $false }
+    return $true
+}
+
+function Test-ClaudeAgentsDirItselfIsSymlinkRejectedWithoutLeakingContent
+{
+    $dir = Join-Path $scratchRoot "t30/repo"
+    $home1 = Join-Path $scratchRoot "t30/home"
+    $external = Join-Path $scratchRoot "t30/external-claude-agents-dir"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    New-Item -ItemType Directory -Path $external -Force | Out-Null
+    Write-FixtureFile -Path (Join-Path $external "leaked.md") -Content "LEAKED-CLAUDE-AGENTS-DIR-SECRET"
+    New-FixtureRepo -Dir $dir
+    Remove-Item -Path (Join-Path $dir "claude-agents") -Recurse -Force
+    if (-not (Try-NewSymlink -Path (Join-Path $dir "claude-agents") -Target $external))
+    {
+        Write-Note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return $true
+    }
+    $result = Invoke-Install -Cwd $dir -HomeDir $home1
+    if ($result.Code -eq 0) { Write-Note "expected non-zero exit when claude-agents/ itself is a symlink, got 0"; return $false }
+    if ($result.Output -notmatch '(?i)symlink') { Write-Note "expected a symlink-rejection notice in output, got: $($result.Output)"; return $false }
+    if (-not (Test-NoSecretLeaked -HomeDir $home1 -Secret "LEAKED-CLAUDE-AGENTS-DIR-SECRET")) { return $false }
+    if (-not (Assert-DirAbsent (Join-Path $home1 ".claude/agents"))) { return $false }
+    # Aggregate failure, not early abort: agents/ (a sibling source
+    # directory, not itself a symlink) must still install normally.
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".copilot/agents/alpha.agent.md") (Join-Path $dir "agents/alpha.agent.md"))) { return $false }
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".copilot/agents/beta.agent.md") (Join-Path $dir "agents/beta.agent.md"))) { return $false }
+    return $true
+}
+
+function Test-SkillsRootItselfIsSymlinkRejectedWithoutLeakingContent
+{
+    $dir = Join-Path $scratchRoot "t31/repo"
+    $home1 = Join-Path $scratchRoot "t31/home"
+    $external = Join-Path $scratchRoot "t31/external-skills-root"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    New-Item -ItemType Directory -Path $external -Force | Out-Null
+    Write-FixtureFile -Path (Join-Path $external "leaked.txt") -Content "LEAKED-SKILLS-ROOT-SECRET"
+    New-FixtureRepo -Dir $dir
+    if (-not (Try-NewSymlink -Path (Join-Path $dir "skills") -Target $external))
+    {
+        Write-Note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return $true
+    }
+    $result = Invoke-Install -Cwd $dir -HomeDir $home1
+    if ($result.Code -eq 0) { Write-Note "expected non-zero exit when skills/ itself is a symlink, got 0"; return $false }
+    if ($result.Output -notmatch '(?i)symlink') { Write-Note "expected a symlink-rejection notice in output, got: $($result.Output)"; return $false }
+    if (-not (Test-NoSecretLeaked -HomeDir $home1 -Secret "LEAKED-SKILLS-ROOT-SECRET")) { return $false }
+    if (-not (Assert-DirAbsent (Join-Path $home1 ".claude/skills"))) { return $false }
+    if (-not (Assert-DirAbsent (Join-Path $home1 ".copilot/skills"))) { return $false }
+    # Aggregate failure, not early abort: agents/ and claude-agents/ must
+    # still install normally in the same run.
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".copilot/agents/alpha.agent.md") (Join-Path $dir "agents/alpha.agent.md"))) { return $false }
+    if (-not (Assert-FilesEqual (Join-Path $home1 ".claude/agents/alpha.md") (Join-Path $dir "claude-agents/alpha.md"))) { return $false }
+    return $true
+}
+
+function Test-SkillEntryItselfIsSymlinkRejectedWithoutLeakingContent
+{
+    # skills/ itself is a real directory; one individual entry underneath
+    # it (skills/evil-skill) is a symlink to a directory entirely outside
+    # the repo. A sibling, non-symlinked skill (skills/demo-skill) must
+    # still install correctly in the same run.
+    $dir = Join-Path $scratchRoot "t32/repo"
+    $home1 = Join-Path $scratchRoot "t32/home"
+    $external = Join-Path $scratchRoot "t32/external-evil-skill"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    New-Item -ItemType Directory -Path $home1 -Force | Out-Null
+    New-Item -ItemType Directory -Path $external -Force | Out-Null
+    Write-FixtureFile -Path (Join-Path $external "leaked.txt") -Content "LEAKED-SKILL-ENTRY-SECRET"
+    New-FixtureRepo -Dir $dir
+    New-Item -ItemType Directory -Path (Join-Path $dir "skills/demo-skill") -Force | Out-Null
+    Write-FixtureFile -Path (Join-Path $dir "skills/demo-skill/real.txt") -Content "REAL SKILL FILE"
+    if (-not (Try-NewSymlink -Path (Join-Path $dir "skills/evil-skill") -Target $external))
+    {
+        Write-Note "SKIPPED: no symlink privilege on this host (Developer Mode / admin required)"
+        return $true
+    }
+    Initialize-FixtureGit -Dir $dir
+    $result = Invoke-Install -Cwd $dir -HomeDir $home1
+    if ($result.Code -eq 0) { Write-Note "expected non-zero exit when a skills/<name> entry itself is a symlink, got 0"; return $false }
+    if ($result.Output -notmatch '(?i)symlink') { Write-Note "expected a symlink-rejection notice in output, got: $($result.Output)"; return $false }
+    if (-not (Test-NoSecretLeaked -HomeDir $home1 -Secret "LEAKED-SKILL-ENTRY-SECRET")) { return $false }
+    if (-not (Assert-DirAbsent (Join-Path $home1 ".claude/skills/evil-skill"))) { return $false }
+    if (-not (Assert-DirAbsent (Join-Path $home1 ".copilot/skills/evil-skill"))) { return $false }
+    # Aggregate failure, not early abort: the real sibling skill must still
+    # install correctly.
+    if (-not (Assert-FileContent (Join-Path $home1 ".claude/skills/demo-skill/real.txt") "REAL SKILL FILE")) { return $false }
+    if (-not (Assert-FileContent (Join-Path $home1 ".copilot/skills/demo-skill/real.txt") "REAL SKILL FILE")) { return $false }
+    return $true
+}
+
+# ===========================================================================
 # Run all scenarios
 # ===========================================================================
 
@@ -810,6 +963,11 @@ try
     Invoke-Case "Test-WeirdSourceFilenamesSurviveByteForByte" { Test-WeirdSourceFilenamesSurviveByteForByte }
     Invoke-Case "Test-SourceRepoPathWithSpacesIsHandled" { Test-SourceRepoPathWithSpacesIsHandled }
     Invoke-Case "Test-SymlinkEscapingSourceTreeDoesNotLeakExternalContent" { Test-SymlinkEscapingSourceTreeDoesNotLeakExternalContent }
+
+    Invoke-Case "Test-AgentsDirItselfIsSymlinkRejectedWithoutLeakingContent" { Test-AgentsDirItselfIsSymlinkRejectedWithoutLeakingContent }
+    Invoke-Case "Test-ClaudeAgentsDirItselfIsSymlinkRejectedWithoutLeakingContent" { Test-ClaudeAgentsDirItselfIsSymlinkRejectedWithoutLeakingContent }
+    Invoke-Case "Test-SkillsRootItselfIsSymlinkRejectedWithoutLeakingContent" { Test-SkillsRootItselfIsSymlinkRejectedWithoutLeakingContent }
+    Invoke-Case "Test-SkillEntryItselfIsSymlinkRejectedWithoutLeakingContent" { Test-SkillEntryItselfIsSymlinkRejectedWithoutLeakingContent }
 }
 finally
 {
