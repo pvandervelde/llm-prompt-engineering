@@ -59,6 +59,37 @@ Each AI tool has different file format requirements:
 
 The generator handles all these formats automatically.
 
+## Install the Framework
+
+This repository also defines agent files for AI coding assistants — Copilot agents in
+`agents/*.agent.md` and Claude Code agents in `claude-agents/*.md` — plus, in the future,
+shared `skills/`. These need to land in your tool's global config directory before your
+assistant can see them; the repo's own workspace is never the place they run from. This is
+a **one-time, global** step, separate from bootstrapping a target repo (see below): run it
+once from inside this repo's checkout to install the agent definitions onto your machine.
+
+```bash
+# Linux / macOS / Git Bash
+./tools/ai-bootstrap/install.sh
+
+# Windows PowerShell
+.\tools\ai-bootstrap\install.ps1
+```
+
+This copies `agents/*.agent.md` to `~/.copilot/agents/`, `claude-agents/*.md` to
+`~/.claude/agents/`, and (once any exist) `skills/<name>/` to both `~/.claude/skills/<name>/`
+and `~/.copilot/skills/<name>/`. Existing destination files are left untouched unless you
+pass `--force` (bash) or `-Force` (PowerShell). Set `$COPILOT_HOME` to install Copilot agents
+somewhere other than `~/.copilot`. See [tools/ai-bootstrap/README.md](./tools/ai-bootstrap/README.md)
+for details.
+
+## Bootstrap a Repo
+
+Separately, `tools/ai-bootstrap/bootstrap-ai-repo.*` configures *whatever repo you're
+currently standing in* for AI-assisted development (`AGENTS.md`, git hooks,
+`.tech-decisions.yml`, etc.) — a different job from installing this framework's own agent
+definitions above. See [tools/ai-bootstrap/README.md](./tools/ai-bootstrap/README.md).
+
 ## Quick Start
 
 1. **Clone the repository**
