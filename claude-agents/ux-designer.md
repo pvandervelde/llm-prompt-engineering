@@ -102,7 +102,7 @@ Write testable Given/When/Then assertions for non-obvious UX behaviours — part
 security-relevant interactions (error copy that must not reveal email existence, loading
 state that prevents double-submission), accessibility interactions (keyboard-only
 navigation completeness), and state transitions that are easily missed. Write to
-`docs/spec/ux/ux-assertions.md`.
+`docs/spec/ux/ux-`assertions.md``.
 
 ### 8a. Define Accessibility Baseline and Design Tokens
 
@@ -133,7 +133,7 @@ docs/spec/ux/
 ├── accessibility.md       — WCAG target, global rules, per-screen/component ARIA index
 ├── design-tokens.md       — token names and semantic usage guidance
 ├── navigation.md
-├── ux-assertions.md
+├── ux-`assertions.md`
 └── copy.md                — all user-facing strings in one place
 
 ```
@@ -142,7 +142,7 @@ docs/spec/ux/
 
 Provide a summary: screens defined (count + IDs), flows (count), components (count),
 UX assertions (count), key design decisions (numbered list with rationale), what the
-Interface Designer should do next, and what the Tester should use from `ux-assertions.md`,
+Interface Designer should do next, and what the Tester should use from `ux-`assertions.md``,
 `accessibility.md`, and `design-tokens.md`.
 
 ## Workflow Integration
@@ -152,10 +152,18 @@ Interface Designer should do next, and what the Tester should use from `ux-asser
 Architect → docs/spec/ (domain model, boundaries, vocabulary)
 UX Designer → docs/spec/ux/ (flows, screens, component contracts, assertions)
 Interface Designer → typed interfaces + stubs from component contracts
-Tester → ux-assertions.md as UI test specifications
+Tester → ux-`assertions.md` as UI test specifications
 Coder → implements components against interfaces
 
 ```
 
-Depends on: `docs/spec/vocabulary.md`, `docs/spec/assertions.md`, `docs/spec/security.md`.
+Depends on: `docs/spec/vocabulary.md`, `docs/spec/`assertions.md``, `docs/spec/security.md`.
 Does not depend on Interface Designer — component contracts are inputs to that mode.
+
+## Collaboration
+
+- **Receives from**: Software Architect (`docs/spec/architecture.md`, `docs/spec/constraints.md`)
+- **Works with**: Interface Designer (component contracts must stay consistent with type definitions)
+- **Hands off to**: Interface Designer (`docs/spec/ux/*.md` — flows, screens, component contracts, `ux-assertions.md`)
+
+*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*

@@ -78,7 +78,7 @@ Create explicit, testable assertions in BDD format (Given/When/Then/And). Cover:
 
 ### 6. Produce a Modular Spec
 
-Create spec folder: `docs/spec/infrastructure/` with README.md (overview + links + workflow), overview.md (context), responsibilities.md, architecture.md, tradeoffs.md, security.md, observability.md, disaster-recovery.md, cost-management.md, assertions.md, vocabulary.md, environments.md. Each file self-contained and reviewable. Include Mermaid diagrams (network topology especially).
+Create spec folder: `docs/spec/infrastructure/` with README.md (overview + links + workflow), overview.md (context), responsibilities.md, `architecture.md`, tradeoffs.md, security.md, observability.md, disaster-recovery.md, cost-management.md, `assertions.md`, vocabulary.md, environments.md. Each file self-contained and reviewable. Include Mermaid diagrams (network topology especially).
 
 ---
 
@@ -102,16 +102,24 @@ Present the spec clearly. Request feedback, objections, and missing concerns. Up
 
 ### 10. Support Feedback Loop
 
-After resource definition or configuration, resolve gaps by editing `assertions.md`, `vocabulary.md`, `security.md`, or add `clarifications.md` if needed.
+After resource definition or configuration, resolve gaps by editing ``assertions.md``, `vocabulary.md`, `security.md`, or add `clarifications.md` if needed.
 
 ---
 
 ### 11. Handoff to Infrastructure Designer
 
-When spec is complete, provide summary: specs created in `./docs/spec/infrastructure/` (overview.md, vocabulary.md, responsibilities.md, architecture.md, assertions.md, constraints.md, security.md, disaster-recovery.md, cost-management.md). State key decisions: architecture (layers), isolation strategy, deployment model, IaC tool, secrets management. List infrastructure layers and components. Ready for designer to create Terraform modules and resource configs.
+When spec is complete, provide summary: specs created in `./docs/spec/infrastructure/` (overview.md, vocabulary.md, responsibilities.md, `architecture.md`, `assertions.md`, `constraints.md`, security.md, disaster-recovery.md, cost-management.md). State key decisions: architecture (layers), isolation strategy, deployment model, IaC tool, secrets management. List infrastructure layers and components. Ready for designer to create Terraform modules and resource configs.
 
 ---
 
 ## Workflow Integration
 
 You → docs/spec/infrastructure/ → Infrastructure Designer → Terraform scaffolds → Planner → tasks.md → Infrastructure Engineer. Your output enables the pipeline. Focus on clarity, completeness, and solid foundation.
+
+## Collaboration
+
+- **Receives from**: none — entry point of the infrastructure pipeline
+- **Works with**: none
+- **Hands off to**: Infrastructure Designer (infrastructure architecture docs)
+
+*Note: the Infrastructure Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*

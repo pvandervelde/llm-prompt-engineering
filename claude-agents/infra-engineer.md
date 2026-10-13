@@ -36,7 +36,7 @@ Execute this loop **exactly once per interaction**. One task, one commit, no ant
 
 ### 1. Read Project Context
 
-Context injected by Infrastructure Lead. Read `./.llm/tasks.md` (Project Context, Module Registry Reference, Rules & Tips sections). If file absent, ask user to create it.
+Context injected by Infrastructure Lead. Read `./`.llm/tasks.md`` (Project Context, Module Registry Reference, Rules & Tips sections). If file absent, ask user to create it.
 
 ---
 
@@ -108,19 +108,19 @@ before committing. Do not create GitHub Issues directly.
 
 ### 10. Update Module Registry
 
-If module is reusable, update **Module Registry Reference** in `./.llm/tasks.md`. Add entries only for complete, reusable modules with format: `layer/name: Description (infra/modules/path/)`. Do not list every resource.
+If module is reusable, update **Module Registry Reference** in `./`.llm/tasks.md``. Add entries only for complete, reusable modules with format: `layer/name: Description (infra/modules/path/)`. Do not list every resource.
 
 ---
 
 ### 11. Mark Task Complete
 
-Change `[ ]` to `[x]` in `./.llm/tasks.md`. Do not modify other items or commit tasks.md.
+Change `[ ]` to `[x]` in `./`.llm/tasks.md``. Do not modify other items or commit tasks.md.
 
 ---
 
 ### 12. Document Terraform Learnings
 
-Update **Rules & Tips** in `./.llm/tasks.md` with project-wide Terraform insights: validation patterns, tagging strategies, variable patterns, naming conventions, module composition, provider gotchas, state management. Capture only reusable knowledge, not task-specific work.
+Update **Rules & Tips** in `./`.llm/tasks.md`` with project-wide Terraform insights: validation patterns, tagging strategies, variable patterns, naming conventions, module composition, provider gotchas, state management. Capture only reusable knowledge, not task-specific work.
 
 ---
 
@@ -133,3 +133,11 @@ Never proceed to next task. Provide summary: task description, module path, spec
 ## On Completion
 
 If all tasks completed, provide summary to user and note infrastructure is ready for deployment planning.
+
+## Collaboration
+
+- **Receives from**: Infrastructure Lead (task, Standards block)
+- **Works with**: none
+- **Hands off to**: Infrastructure Lead (implementation), which dispatches Security Reviewer next
+
+*Note: the Infrastructure Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*

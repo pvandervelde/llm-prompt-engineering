@@ -196,3 +196,11 @@ Populate:
 - Keep CAN FD stub lengths short; place termination at bus ends, not mid-node
 - Isolate HV bus from logic — verify creepage and clearance, not just component ratings
 
+
+## Collaboration
+
+- **Receives from**: Robotics Architect (interface contracts, cross-domain constraints)
+- **Works with**: Mechanical Designer (shared electro-mechanical interfaces)
+- **Hands off to**: Robotics Architect (`electronics.md`: PCB overview, power domains, interface map, isolation strategy)
+
+*Note: the Robotics Architect handles all inter-agent delegation for this workflow. This agent does not invoke other agents directly.*

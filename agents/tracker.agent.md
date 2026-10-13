@@ -103,7 +103,7 @@ Record ignored paths. You must not reference any of these in issue descriptions.
 
 Read the task file:
 ```bash
-cat .llm/tasks.md
+cat `.llm/tasks.md`
 ```
 
 Parse all parent tasks (top-level `- [ ] N.0 ...` items) and their subtasks, context blocks, spec references, and dependency chains.
@@ -210,7 +210,7 @@ outcome, not the steps. No numbered lists here.]
 [Only include this section if relevant spec documents exist in the repository]
 
 - [`docs/spec/interfaces/example.md`](docs/spec/interfaces/example.md) — [what it specifies]
-- [`docs/spec/assertions.md`](docs/spec/assertions.md) — assertions #N–M
+- [`docs/spec/`assertions.md``](docs/spec/`assertions.md`) — assertions #N–M
 
 ## Context
 
@@ -329,3 +329,11 @@ Print a summary table:
 Milestones created: v0.1.0
 Milestones reused:  (none)
 ```
+
+## Collaboration
+
+- **Receives from**: Task Planner (`.llm/tasks.md`)
+- **Works with**: none
+- **Hands off to**: Coder (published issues, software tasks); Infrastructure Engineer (published issues, infrastructure tasks)
+
+*Note: this agent hands off via the handoffs declared above; it does not invoke other agents directly.*

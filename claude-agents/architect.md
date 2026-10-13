@@ -137,3 +137,11 @@ After test generation or interface design, resolve gaps by editing `edge-cases.m
 ### 11. Handoff to Interface Designer
 
 When the spec is complete, produce a summary listing: spec files created with one-line descriptions, key architectural decisions (numbered), and what the interface designer should do next. Format as markdown under the heading "Architecture Complete".
+
+## Collaboration
+
+- **Receives from**: none — entry point of the software pipeline. (Future: Requirements Analyst, once added.)
+- **Works with**: UX Designer (shared ownership of Frontend-facing scope)
+- **Hands off to**: Interface Designer (`docs/spec/architecture.md`, `responsibilities.md`, `vocabulary.md`, `constraints.md`), UX Designer (`docs/spec/architecture.md`, `constraints.md` — when the task touches Frontend)
+
+*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*

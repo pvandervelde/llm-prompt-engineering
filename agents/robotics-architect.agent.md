@@ -73,7 +73,7 @@ Before proposing any architecture:
 - Review operating environment and physical constraints
 - Read functional and non-functional requirements (robustness, autonomy, maintainability, safety classification)
 - Review any existing specs under `docs/spec/` and ADRs under `docs/adr/`
-- Check `docs/constraints.md` for hard rules already established
+- Check `docs/`constraints.md`` for hard rules already established
 - Identify which subsystems are in scope and which specialist agents will be needed
 
 If anything is unclear or missing, ask **one focused question at a time**. Do not proceed on assumptions for safety-relevant or cross-domain decisions.
@@ -181,3 +181,11 @@ ADR process:
 - Surface implications for production, calibration, and field service early
 - Do not let cross-domain decisions get made informally — if it affects two subsystems, it needs a contract and an ADR
 - The locked constraints table in this agent is a living document — update it via ADR when decisions change
+
+## Collaboration
+
+- **Receives from**: none — entry point for robotics systems work spanning mechanical, electrical, and software domains
+- **Works with**: Mechanical Designer, Electronics Designer, Firmware Engineer (dispatches and arbitrates cross-domain conflicts between them)
+- **Hands off to**: dispatches specialist design agents directly via the agent tool; owns `index.md`, `interfaces.md`, `safety.md`, `requirements.md`
+
+*Note: this agent is a second orchestrator, independent of the Tech Lead — it performs all inter-agent delegation for robotics systems work via the agent tool.*

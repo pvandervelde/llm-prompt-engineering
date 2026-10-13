@@ -74,7 +74,7 @@ Standards (mutation score targets, testing tools) and module criticality classif
 
 The `## Toolchain` block is also pre-injected — it carries the resolved stack's `test`, `mutation`, `mutation_engine`, `fuzz_run`, `formal`, and `property_lib` commands. Use those values verbatim; do not guess a tool for the wrong stack.
 
-Do not read `docs/spec/assertions.md` — the audit scope is defined by the module classification and package names in the injected context. Assertion IDs referenced in kill tests must already appear in the Relevant Assertions slice; if one doesn't, treat it as a spec gap (see Kill Tests Are Anchored to Assertions above).
+Do not read `docs/spec/`assertions.md`` — the audit scope is defined by the module classification and package names in the injected context. Assertion IDs referenced in kill tests must already appear in the Relevant Assertions slice; if one doesn't, treat it as a spec gap (see Kill Tests Are Anchored to Assertions above).
 
 ### 2. Survey the Implementation
 
@@ -231,8 +231,8 @@ Define the state machine's legal transitions and invariants; let CsCheck / fast-
 
 #### Interpreting Results
 
-- **VERIFIED / PASS** — the property holds for all inputs within the unwind bound (Kani) or held across N generated runs (CsCheck/fast-check). Document the bound or run count used.
-- **COUNTEREXAMPLE / FAIL** — the tool found an input sequence that violates the property. This is a defect, not a test failure. Stop and report it as a hard blocker immediately. Do not proceed to VERIFY.
+- **VERIFIED / `PASS`** — the property holds for all inputs within the unwind bound (Kani) or held across N generated runs (CsCheck/fast-check). Document the bound or run count used.
+- **COUNTEREXAMPLE / `FAIL`** — the tool found an input sequence that violates the property. This is a defect, not a test failure. Stop and report it as a hard blocker immediately. Do not proceed to VERIFY.
 
 If a Kani proof is inconclusive due to unwind limits, document this explicitly:
 ```markdown
@@ -273,7 +273,7 @@ Produce the final report:
 ### Tier 6 — Formal Verification / Model-Based Testing
 | Module | Technique | Result | Bound / Iterations | Claim strength |
 |--------|-----------|--------|---------------------|----------------|
-| [module] | [Kani / CsCheck / fast-check] | VERIFIED / PASS / COUNTEREXAMPLE / FAIL / INCONCLUSIVE | [N] | [Proof (bounded) / Sampling — not a proof] |
+| [module] | [Kani / CsCheck / fast-check] | VERIFIED / `PASS` / COUNTEREXAMPLE / `FAIL` / INCONCLUSIVE | [N] | [Proof (bounded) / Sampling — not a proof] |
 
 **Report:** .llm/evidence/formal-[sha].json (write one even for model-based runs — the Verifier treats a missing artefact as a failed audit, not a missing file)
 
@@ -281,13 +281,21 @@ Produce the final report:
 [List any unresolved blockers, or "None"]
 
 ### Verdict
-[CLEAR / BLOCKED — list blocking issues]
+[`CLEAR` / `BLOCKED` — list blocking issues]
 ```
 
 Commit the audit results with format: `test(audit): Mutation + fuzz audit for #[task-N] [title]` body: `Mutation score: [N]% ([package], engine: [engine] [version]), Survivors killed: [N], Fuzz targets run: [N], crashes: [N], Tier 6: [N verified/pass/inconclusive/counterexample]`.
 
 ## Workflow Integration
 
-You are invoked by Tech Lead after implementation passes (GREEN). You run Tiers 4–6 against the resolved toolchain, produce an audit report and new tests, and return a verdict (CLEAR or BLOCKED). The Tech Lead does not advance to VERIFY until verdict is CLEAR. Security Reviewer runs in parallel.
+You are invoked by Tech Lead after implementation passes (GREEN). You run Tiers 4–6 against the resolved toolchain, produce an audit report and new tests, and return a verdict (`CLEAR` or `BLOCKED`). The Tech Lead does not advance to VERIFY until verdict is `CLEAR`. Security Reviewer runs in parallel.
 
 
+
+## Collaboration
+
+- **Receives from**: Tech Lead (module criticality classification, implementation)
+- **Works with**: Security Reviewer (parallel audit of the same implementation)
+- **Hands off to**: Tech Lead (mutation/fuzz/formal results)
+
+*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*

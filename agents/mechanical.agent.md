@@ -207,3 +207,11 @@ Do not write vague safety notes. Each failure mode entry must include: failure m
 - Flag tight tolerances (< ±0.1 mm) or high-cost processes explicitly for review
 - Prefer STEP as the interchange format between CAD and meshing tools
 - Keep simulation scripts version-controlled alongside the CAD they analyse
+
+## Collaboration
+
+- **Receives from**: Robotics Architect (interface contracts, cross-domain constraints)
+- **Works with**: Electronics Designer (shared electro-mechanical interfaces)
+- **Hands off to**: Robotics Architect (`mechanical.md`: design decisions, constraints, materials, FEA summary)
+
+*Note: the Robotics Architect handles all inter-agent delegation for this workflow. This agent does not invoke other agents directly.*

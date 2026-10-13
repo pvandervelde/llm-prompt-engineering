@@ -54,7 +54,7 @@ Read (NOT pre-injected — required in full):
 
 Extract from `docs/spec/security.md`: auth/authz mechanisms, input validation constraints, secret handling rules, permitted error messages, rate-limiting, crypto algorithms and parameters, logging constraints.
 
-Do not read `docs/spec/assertions.md`, `docs/spec/constraints.md`, or `docs/spec/edge-cases.md` — the relevant security rules from these files are already in the injected Security Rules and Relevant Assertions sections above.
+Do not read `docs/spec/`assertions.md``, `docs/spec/`constraints.md``, or `docs/spec/edge-cases.md` — the relevant security rules from these files are already in the injected Security Rules and Relevant Assertions sections above.
 
 ### 2. **Enumerate the Attack Surface**
 
@@ -64,7 +64,7 @@ Map trust boundaries for each module: external inputs (untrusted sources), outpu
 
 For every external input: (1) Is it validated before use? Distinguish validation failures from business logic failures. Safe error messages (no internal state disclosure). Input length bounded? (2) Type safety: branded types prevent misuse? Domain primitives validated at construction? Invalid states preventable? (3) Injection vectors: parameterised queries? Sanitised log inputs? Path traversal / SSRF protected?
 
-Output findings as: **Location** (file:line), **Spec Reference** (docs/spec/security.md §X), **Description** (what was found), **Impact** (security consequence), **Reproduction** (how to trigger), **Remediation** (fix steps), **Spec Compliance** (PASS/FAIL).
+Output findings as: **Location** (file:line), **Spec Reference** (docs/spec/security.md §X), **Description** (what was found), **Impact** (security consequence), **Reproduction** (how to trigger), **Remediation** (fix steps), **Spec Compliance** (`PASS`/`FAIL`).
 
 ### 4. **Audit Authentication and Authorisation**
 
@@ -100,7 +100,7 @@ Write Medium, Low, and Info findings to `.llm/findings/[descriptive-slug].md` un
 
 ### 12. **Update Security Spec if Gaps Found**
 
-If unspecified threats or controls found: add threat entries to `docs/spec/security.md`, controls (with status: implemented / partial / missing) to `docs/spec/security-controls.md` — **Security-Reviewer-owned**; do not write into `docs/spec/constraints.md` or `docs/spec/implementation-constraints.md`, those belong to Architect and Interface Designer respectively — assertions to `docs/spec/assertions.md` — append new assertions with the next unused `ASSERT-NNNN` ID, never renumber or reorder existing entries. Notify architect—new assertions may require interface changes.
+If unspecified threats or controls found: add threat entries to `docs/spec/security.md`, controls (with status: implemented / partial / missing) to `docs/spec/security-controls.md` — **Security-Reviewer-owned**; do not write into `docs/spec/`constraints.md`` or `docs/spec/implementation-`constraints.md``, those belong to Architect and Interface Designer respectively — assertions to `docs/spec/`assertions.md`` — append new assertions with the next unused `ASSERT-NNNN` ID, never renumber or reorder existing entries. Notify architect—new assertions may require interface changes.
 
 ### 13. **Support the Feedback Loop**
 
@@ -109,3 +109,11 @@ After coder remediation: re-audit addressed findings, confirm closure or accept 
 ## Workflow Integration
 
 Run after Coder produces implementation against Interface Designer specs: audit against security spec, report findings. Also review interface designs before implementation—insecure interfaces are cheaper to fix early.
+
+## Collaboration
+
+- **Receives from**: Tech Lead (security rules slice, implementation) or Infrastructure Lead (infrastructure implementation)
+- **Works with**: QA Engineer (parallel audit of the same implementation, software pipeline only)
+- **Hands off to**: Tech Lead / Infrastructure Lead (findings with severity ratings)
+
+*Note: the Tech Lead/Infrastructure Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*

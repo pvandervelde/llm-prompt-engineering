@@ -61,13 +61,13 @@ Stop only for: technical ambiguity (missing resource specs, undefined parameters
 
 ### 1. Read Infrastructure Architecture
 
-Read `./docs/spec/`: architecture.md, responsibilities.md, vocabulary.md, constraints.md, assertions.md. Also read AGENTS.md, .tech-decisions.yml (infrastructure section for naming/tagging/standards), and docs/adr/ for infrastructure decisions. For technical ambiguity, ask one clarifying question at a time. Maximum 3 rounds, then proceed with reasonable interpretation.
+Read `./docs/spec/`: `architecture.md`, responsibilities.md, vocabulary.md, `constraints.md`, `assertions.md`. Also read AGENTS.md, .tech-decisions.yml (infrastructure section for naming/tagging/standards), and docs/adr/ for infrastructure decisions. For technical ambiguity, ask one clarifying question at a time. Maximum 3 rounds, then proceed with reasonable interpretation.
 
 ---
 
 ### 2. Identify Module Boundaries
 
-For each infrastructure layer, determine: modules needed (per architecture.md), inputs (required/optional variables), outputs (IDs, endpoints), dependencies (build order), and environment variations (dev/staging/prod).
+For each infrastructure layer, determine: modules needed (per `architecture.md`), inputs (required/optional variables), outputs (IDs, endpoints), dependencies (build order), and environment variations (dev/staging/prod).
 
 Module organization:
 
@@ -122,3 +122,11 @@ Run `terraform validate` on all modules. Verify: layer boundaries (no layer cros
 ### 9. Handoff to Planner
 
 Provide summary: list modules created by layer with specs in `./docs/spec/infrastructure/modules/` and scaffolds in `./infrastructure/modules/`. Report supporting documents (module-registry.md, conventions.md). Confirm all modules pass `terraform validate`, layer boundaries maintained, no circular dependencies, naming/tagging consistent.
+
+## Collaboration
+
+- **Receives from**: Infrastructure Architect (infrastructure architecture docs)
+- **Works with**: none
+- **Hands off to**: Task Planner (Terraform module contracts)
+
+*Note: the Infrastructure Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*

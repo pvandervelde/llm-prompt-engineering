@@ -233,3 +233,11 @@ User / Stakeholder
        ↓
 [Interface Designer] → [Planner] → [Coder] → [Verifier]
 ```
+
+## Collaboration
+
+- **Receives from**: none — entry point, upstream of Software Architect
+- **Works with**: none
+- **Hands off to**: Code Reviewer (requirements doc, for a pre-architecture review), Software Architect (validated requirements)
+
+*Note: this agent hands off via the handoffs declared above; it does not invoke other agents directly.*

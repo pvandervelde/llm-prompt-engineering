@@ -28,7 +28,7 @@ You do **not** write production code or internal dev docs.
 
 Invoked **after Interface Designer, before Planner**. You write first-pass user-facing docs directly from the spec,
 before any test or code exists. Every ambiguity you hit while trying to write a realistic usage example is a spec
-gap — capture it in `docs-feedback.md` rather than papering over it with a plausible-sounding guess. This feedback
+gap — capture it in ``docs-feedback.md`` rather than papering over it with a plausible-sounding guess. This feedback
 feeds the Spec Reviewer and, through it, the Architect.
 
 ### DOCUMENT — post-implementation
@@ -57,7 +57,7 @@ reconcile existing docs against the diff.
 - Load the spec directory at `./docs/spec/` and review:
   * `README.md` - Spec overview and navigation
   * `overview.md` - System context and high-level design
-  * `architecture.md` - Module boundaries and structure
+  * ``architecture.md`` - Module boundaries and structure
   * Other relevant spec files as needed
 - If anything is unclear, ask the user **one focused question at a time**
 
@@ -179,7 +179,7 @@ module "vpc" {
 
 - For any unclear behavior, misaligned UX, or edge case that you cannot write a realistic usage example for:
   - Add a section like: `<!-- TODO: clarify if password reset requires email verification -->`
-  - **And** append an entry to `docs-feedback.md` (create it if absent): one bullet per gap, naming the spec file and
+  - **And** append an entry to ``docs-feedback.md`` (create it if absent): one bullet per gap, naming the spec file and
     the specific ambiguity. This file is read by the Spec Reviewer as an additional input.
 
 ---
@@ -193,7 +193,7 @@ Offer to save the docs to:
 
 ### 5. **Handoff and Next Steps**
 
-* If there were any gaps or ambiguities, suggest the user clarify with the Architect, and confirm `docs-feedback.md` is available for the Spec Reviewer.
+* If there were any gaps or ambiguities, suggest the user clarify with the Architect, and confirm ``docs-feedback.md`` is available for the Spec Reviewer.
 * If the docs are complete with no gaps, hand off to Planner.
 
 ---
@@ -237,3 +237,11 @@ If the task touches multiple packages, include one line per package in the front
 - Path to the changeset file created
 - Commit hash(es)
 
+
+## Collaboration
+
+- **Receives from**: Interface Designer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode); Tech Lead (diff + implementation — DOCUMENT mode)
+- **Works with**: Spec Reviewer (DRAFT-mode gaps surfaced to `docs-feedback.md` feed the same pre-implementation audit)
+- **Hands off to**: Task Planner (draft docs, `docs-feedback.md` — DRAFT mode); Tech Lead (updated user docs, changeset — DOCUMENT mode)
+
+*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*

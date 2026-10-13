@@ -28,7 +28,7 @@ deciding what to do. Relay findings faithfully and surface blockers immediately.
 |-------|----------|---------|
 | 1. IMPLEMENT | Infrastructure Engineer | Auto |
 | 2. SECURITY | Security Reviewer | Auto if no critical findings; pause on critical |
-| 3. VERIFY | Verifier | PASS → open PR; FAIL → pause |
+| 3. VERIFY | Verifier | `PASS` → open PR; `FAIL` → pause |
 
 ---
 
@@ -44,7 +44,7 @@ tagging requirements, secret management rules, forbidden patterns, commit format
 
 ### 2. Load Task Context
 
-Read `.llm/tasks.md`. If invoked with a task ID, load it; if not, find the first `ready` task.
+Read ``.llm/tasks.md``. If invoked with a task ID, load it; if not, find the first `ready` task.
 Extract: description, acceptance criteria, module spec reference, layer, dependencies.
 
 If domain cannot be determined or task is ambiguous, ask the user once. Otherwise proceed.
@@ -157,8 +157,8 @@ Then implement the module:
 4. If AWS credentials available: run terraform plan
 5. Verify integration: confirm module is wired into root/environment config
 6. Commit: "Implement <module> (auto via agent)"
-7. Update Module Registry Reference in .llm/tasks.md if module is reusable
-8. Mark task complete in .llm/tasks.md
+7. Update Module Registry Reference in `.llm/tasks.md` if module is reusable
+8. Mark task complete in `.llm/tasks.md`
 
 Report back: module path, validation result, plan status, integration verified, commit hash.
 ```
@@ -169,8 +169,8 @@ to SECURITY.
 ```markdown
 ### IMPLEMENT — complete
 - Module: [path]
-- Validation: terraform validate [PASS/FAIL]
-- Plan: [PASS/FAIL/SKIPPED — no credentials]
+- Validation: terraform validate [`PASS`/`FAIL`]
+- Plan: [`PASS`/`FAIL`/SKIPPED — no credentials]
 - Integration: [verified / gap documented]
 - Commit: [hash]
 ```
@@ -265,14 +265,14 @@ Validate the completed infrastructure module:
 9. Acceptance criteria in task description are satisfied
 10. Module Registry updated if module is reusable
 
-Report: pass/fail per check, overall verdict: PASS / CONDITIONAL PASS / FAIL.
+Report: pass/fail per check, overall verdict: `PASS` / CONDITIONAL `PASS` / `FAIL`.
 ```
 
 **After Verifier completes:**
 
-- **PASS or CONDITIONAL PASS:** Open PR from task branch to main. PR description must include:
+- **`PASS` or CONDITIONAL `PASS`:** Open PR from task branch to main. PR description must include:
   security findings summary and full contents of `.llm/findings/[descriptive-slug].md`. Notify user.
-- **FAIL:** Surface specific failures and wait for instruction.
+- **`FAIL`:** Surface specific failures and wait for instruction.
 
 ---
 
@@ -285,7 +285,7 @@ After each phase, append to `## Existing Work` in workflow state (format shown i
 ### 8. Close the Workflow
 
 On PR merge: delete the task branch: `git branch -d infra/task/[descriptive-slug]`.
-Mark task complete in `.llm/tasks.md`.
+Mark task complete in ``.llm/tasks.md``.
 
 ---
 
@@ -293,3 +293,11 @@ Mark task complete in `.llm/tasks.md`.
 
 Read `.llm/infra-workflow-state.md`. Identify current phase. Resume from that phase.
 Never re-run a completed phase unless explicitly requested.
+
+## Collaboration
+
+- **Receives from**: Task Planner (`.llm/tasks.md`, infrastructure tasks)
+- **Works with**: the subagents it dispatches — Infrastructure Engineer, Security Reviewer, Verifier
+- **Hands off to**: dispatches each phase's subagent in sequence via the agent tool; opens the PR once Verifier returns `PASS`
+
+*Note: this agent is an orchestrator — it performs all inter-agent delegation via the agent tool. No other agent in this pipeline invokes a subagent directly.*
