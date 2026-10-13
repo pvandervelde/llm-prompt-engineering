@@ -623,6 +623,17 @@ mutation_targets:
     api_boundary:    75
     adapter:         65
 
+# Maps module paths to the criticality classes used by mutation_targets above
+# and by the QA Engineer agent's Criticality Tiers table. Glob-matched against
+# the paths touched by a task; first match wins. Customize for your project -
+# an empty or missing mapping means every module defaults to domain_logic.
+criticality:
+  safety_critical: []  # e.g. ["src/safety/**", "src/control/**"]
+  parser: []            # e.g. ["src/protocol/**"]
+  domain_logic: []      # e.g. ["src/domain/**"]
+  api_boundary: []      # e.g. ["src/api/**"]
+  adapter: []           # e.g. ["src/infra/**"]
+
 # Database (customize for your project)
 database:
   choice: null  # e.g., postgresql, mongodb, sqlite
