@@ -178,9 +178,9 @@ If Domain is Frontend, also run:
 
 ### 9a. **Quality Validation**
 
-After tests pass, verify: code quality (length, complexity, naming per .tech-decisions.yml), security (no hardcoded secrets, proper secret management, no sensitive data logged), test coverage (minimum threshold met), and pre-commit (format/lint pass, no large files, no conflict markers).
+After tests pass, verify: code quality (length, complexity, naming per .tech-decisions.yml), security (no hardcoded secrets, proper secret management, no sensitive data logged), and test coverage (minimum threshold met).
 
-Passing pre-commit simulation permits immediate commit. No additional gate required. Actual git hooks enforce these standards.
+Run the configured git hooks (`.githooks/pre-commit`); on failure, fix and retry, up to 3 attempts. Do not hand-check formatting, linting, large files, or conflict markers — the hooks already enforce those deterministically, and re-deriving their result in prose only costs tokens and risks a false pass.
 
 If Domain is Frontend, also verify:
 - No hardcoded values where design tokens are specified
