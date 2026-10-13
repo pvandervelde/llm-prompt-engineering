@@ -136,7 +136,7 @@ Save `./`.llm/tasks.md`` with appropriate format per Section 4. Your task list i
 
 ## Collaboration
 
-- **Receives from**: Interface Designer (`docs/spec/interfaces/*.md`, software tasks), Doc Writer (`docs-feedback.md`, draft docs), Infrastructure Designer (Terraform module contracts, infrastructure tasks)
+- **Receives from**: Interface Designer (`docs/spec/interfaces/*.md`, software tasks, gated on the Design Reviewer's `CLEAR` verdict), Doc Writer (`docs-feedback.md`, draft docs), Infrastructure Designer (Terraform module contracts, infrastructure tasks)
 - **Works with**: none
 - **Hands off to**: Spec Reviewer (`.llm/tasks.md`, software tasks); Infrastructure Lead (`.llm/tasks.md`, infrastructure tasks — no Spec Reviewer gate on this path)
 

@@ -15,6 +15,7 @@ flowchart TD
         Architect["Software Architect"]
         UX["UX Designer"]
         IFace["Interface Designer"]
+        DesignRev["Design Reviewer"]
         Doc["Doc Writer"]
         Plan["Task Planner"]
         SpecRev["Spec Reviewer"]
@@ -29,8 +30,10 @@ flowchart TD
         Architect --> IFace
         Architect --> UX
         UX --> IFace
-        IFace --> Doc
-        IFace --> Plan
+        IFace --> DesignRev
+        DesignRev -->|CLEAR| Doc
+        DesignRev -->|CLEAR| Plan
+        DesignRev -.->|BLOCKED: routes to owning agent| Architect
         Doc --> Plan
         Plan --> SpecRev
         SpecRev -->|CLEAR| TechLead
@@ -64,6 +67,10 @@ flowchart TD
 - **Doc Writer** appears twice in the diagram above (DRAFT mode, between Interface Designer
   and Task Planner; DOCUMENT mode, after AUDIT + SECURITY) because it is one file operating
   in two explicit modes — see `docwriter.md`.
+- **Design Reviewer** is the pre-code adversarial gate (see #51): it runs before any test or
+  code exists, checking the whole design bundle (architecture, responsibilities,
+  assertions, vocabulary, constraints, and the interface spec) for defects that would
+  otherwise only surface once the Verifier runs at the very end of the pipeline.
 - **QA Engineer** and **Security Reviewer** run in parallel in the software pipeline (both
   gate on the same Refactor output); Security Reviewer is reused standalone in the
   infrastructure pipeline, where there is no QA Engineer phase.

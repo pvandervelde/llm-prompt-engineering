@@ -5,6 +5,9 @@ tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
 tier: judgment
 handoffs:
+  - label: "Design review"
+    agent: design-reviewer
+    prompt: "Interface design is complete. Please run the pre-code design review over architecture.md, responsibilities.md, assertions.md, vocabulary.md, constraints.md, and this interface spec before Doc Writer or Task Planner proceeds."
   - label: "Draft user docs (DRAFT mode)"
     agent: docwriter
     prompt: "Interface design is complete. Please draft first-pass user-facing documentation in DRAFT mode from the spec, surfacing any ambiguities to `docs-feedback.md` for the Spec Reviewer.\n\n## Mode: DRAFT"
@@ -123,6 +126,6 @@ After feedback: update specific interface documents, regenerate affected stubs, 
 
 - **Receives from**: Software Architect (`architecture.md`), UX Designer (`docs/spec/ux/*.md`, when the task touches Frontend)
 - **Works with**: none beyond its receives/hands-off edges
-- **Hands off to**: Doc Writer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode), Task Planner (`docs/spec/interfaces/*.md`, `assertions.md`), Spec Tester (`docs/spec/interfaces/*.md`, `assertions.md`)
+- **Hands off to**: Design Reviewer (`docs/spec/interfaces/*.md`) for the pre-code gate; on `CLEAR`, Doc Writer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode), Task Planner (`docs/spec/interfaces/*.md`, `assertions.md`), Spec Tester (`docs/spec/interfaces/*.md`, `assertions.md`)
 
 *Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*

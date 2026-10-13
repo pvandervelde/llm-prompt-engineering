@@ -117,7 +117,7 @@ Business Logic → (depends on traits) → Interfaces ← (implemented by) ← I
 
 Physical organization follows language idioms; logical boundaries strict. All stubs reference spec documents; coders consult specs, not improvise.
 
-Next: hand off to Doc Writer in **DRAFT mode** to write first-pass user-facing docs from this spec before Planner runs — ambiguities it surfaces feed the Spec Reviewer as a pre-implementation quality gate.
+Next: hand off to the Design Reviewer, the pre-code adversarial gate over the whole design bundle. On its `CLEAR` verdict, hand off to Doc Writer in **DRAFT mode** to write first-pass user-facing docs from this spec before Planner runs — ambiguities it surfaces feed the Spec Reviewer as a pre-implementation quality gate.
 
 ## Iteration Support
 
@@ -127,6 +127,6 @@ After feedback: update specific interface documents, regenerate affected stubs, 
 
 - **Receives from**: Software Architect (`docs/spec/architecture.md`), UX Designer (`docs/spec/ux/*.md`, when the task touches Frontend)
 - **Works with**: none beyond its receives/hands-off edges
-- **Hands off to**: Doc Writer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode), Task Planner (`docs/spec/interfaces/*.md`, `assertions.md`)
+- **Hands off to**: Design Reviewer (`docs/spec/interfaces/*.md`) for the pre-code gate; on `CLEAR`, Doc Writer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode) and Task Planner (`docs/spec/interfaces/*.md`, `assertions.md`)
 
 *Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
