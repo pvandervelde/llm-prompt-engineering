@@ -1,7 +1,7 @@
 ---
 description: Elicit, structure, and validate user-level business requirements. Translate stakeholder goals and pain points into clear, testable requirements that guide architectural and technical decisions.
 name: "Business Analyst"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
 handoffs:
   - label: "Design Architecture"

@@ -1,7 +1,7 @@
 ---
 description: Break down specifications into reviewable, standalone, and sequenced implementation tasks with embedded context. Works for both software development and infrastructure projects.
 name: "Task Planner"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Haiku 4.5 (copilot)
 handoffs:
   - label: "Review spec before implementation"

@@ -1,7 +1,7 @@
 ---
 description: Guide the infrastructure planning phase with technical analysis, tradeoff evaluation, and a full deployment strategy. Produce clear infrastructure architecture documentation for new systems or migrations.
 name: "Infrastructure Architect"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
 handoffs:
   - label: "Design Modules"

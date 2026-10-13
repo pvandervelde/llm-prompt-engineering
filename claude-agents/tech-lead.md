@@ -13,7 +13,7 @@ tools:
   - Bash
   - Glob
   - Grep
-  - Agent
+  - Task
   - TodoRead
   - TodoWrite
 ---

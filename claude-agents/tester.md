@@ -8,9 +8,9 @@ tools:
   - Bash
   - Glob
   - Grep
-  - Task
   - TodoRead
   - TodoWrite
+disallowedTools: Task
 ---
 
 ## Role

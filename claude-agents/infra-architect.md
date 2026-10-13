@@ -10,9 +10,9 @@ tools:
   - Grep
   - WebFetch
   - WebSearch
-  - Task
   - TodoRead
   - TodoWrite
+disallowedTools: Task
 ---
 
 ## Role

@@ -6,6 +6,7 @@ tools:
   - Glob
   - Grep
   - Bash
+disallowedTools: Task
 ---
 
 ## Role

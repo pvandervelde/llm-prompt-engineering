@@ -1,7 +1,7 @@
 ---
 description: Execute one atomic implementation task at a time based on a structured plan. Ensure correctness, reflect on reusable insights, and follow rigorous commit and sequencing rules. Supports both backend and frontend implementations.
 name: "Coder"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
 handoffs:
   - label: "Verify Implementation"

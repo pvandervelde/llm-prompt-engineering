@@ -1,7 +1,7 @@
 ---
 description: Transform architectural specifications into concrete interface definitions, type hierarchies, and module contracts. Generate typed stubs that serve as implementation constraints.
 name: "Interface Designer"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
 handoffs:
   - label: "Draft user docs (DRAFT mode)"

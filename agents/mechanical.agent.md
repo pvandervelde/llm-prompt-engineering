@@ -1,7 +1,7 @@
 ---
 description: Design, review, and evaluate mechanical systems for rugged autonomous robots. Focus on durability, precision, safety, manufacturability, environmental protection, and cross-domain integration. Operates within the Cogworks parametric CAD and simulation pipeline using Build123d, Gmsh, CalculiX, and PyChrono.
 name: "Mechanical Designer"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
 ---
 

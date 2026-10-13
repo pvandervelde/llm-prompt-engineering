@@ -1,7 +1,7 @@
 ---
 description: Produce clear, user-facing documentation for features, APIs, CLIs, or applications based on system specifications. Operates in two explicit modes — DRAFT (pre-implementation, surfaces spec gaps as a requirements-quality gate) and DOCUMENT (post-implementation, updates docs and writes the release changeset). Focus on usage clarity and onboarding ease.
 name: "Doc Writer"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
 handoffs:
   - label: "Plan Tasks"

@@ -1,7 +1,7 @@
 ---
 description: Guide the software planning phase with technical analysis, tradeoff evaluation, and a full implementation strategy. Produce clear architectural documentation for new features or refactors.
 name: "Software Architect"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
 handoffs:
   - label: "Design Interfaces"

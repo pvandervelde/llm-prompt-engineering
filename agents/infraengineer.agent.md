@@ -1,7 +1,7 @@
 ---
 description: Execute one atomic infrastructure task at a time based on a structured plan. Implement Terraform modules against specifications with validation and strict commit discipline.
 name: "Infrastructure Engineer"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
 handoffs:
   - label: "Verify Implementation"

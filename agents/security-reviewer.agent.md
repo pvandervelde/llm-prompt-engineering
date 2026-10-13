@@ -1,7 +1,7 @@
 ---
 description: Audit implemented code and interfaces against security specifications, threat models, and safety-critical constraints. Produce structured findings with severity ratings and actionable remediation guidance.
 name: "Security Reviewer"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Haiku 4.5 (copilot)
 ---
 

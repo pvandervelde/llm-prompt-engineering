@@ -1,8 +1,8 @@
 ---
 name: doc-writer
 description: Produces clear, user-facing documentation for features, APIs, CLIs, or applications based on system specifications. Operates in two explicit modes — DRAFT (pre-implementation, after Interface Designer, before Planner — surfaces spec gaps as a requirements-quality gate) and DOCUMENT (post-implementation — updates docs and writes the release changeset). Focuses on usage clarity and onboarding ease — not internal dev docs or production code.
-tools: Read, Grep, Glob, Edit, Write, WebFetch, WebSearch, Bash, Agent
-model: sonnet
+tools: Read, Grep, Glob, Edit, Write, WebFetch, WebSearch, Bash
+disallowedTools: Task
 ---
 
 ## Role
