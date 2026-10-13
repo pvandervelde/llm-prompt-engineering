@@ -43,7 +43,7 @@ Execute this loop **exactly once per interaction**. One task, TDD workflow, two 
 Standards, interface contract, catalog slice, and security rules are pre-injected above. Do not read AGENTS.md, .tech-decisions.yml, or spec files already present above.
 
 Read only if missing from injected context:
-- `./docs/spec/`constraints.md`` — if implementation constraint not covered by Standards block
+- `./docs/spec/constraints.md` — if implementation constraint not covered by Standards block
 - `./docs/spec/shared-registry.md` — if a type reference is missing from Catalog Slice
 
 ### 2. **Identify Next Task**
@@ -91,7 +91,7 @@ Before writing any code, identify implementation choices that have significant o
 - API contract changes visible to other services or clients (new endpoints, changed request/response shapes)
 - Significant architectural boundary crossings (e.g., domain logic calling infrastructure directly)
 - Performance trade-offs with broad impact (disabling a cache layer, adding a synchronous call in an async path)
-- Building a second recovery path for a resource that already has one (e.g., a separate "reload credentials" or "graceful reconnect" function alongside failure-triggered recovery for the same resource) — per the recovery path rule in `docs/spec/`constraints.md``, these should normally be unified into a single acquire/reacquire path
+- Building a second recovery path for a resource that already has one (e.g., a separate "reload credentials" or "graceful reconnect" function alongside failure-triggered recovery for the same resource) — per the recovery path rule in `docs/spec/constraints.md`, these should normally be unified into a single acquire/reacquire path
 
 **Frontend:**
 - Authentication or authorization flow in the UI (e.g., how tokens are obtained, stored, or refreshed; which storage mechanism: memory vs `localStorage` vs `sessionStorage` vs secure cookie)
@@ -153,13 +153,13 @@ The test suite already exists and is committed. Do not create, modify, or delete
 - If the suite fails to compile, the interface stubs and the tests disagree — **STOP** and
   report to the Tech Lead as a contract mismatch. Do not resolve it by editing tests.
 - Commit format: `feat(<scope>): add types and docs for <feature>`
-- **IMPORTANT**: Never include task numbers from `.llm/tasks.md` - they are local-only identifiers
+- **IMPORTANT**: Never include task numbers from .llm/tasks.md - they are local-only identifiers
 
 ### 8. **Implementation Phase - Make Tests Pass**
 
 * **Now implement the actual function bodies** to make all tests pass
 * Follow the interface specification's documented behavior exactly
-* Use the patterns and constraints from `docs/spec/`constraints.md``
+* Use the patterns and constraints from `docs/spec/constraints.md`
 * Delegate to port interfaces (don't implement infrastructure)
 * Handle all error conditions as documented
 * Run tests frequently during implementation
@@ -215,7 +215,7 @@ Commit message format: `<type>(<scope>): <subject>` with body explaining why, al
 ### 11. **Update Shared Type Registry and Catalog**
 
 After implementation:
-- Update Shared Types Registry in `./`.llm/tasks.md`` for reusable types/patterns (only truly reusable, shared code).
+- Update Shared Types Registry in `./.llm/tasks.md` for reusable types/patterns (only truly reusable, shared code).
 - Update `docs/catalog.md` for any created or modified abstractions. Format: `| name | kind | location | description | tags |`. If used existing abstractions missing from catalog, add them. If superseded entries, update or remove stale ones. Verifier flags missing updates as Major. Do not skip this step.
 
 If Domain is Frontend:
@@ -223,11 +223,11 @@ If Domain is Frontend:
 - Only add truly reusable, shared code—not every component
 
 ### 12. **Mark Task Complete**
-- Change `[ ]` to `[x]` in `./`.llm/tasks.md``. Do not modify other items or commit the file.
+- Change `[ ]` to `[x]` in `./.llm/tasks.md`. Do not modify other items or commit the file.
 
 ### 13. **Document TDD Discoveries**
 
-Update `Rules & Tips` in `./`.llm/tasks.md`` with project-wide TDD learnings: testing patterns, documentation standards, error handling patterns, type design, framework gotchas, port mocking, integration test strategies. Document only reusable knowledge, not task-specific work.
+Update `Rules & Tips` in `./.llm/tasks.md` with project-wide TDD learnings: testing patterns, documentation standards, error handling patterns, type design, framework gotchas, port mocking, integration test strategies. Document only reusable knowledge, not task-specific work.
 
 ### 14. **STOP EXECUTION**
 
@@ -244,7 +244,7 @@ This section applies when **Domain: Frontend** is passed by the Tech Lead. Front
 ### Frontend-Specific Context Loading (Step 1 Supplement)
 
 In addition to the base context, load:
-- `./`.llm/tasks.md``: Project Context, Shared Types Registry, Rules & Tips, Notes (if absent, ask user to create it)
+- `./.llm/tasks.md`: Project Context, Shared Types Registry, Rules & Tips, Notes (if absent, ask user to create it)
 - `docs/standards/`: Front-end patterns, design tokens, CSS conventions
 - `docs/spec/components/` or `docs/spec/ui/`: Component APIs, slots, events
 - `docs/spec/design-tokens.md` or `docs/design/tokens/`: Token values and constraints

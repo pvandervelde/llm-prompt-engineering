@@ -35,7 +35,7 @@ Focus on correctness, security, and maintainability—not perfection. Validate a
 - Hardcoded secrets (violates .tech-decisions.yml security.no_hardcoded_secrets)
 - Function length > max_function_length in .tech-decisions.yml
 - Cyclomatic complexity > max_complexity in .tech-decisions.yml
-- Violates tripwire in docs/`constraints.md`
+- Violates tripwire in docs/constraints.md
 - Missing required security headers per .tech-decisions.yml
 
 **High Examples (Bootstrap Context)**
@@ -48,15 +48,15 @@ Focus on correctness, security, and maintainability—not perfection. Validate a
 
 **Review:** Correctness, security, safety, architectural integrity, test coverage, perf bottlenecks (with evidence), error handling, dead code, duplicate types, architectural improvement patterns.
 
-**Exclude:** Unplanned features (check ``.llm/tasks.md``), stylistic preferences (unless violating standards), "could be different" critiques, speculative optimizations, undesired features, equally-valid alternates.
+**Exclude:** Unplanned features (check `.llm/tasks.md`), stylistic preferences (unless violating standards), "could be different" critiques, speculative optimizations, undesired features, equally-valid alternates.
 
 ### Context Awareness
 
-Before Stage 0: Check ``.llm/tasks.md`` (if present) for scope/requirements; check `docs/spec/` for baseline behavior; check `CONTRIBUTING.md`/style guides; identify documented requirements vs implementation.
+Before Stage 0: Check `.llm/tasks.md` (if present) for scope/requirements; check `docs/spec/` for baseline behavior; check `CONTRIBUTING.md`/style guides; identify documented requirements vs implementation.
 
 #### Bootstrap-Enhanced Context
 
-Load: AGENTS.md (production baseline), .tech-decisions.yml (quality source of truth), docs/adr/ (don't flag documented decisions), docs/`constraints.md` (violations = Critical), .githooks/ (CI gates). Review against .tech-decisions.yml (code_quality, testing, security, naming); against AGENTS.md (standards); against ADRs (ignore documented decisions); against `constraints.md` (all violations Critical).
+Load: AGENTS.md (production baseline), .tech-decisions.yml (quality source of truth), docs/adr/ (don't flag documented decisions), docs/constraints.md (violations = Critical), .githooks/ (CI gates). Review against .tech-decisions.yml (code_quality, testing, security, naming); against AGENTS.md (standards); against ADRs (ignore documented decisions); against constraints.md (all violations Critical).
 
 ### Patch Strategy
 
@@ -68,7 +68,7 @@ Patches only for Critical (security, data corruption) and High (incorrect logic,
 
 ### Stage 0 — Quick Repo Triage (15-30 minutes)
 
-Read: README, docs/, `.llm/tasks.md` (if present), build files (package.json, Cargo.toml, go.mod, pom.xml), src/, tests, CI config. Check for specs/tasks baseline; check coding standards. Produce: purpose statement, languages/frameworks, scope (implemented vs planned). Output: `reviews/00-triage.md` (1-2 pages max).
+Read: README, docs/, .llm/tasks.md (if present), build files (package.json, Cargo.toml, go.mod, pom.xml), src/, tests, CI config. Check for specs/tasks baseline; check coding standards. Produce: purpose statement, languages/frameworks, scope (implemented vs planned). Output: `reviews/00-triage.md` (1-2 pages max).
 
 ### Stage 0b — Validate Against Bootstrap Standards
 
@@ -76,7 +76,7 @@ Read .tech-decisions.yml; extract code quality, security, testing, documentation
 
 ### Stage 1 — High-Level Architecture Audit (30-60 minutes)
 
-Describe system intent and evaluate architecture against it. Create system context (actors, systems, stores, flows); produce Mermaid diagram (components/data flows); validate against `docs/spec/`architecture.md`` if present. Check: modularity, layering, dependency directions, data ownership, single source of truth, observability, security, resilience. Identify improvement opportunities: applicable design patterns, implicit domain concepts, cross-cutting concerns, structural duplication. For each finding: observation, evidence (path:lines), severity, mitigation. Limit to 10-15 most impactful. Output: `reviews/01-`architecture.md`` (5-10 pages max) with embedded Mermaid.
+Describe system intent and evaluate architecture against it. Create system context (actors, systems, stores, flows); produce Mermaid diagram (components/data flows); validate against `docs/spec/architecture.md` if present. Check: modularity, layering, dependency directions, data ownership, single source of truth, observability, security, resilience. Identify improvement opportunities: applicable design patterns, implicit domain concepts, cross-cutting concerns, structural duplication. For each finding: observation, evidence (path:lines), severity, mitigation. Limit to 10-15 most impactful. Output: `reviews/01-architecture.md` (5-10 pages max) with embedded Mermaid.
 
 ### Stage 2 — Automatic Decomposition into Blocks (15-30 minutes)
 

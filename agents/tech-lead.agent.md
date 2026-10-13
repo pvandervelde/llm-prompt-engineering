@@ -27,7 +27,7 @@ Own the outcome by delegating work to specialists. You are accountable for corre
 │       ↑                        │                                 │
 │       └── spec gap ◄───────────┘                                 │
 │                                │                                 │
-│                        [2b] REFACTOR ──→ 🚦 gate (if `BLOCKED`)    │
+│                        [2b] REFACTOR ──→ 🚦 gate (if BLOCKED)    │
 │                                │                                 │
 │                    ┌───────────┴───────────┐                     │
 │                [3] AUDIT            [3b] SECURITY                │
@@ -47,10 +47,10 @@ Own the outcome by delegating work to specialists. You are accountable for corre
 |-------|----------|----------|
 | 1. RED | Tester | Auto — pause only if spec gap blocks test writing |
 | 2. GREEN | Coder | Auto |
-| 2b. REFACTOR | Refactor | Auto if `CLEAN`; pause if `BLOCKED` |
+| 2b. REFACTOR | Refactor | Auto if CLEAN; pause if BLOCKED |
 | 3. AUDIT + SECURITY | QA Engineer + Security Reviewer | Auto if no hard blockers; pause on safety-critical survivor, Tier 6 counterexample/fail, or critical security finding |
 | 4. DOCUMENT | Doc Writer | Auto — update user docs and create changeset |
-| 5. VERIFY | Verifier | `PASS` → open PR automatically; `FAIL` → pause |
+| 5. VERIFY | Verifier | PASS → open PR automatically; FAIL → pause |
 
 ## Workflow
 
@@ -60,11 +60,11 @@ Read `AGENTS.md` and `.tech-decisions.yml` for production standards, quality gat
 
 ### 1a. Check Spec Review Gate
 
-Look for the most recent `.llm/spec-review/*.md` report. If none exists, or its Verdict is ``BLOCKED``, or its date predates the last change to `docs/spec/` (`git log -1 --format=%cI — docs/spec/`), invoke the subagent named exactly **"Spec Reviewer"** before proceeding — do not start RED against an unaudited or stale specification bundle.
+Look for the most recent `.llm/spec-review/*.md` report. If none exists, or its Verdict is `BLOCKED`, or its date predates the last change to `docs/spec/` (`git log -1 --format=%cI -- docs/spec/`), invoke the subagent named exactly **"Spec Reviewer"** before proceeding — do not start RED against an unaudited or stale specification bundle.
 
-If the Spec Reviewer returns ``BLOCKED``: relay the findings, route each to its named owner, and wait — do not invoke Tester until a re-run of Spec Reviewer returns ``CLEAR``.
+If the Spec Reviewer returns `BLOCKED`: relay the findings, route each to its named owner, and wait — do not invoke Tester until a re-run of Spec Reviewer returns `CLEAR`.
 
-If ``CLEAR``: proceed to Step 2.
+If `CLEAR`: proceed to Step 2.
 
 ### 2. Load Task Context
 
@@ -116,9 +116,9 @@ Write to the Standards section of `.llm/workflow-state.md`.
 Read the task's spec files and extract only the slices each subagent needs. Write all extracted content to the Context Bundle section of `.llm/workflow-state.md`.
 
 #### Assertions slice
-Read `docs/spec/`assertions.md``. Extract only the assertions (with their stable `ASSERT-NNNN` IDs preserved) that reference the module(s) this task touches. Skip assertions for unrelated modules. Write under `## Relevant Assertions` in workflow state.
+Read `docs/spec/assertions.md`. Extract only the assertions (with their stable `ASSERT-NNNN` IDs preserved) that reference the module(s) this task touches. Skip assertions for unrelated modules. Write under `## Relevant Assertions` in workflow state.
 
-If `docs/spec/`assertions.md`` does not exist or contains no assertions for this module, write: `## Relevant Assertions\nNone found for this module.`
+If `docs/spec/assertions.md` does not exist or contains no assertions for this module, write: `## Relevant Assertions\nNone found for this module.`
 
 Also tag each assertion as `[security]` if it references auth, validation, secrets, or error handling — these tagged assertions are the subset passed to Security Reviewer.
 
@@ -216,7 +216,7 @@ Invoke the appropriate subagent with a precise, self-contained prompt. **Subagen
 
 #### Phase 1: RED — Tester
 
-**Entry criteria:** `docs/spec/`assertions.md`` exists and is non-empty. Interface stubs compile / type-check cleanly under `{toolchain.typecheck}`. If Domain is Frontend, `docs/spec/ux/`ux-assertions.md`` must also exist and be non-empty — a frontend task with no UX assertions has nothing for the Tester to build Tier 1 tests from, and auto-advancing anyway ships a thin suite silently.
+**Entry criteria:** `docs/spec/assertions.md` exists and is non-empty. Interface stubs compile / type-check cleanly under `{toolchain.typecheck}`. If Domain is Frontend, `docs/spec/ux/ux-assertions.md` must also exist and be non-empty — a frontend task with no UX assertions has nothing for the Tester to build Tier 1 tests from, and auto-advancing anyway ships a thin suite silently.
 
 **Subagent prompt:**
 ```
@@ -254,7 +254,7 @@ Work in the current git workspace (the directory where you are invoked).
 [classification] — apply testing tiers accordingly
 
 ## Your job
-Do not read AGENTS.md, .tech-decisions.yml, docs/spec/`assertions.md`, or spec files already injected above. Use the pre-injected context (Standards, Relevant Assertions, Interface Contract, Catalog Slice, Security Rules) to inform test generation.
+Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, or spec files already injected above. Use the pre-injected context (Standards, Relevant Assertions, Interface Contract, Catalog Slice, Security Rules) to inform test generation.
 
 If a specific value needed for test generation is absent from the injected context, note the gap in your report rather than searching for it.
 
@@ -315,10 +315,10 @@ Work in the current git workspace (the directory where you are invoked).
 [Backend / Frontend]
 
 ## Your job
-Do not read AGENTS.md, .tech-decisions.yml, docs/spec/`assertions.md`, or spec files already injected above. Use the pre-injected context.
+Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, or spec files already injected above. Use the pre-injected context.
 
 Read only if missing from injected context:
-- `./docs/spec/`constraints.md`` — if implementation constraint not covered by Standards block
+- `./docs/spec/constraints.md` — if implementation constraint not covered by Standards block
 - `./docs/spec/shared-registry.md` — if a type reference is missing from Catalog Slice
 
 Additionally read:
@@ -389,10 +389,10 @@ Then:
 5. Run the full test suite using `{toolchain.test}` — must be green before returning
 6. Commit if any refactoring was performed: `refactor(<scope>): ...`
 
-Report back the full Refactor Report including verdict: `CLEAN` / ISSUES_FILED / `BLOCKED`
+Report back the full Refactor Report including verdict: CLEAN / ISSUES_FILED / BLOCKED
 ```
 
-**After Refactor completes:** Evaluate verdict. `CLEAN`: auto-advance to AUDIT + SECURITY. `BLOCKED`: human gate required (options: skip-refactor, create-task, or resolve). Update workflow state accordingly.
+**After Refactor completes:** Evaluate verdict. CLEAN: auto-advance to AUDIT + SECURITY. BLOCKED: human gate required (options: skip-refactor, create-task, or resolve). Update workflow state accordingly.
 
 #### Phase 3: AUDIT + SECURITY (Parallel)
 
@@ -423,7 +423,7 @@ Work in the current git workspace (the directory where you are invoked).
 [classification]
 
 ## Your job
-Do not read AGENTS.md or .tech-decisions.yml — all required context is injected above. Do not read `docs/spec/`assertions.md`` — the audit scope is defined by the module classification in the injected context.
+Do not read AGENTS.md or .tech-decisions.yml — all required context is injected above. Do not read `docs/spec/assertions.md` — the audit scope is defined by the module classification in the injected context.
 
 The implementation is complete and tests are passing. Probe the finished implementation for weaknesses.
 
@@ -445,7 +445,7 @@ Report back:
 - Fuzz results, if the resolved stack has fuzzing available
 - Tier 6 result and claim strength (proof vs. sampling)
 - Any new tests added
-- Verdict: `CLEAR` or `BLOCKED` (list blocking issues)
+- Verdict: CLEAR or BLOCKED (list blocking issues)
 ```
 
 **Security Reviewer subagent prompt:**
@@ -466,7 +466,7 @@ Work in the current git workspace (the directory where you are invoked).
 [Backend / Frontend]
 
 ## Your job
-Do not read AGENTS.md, .tech-decisions.yml, docs/spec/`assertions.md`, or docs/spec/`constraints.md` — relevant context is already injected.
+Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, or docs/spec/constraints.md — relevant context is already injected.
 
 Read (NOT pre-injected — required in full):
 - `docs/spec/security.md` — full threat model and security controls
@@ -510,7 +510,7 @@ Return critical and high findings directly as hard blockers.
 
 **Entry criteria:** AUDIT + SECURITY complete with no hard blockers.
 
-Before spawning, run `git diff main...HEAD — ':!*test*' ':!*spec*'` and capture the output to paste as the `## Diff` section below.
+Before spawning, run `git diff main...HEAD -- ':!*test*' ':!*spec*'` and capture the output to paste as the `## Diff` section below.
 
 **Subagent prompt:**
 ```
@@ -529,7 +529,7 @@ Work in the current git workspace (the directory where you are invoked).
 [Frontend / Backend]
 
 ## Diff
-[paste output of: git diff main...HEAD — excluding test and spec files]
+[paste output of: git diff main...HEAD -- excluding test and spec files]
 
 ## Your job
 Do not modify production code, test files, or spec files.
@@ -593,10 +593,10 @@ Work in the current git workspace (the directory where you are invoked).
 [paste changeset file path from workflow state, e.g. .changeset/[descriptive-slug].md]
 
 ## Your job
-Do not read AGENTS.md, .tech-decisions.yml, docs/spec/`assertions.md`, `.llm/tasks.md`, or docs/catalog.md — all required context is injected above.
+Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, .llm/tasks.md, or docs/catalog.md — all required context is injected above.
 
 Read only if a specific check requires content not present above:
-- `docs/spec/`architecture.md`` — only if verifying a Clean Architecture boundary
+- `docs/spec/architecture.md` — only if verifying a Clean Architecture boundary
 - `docs/catalog.md` — only for catalog currency check, to compare against the diff
 
 Then validate the complete implementation:
@@ -609,7 +609,7 @@ Then validate the complete implementation:
    - Design token usage — no hardcoded values where tokens are specified
 [End frontend addition]
 3. Check test completeness — is every assertion covered by at least one test?
-4. Check constraint compliance — docs/spec/`constraints.md`, docs/spec/implementation-`constraints.md`, and docs/spec/security-controls.md all fully met?
+4. Check constraint compliance — docs/spec/constraints.md, docs/spec/implementation-constraints.md, and docs/spec/security-controls.md all fully met?
 5. Check task completeness — all acceptance criteria satisfied?
 6. Check commit hygiene — commits well-described and granular?
 7. Check catalog currency — does docs/catalog.md reflect any new reusable abstractions introduced by this task?
@@ -618,17 +618,17 @@ Then validate the complete implementation:
 Report:
 - Pass/fail per category
 - Any gaps found
-- Overall verdict: `PASS` / CONDITIONAL `PASS` / `FAIL`
+- Overall verdict: PASS / CONDITIONAL PASS / FAIL
 ```
 
 **After Verifier completes:**
-- **`PASS`:** Open PR from task branch to main automatically. PR description must include: audit summary (mutation scores with engine name, fuzz results, Tier 6 results with claim strength), security findings summary, and full contents of `.llm/findings/[descriptive-slug].md`. Notify user that PR is open for review.
-- **CONDITIONAL `PASS`:** Open PR with a note flagging the conditional items. Do not pause.
-- **`FAIL`:** Surface the specific failures and wait for instruction before re-invoking Verifier.
+- **PASS:** Open PR from task branch to main automatically. PR description must include: audit summary (mutation scores with engine name, fuzz results, Tier 6 results with claim strength), security findings summary, and full contents of `.llm/findings/[descriptive-slug].md`. Notify user that PR is open for review.
+- **CONDITIONAL PASS:** Open PR with a note flagging the conditional items. Do not pause.
+- **FAIL:** Surface the specific failures and wait for instruction before re-invoking Verifier.
 
 ### 2h. Update Existing Work After Phase Completion
 
-After each subagent completes, append to the `## Existing Work` section in workflow state. **For AUDIT in particular:** record artefact paths and the raw claimed values only — never a pre-digested "`CLEAR`" or "passed" summary. The Verifier re-derives its own verdict from the artefact files (see verifier.md §2a); a prose summary here would let a fabricated claim slip through unchecked.
+After each subagent completes, append to the `## Existing Work` section in workflow state. **For AUDIT in particular:** record artefact paths and the raw claimed values only — never a pre-digested "CLEAR" or "passed" summary. The Verifier re-derives its own verdict from the artefact files (see verifier.md §2a); a prose summary here would let a fabricated claim slip through unchecked.
 
 ```markdown
 ### RED — complete
@@ -643,7 +643,7 @@ After each subagent completes, append to the `## Existing Work` section in workf
 - Blockers: [list or "None"]
 
 ### REFACTOR — complete
-- Verdict: `CLEAN` / `BLOCKED`
+- Verdict: CLEAN / BLOCKED
 - Extractions: [list or "None"]
 - Deferred issues filed: [N]
 - Commit: [hash or "None — no refactoring needed"]
@@ -654,7 +654,7 @@ After each subagent completes, append to the `## Existing Work` section in workf
 - Fuzz artefacts: `.llm/evidence/fuzz/[sha]/` (or "not applicable — no external-input parsers in scope")
 - Formal verification: `.llm/evidence/formal-[sha].json`
 - Claimed scores: [module] [N]% (target [N]%, engine [mutation_engine]) ...
-- Tier 6 claimed result: [harness/property: VERIFIED/`PASS`/COUNTEREXAMPLE/`FAIL`/INCONCLUSIVE] ...
+- Tier 6 claimed result: [harness/property: VERIFIED/PASS/COUNTEREXAMPLE/FAIL/INCONCLUSIVE] ...
 
 ### SECURITY — complete
 - Critical: [N findings]
@@ -667,13 +667,13 @@ After each subagent completes, append to the `## Existing Work` section in workf
 - Commits: [hash(es)]
 
 ### VERIFY — complete
-- Verdict: `PASS` / CONDITIONAL `PASS` / `FAIL`
+- Verdict: PASS / CONDITIONAL PASS / FAIL
 - Gaps found: [list or "None"]
 ```
 
 ### 5. Close the Workflow
 
-On `PASS` approval, mark task complete in `.llm/tasks.md`. Delete the task branch after PR merge: `git branch -d task/[slug]`. Update final workflow state with outcome summary and certification evidence.
+On PASS approval, mark task complete in .llm/tasks.md. Delete the task branch after PR merge: `git branch -d task/[slug]`. Update final workflow state with outcome summary and certification evidence.
 
 ## Resuming an Interrupted Pipeline
 

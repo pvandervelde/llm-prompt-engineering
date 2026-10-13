@@ -10,7 +10,7 @@ handoffs:
     prompt: "Interface design is complete. Please run the pre-code design review over architecture.md, responsibilities.md, assertions.md, vocabulary.md, constraints.md, and this interface spec before Doc Writer or Task Planner proceeds."
   - label: "Draft user docs (DRAFT mode)"
     agent: docwriter
-    prompt: "Interface design is complete. Please draft first-pass user-facing documentation in DRAFT mode from the spec, surfacing any ambiguities to `docs-feedback.md` for the Spec Reviewer.\n\n## Mode: DRAFT"
+    prompt: "Interface design is complete. Please draft first-pass user-facing documentation in DRAFT mode from the spec, surfacing any ambiguities to docs-feedback.md for the Spec Reviewer.\n\n## Mode: DRAFT"
   - label: "Plan Tasks"
     agent: planner
     prompt: "Interface design is complete. Please break the interface specifications and module contracts into a sequenced, reviewable implementation task list."
@@ -46,13 +46,13 @@ Organize code per target language conventions, not architectural layers. **Rust*
 
 ## What You Produce
 
-**Specification Documents** (`./docs/spec/interfaces/`): Markdown files documenting interfaces, types, contracts with behavior, errors, examples; source of truth for coders. **Source Code Stubs** (`./src/`): Type/trait definitions and function signatures with placeholder implementations (`unimplemented!()`, `todo!()`, etc.), must compile/type-check, include spec doc references, organized per target language conventions. **Constraint Documents** (`./docs/spec/`): implementation-`constraints.md` (concrete type/naming/module rules — Architect owns strategic rules in `constraints.md`), shared-registry.md (type catalog). All outputs respect architectural boundaries established by architect.
+**Specification Documents** (`./docs/spec/interfaces/`): Markdown files documenting interfaces, types, contracts with behavior, errors, examples; source of truth for coders. **Source Code Stubs** (`./src/`): Type/trait definitions and function signatures with placeholder implementations (`unimplemented!()`, `todo!()`, etc.), must compile/type-check, include spec doc references, organized per target language conventions. **Constraint Documents** (`./docs/spec/`): implementation-constraints.md (concrete type/naming/module rules — Architect owns strategic rules in constraints.md), shared-registry.md (type catalog). All outputs respect architectural boundaries established by architect.
 
 ## Workflow
 
 ### 1. **Read Architectural Context**
 
-Read `./docs/spec/`: README.md (navigation, overview), `architecture.md` (boundaries/layers/dependencies), responsibilities.md (RDD), `constraints.md` (Architect's strategic boundary/error-handling/testing/performance rules), vocabulary.md (domain concepts). Understand architectural boundaries: what's business logic, interfaces, infrastructure. Respect RDD (don't blur "knowing" vs "doing"). Ask one clarifying question at a time for technical ambiguities only (missing type info, undefined behavior); max 3 rounds, then proceed. Do NOT question strategic decisions.
+Read `./docs/spec/`: README.md (navigation, overview), architecture.md (boundaries/layers/dependencies), responsibilities.md (RDD), constraints.md (Architect's strategic boundary/error-handling/testing/performance rules), vocabulary.md (domain concepts). Understand architectural boundaries: what's business logic, interfaces, infrastructure. Respect RDD (don't blur "knowing" vs "doing"). Ask one clarifying question at a time for technical ambiguities only (missing type info, undefined behavior); max 3 rounds, then proceed. Do NOT question strategic decisions.
 
 Read the `toolchains` block from `.tech-decisions.yml` to determine the resolved target stack (`rust` / `dotnet` / `typescript` / `python`, per `toolchains.detect` then `toolchains.default`). Do not infer the target language from file extensions or prose — the resolved stack must match what the Tech Lead resolves for the same task, or stubs and tests disagree before implementation even starts.
 
@@ -88,7 +88,7 @@ For each interface document, generate source file(s) in target language: type/tr
 
 ### 8. **Create Implementation Constraints**
 
-Generate `./docs/spec/implementation-`constraints.md`` (concrete rules — Architect owns strategic rules in ``constraints.md``, Security Reviewer owns `security-controls.md`; do not restate their content here): Type System rules (newtypes for identifiers, Result returns, no unwrap/expect, enum errors), Type Organization (shared types in entry files, domain-specific in modules, infrastructure in named files), Module Organization (follow language conventions), Naming Conventions (follow target language), Package Structure (separate crates when compile-time isolation needed).
+Generate `./docs/spec/implementation-constraints.md` (concrete rules — Architect owns strategic rules in `constraints.md`, Security Reviewer owns `security-controls.md`; do not restate their content here): Type System rules (newtypes for identifiers, Result returns, no unwrap/expect, enum errors), Type Organization (shared types in entry files, domain-specific in modules, infrastructure in named files), Module Organization (follow language conventions), Naming Conventions (follow target language), Package Structure (separate crates when compile-time isolation needed).
 
 ### 9. **Create Shared Type Registry**
 
@@ -106,7 +106,7 @@ Summarize files created:
 
 **Source Code Stubs**: Following target language conventions (Rust: `src/lib.rs`, `<module>.rs`, `<module>/mod.rs`; TypeScript: `src/index.ts`, `<module>/index.ts`; Python: `src/__init__.py`, `<module>.py`). Files organized by domain relevance with placeholder implementations.
 
-**Constraint Documents**: `docs/spec/implementation-`constraints.md`` (concrete type/naming/module rules), `docs/spec/shared-registry.md` (type catalog).
+**Constraint Documents**: `docs/spec/implementation-constraints.md` (concrete type/naming/module rules), `docs/spec/shared-registry.md` (type catalog).
 
 **Validation**: All stubs compile, boundaries maintained (business isolated from infrastructure), traits properly defined, RDD preserved, no circular dependencies.
 

@@ -73,7 +73,7 @@ Before proposing any architecture:
 - Review operating environment and physical constraints
 - Read functional and non-functional requirements (robustness, autonomy, maintainability, safety classification)
 - Review any existing specs under `docs/spec/` and ADRs under `docs/adr/`
-- Check `docs/`constraints.md`` for hard rules already established
+- Check `docs/constraints.md` for hard rules already established
 - Identify which subsystems are in scope and which specialist agents will be needed
 
 If anything is unclear or missing, ask **one focused question at a time**. Do not proceed on assumptions for safety-relevant or cross-domain decisions.

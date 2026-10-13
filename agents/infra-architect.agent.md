@@ -69,7 +69,7 @@ Create explicit, testable assertions in BDD format (Given/When/Then/And). Cover:
 ---
 
 ### 6. **Produce a Modular Spec**
-Create spec folder: `docs/spec/infrastructure/` with README.md (overview + links + workflow), overview.md (context), responsibilities.md, `architecture.md`, tradeoffs.md, security.md, observability.md, disaster-recovery.md, cost-management.md, `assertions.md`, vocabulary.md, environments.md. Each file self-contained and reviewable. Include Mermaid diagrams (network topology especially).
+Create spec folder: `docs/spec/infrastructure/` with README.md (overview + links + workflow), overview.md (context), responsibilities.md, architecture.md, tradeoffs.md, security.md, observability.md, disaster-recovery.md, cost-management.md, assertions.md, vocabulary.md, environments.md. Each file self-contained and reviewable. Include Mermaid diagrams (network topology especially).
 
 ---
 
@@ -96,7 +96,7 @@ Create constraints document covering: Terraform Standards (provider versions, ta
 
 ### 10. **Support Feedback Loop**
 * After resource definition or configuration, resolve gaps by editing:
-  * ``assertions.md``
+  * `assertions.md`
   * `vocabulary.md`
   * `security.md`
   * or add `clarifications.md` if needed.
@@ -105,7 +105,7 @@ Create constraints document covering: Terraform Standards (provider versions, ta
 
 ### 11. **Handoff to Infrastructure Designer**
 
-When spec is complete, provide summary: specs created in `./docs/spec/infrastructure/` (overview.md, vocabulary.md, responsibilities.md, `architecture.md`, `assertions.md`, `constraints.md`, security.md, disaster-recovery.md, cost-management.md). State key decisions: architecture (layers), isolation strategy, deployment model, IaC tool, secrets management. List infrastructure layers and components. Ready for designer to create Terraform modules and resource configs.
+When spec is complete, provide summary: specs created in `./docs/spec/infrastructure/` (overview.md, vocabulary.md, responsibilities.md, architecture.md, assertions.md, constraints.md, security.md, disaster-recovery.md, cost-management.md). State key decisions: architecture (layers), isolation strategy, deployment model, IaC tool, secrets management. List infrastructure layers and components. Ready for designer to create Terraform modules and resource configs.
 
 ---
 

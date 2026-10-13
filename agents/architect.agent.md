@@ -60,7 +60,7 @@ Ask one focused clarifying question at a time. Confirm use case, purpose, and co
 
 #### 1b. Read Bootstrap Context
 
-Read **AGENTS.md** (project overview, production standards, pre-implementation checklist), **.tech-decisions.yml** (technology choices, constraints, standards), **docs/adr/** (existing ADRs), and **docs/`constraints.md`** if present (hard rules). Use these to inform architectural boundaries and technology choices.
+Read **AGENTS.md** (project overview, production standards, pre-implementation checklist), **.tech-decisions.yml** (technology choices, constraints, standards), **docs/adr/** (existing ADRs), and **docs/constraints.md** if present (hard rules). Use these to inform architectural boundaries and technology choices.
 
 #### 1c. Challenge Assumptions
 
@@ -74,19 +74,19 @@ Challenge in round 1 (before design) and round 2 (after initial draft). Document
 
 ### 2. Surface Responsibilities (RDD)
 
-For each candidate component, define responsibilities (knowing vs doing), collaborators (delegations), and roles using CRC-style notes. Output in ``responsibilities.md``: component name, Knows/Does bullets, Collaborators list, Roles.
+For each candidate component, define responsibilities (knowing vs doing), collaborators (delegations), and roles using CRC-style notes. Output in `responsibilities.md`: component name, Knows/Does bullets, Collaborators list, Roles.
 
 ### 3. Draw Boundaries (Clean Architecture)
 
-Define: business logic (domain concepts and operations), external system interfaces (abstractions), infrastructure implementations (concrete adapters). Business logic must depend only on abstractions, never on frameworks or infrastructure. Document in ``architecture.md`` with three explicit sections: Business Logic | External System Interfaces | Infrastructure Implementations.
+Define: business logic (domain concepts and operations), external system interfaces (abstractions), infrastructure implementations (concrete adapters). Business logic must depend only on abstractions, never on frameworks or infrastructure. Document in `architecture.md` with three explicit sections: Business Logic | External System Interfaces | Infrastructure Implementations.
 
 ### 4. Explore the Design Space
 
-Evaluate alternatives with pros/cons. Consider: security, data integrity, observability, migration/refactoring strategies, testing strategy, type system implications (what makes invalid states unrepresentable?), error handling (exceptions vs Results), recovery path unification (does each external resource have exactly one acquire/reacquire path, exercised identically at startup and on failure, or is planned reconfiguration handled by separate code from unplanned failure?). Document each decision as an ADR in `docs/adr/` following ADR_TEMPLATE.md, named `ADR-NNNN-descriptive-name.md`. Link to `.tech-decisions.yml` and `docs/`constraints.md``.
+Evaluate alternatives with pros/cons. Consider: security, data integrity, observability, migration/refactoring strategies, testing strategy, type system implications (what makes invalid states unrepresentable?), error handling (exceptions vs Results), recovery path unification (does each external resource have exactly one acquire/reacquire path, exercised identically at startup and on failure, or is planned reconfiguration handled by separate code from unplanned failure?). Document each decision as an ADR in `docs/adr/` following ADR_TEMPLATE.md, named `ADR-NNNN-descriptive-name.md`. Link to `.tech-decisions.yml` and `docs/constraints.md`.
 
 ### 5. Define Behavioral Assertions
 
-Create explicit, testable Given/When/Then assertions for each significant behavior. These guide error type design, test coverage requirements, and implementation targets. Document in `docs/spec/`assertions.md``, each assertion given a **stable ID** (`ASSERT-NNNN`, zero-padded, assigned in creation order):
+Create explicit, testable Given/When/Then assertions for each significant behavior. These guide error type design, test coverage requirements, and implementation targets. Document in `docs/spec/assertions.md`, each assertion given a **stable ID** (`ASSERT-NNNN`, zero-padded, assigned in creation order):
 
 ```markdown
 ### ASSERT-0001: <assertion name>
@@ -107,27 +107,27 @@ Write results as a spec folder:
 docs/spec/
 ├── README.md            # Summary + links + workflow
 ├── overview.md          # System context & glossary
-├── `responsibilities.md`  # RDD responsibilities & collaborations
-├── `architecture.md`      # Clean architecture: business logic, interfaces, infrastructure
+├── responsibilities.md  # RDD responsibilities & collaborations
+├── architecture.md      # Clean architecture: business logic, interfaces, infrastructure
 ├── tradeoffs.md         # Alternatives, pros/cons
 ├── operations.md        # Deployment, monitoring, scaling
 ├── testing.md           # Testing strategies
 ├── security.md          # Security threats & mitigations
 ├── edge-cases.md        # Non-standard flows, failure modes
-├── `assertions.md`        # Behavioral assertions (NEW)
+├── assertions.md        # Behavioral assertions (NEW)
 ├── assumptions.md       # Challenged assumptions and their resolutions (NEW)
-└── `vocabulary.md`        # Domain concepts and their definitions (NEW)
+└── vocabulary.md        # Domain concepts and their definitions (NEW)
 ```
 
 Each file is self-contained and reviewable in isolation. README.md provides a narrative overview, links to each section, and explains the workflow to the interface designer. Include Mermaid diagrams where helpful.
 
 ### 7. Create Vocabulary Document
 
-In ``vocabulary.md``, define each domain concept: name, description, identifier type, fields/contents, constraints, and lifespan if applicable. Include error concepts with their semantics and any security implications.
+In `vocabulary.md`, define each domain concept: name, description, identifier type, fields/contents, constraints, and lifespan if applicable. Include error concepts with their semantics and any security implications.
 
 ### 8. Specify Strategic Constraints
 
-In `docs/spec/`constraints.md`` — **Architect-owned**; Interface Designer owns concrete type/naming/module rules in `docs/spec/implementation-`constraints.md``, Security Reviewer owns control status in `docs/spec/security-controls.md` — document: module boundary rules (business logic never imports infrastructure), error-handling philosophy (expected errors as values not exceptions, when to panic vs return), testing requirements (coverage targets, test double usage), and performance targets (latency and concurrency). Do not duplicate the other two files' content here.
+In `docs/spec/constraints.md` — **Architect-owned**; Interface Designer owns concrete type/naming/module rules in `docs/spec/implementation-constraints.md`, Security Reviewer owns control status in `docs/spec/security-controls.md` — document: module boundary rules (business logic never imports infrastructure), error-handling philosophy (expected errors as values not exceptions, when to panic vs return), testing requirements (coverage targets, test double usage), and performance targets (latency and concurrency). Do not duplicate the other two files' content here.
 
 Also document a **recovery path rule** for any component depending on an external resource with a validity window (credential, connection, config, certificate): exactly one acquire/reacquire function, invoked identically at startup and on failure detection — no parallel graceful-refresh path for the same resource. Recovery calls require jittered backoff, and must emit an observable signal (metric or log) so an anomalous retry rate is distinguishable from expected rotation/reconnect cadence.
 
@@ -137,7 +137,7 @@ Present the spec clearly. Request feedback, objections, and missing concerns. Up
 
 ### 10. Support Feedback Loop
 
-After test generation or interface design, resolve gaps by editing `edge-cases.md`, ``vocabulary.md``, or adding `clarifications.md` if needed. For ``assertions.md``, only append new assertions with the next unused `ASSERT-NNNN` ID — never renumber or reorder existing entries (see Step 5).
+After test generation or interface design, resolve gaps by editing `edge-cases.md`, `vocabulary.md`, or adding `clarifications.md` if needed. For `assertions.md`, only append new assertions with the next unused `ASSERT-NNNN` ID — never renumber or reorder existing entries (see Step 5).
 
 ### 11. Handoff to Interface Designer
 

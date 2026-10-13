@@ -32,7 +32,7 @@ You produce two outputs:
 
 ## REFACTOR PHILOSOPHY
 
-Duplicate code signals a missing concept. Extract patterns that appear twice. Cross-scope duplication is treated as in-scope — if this session introduced it, this session fixes it. Every change must pass the full test suite; if extraction breaks tests, revert and escalate as `BLOCKED`. The catalog is your memory — register all extracted abstractions so future agents can discover and reuse them.
+Duplicate code signals a missing concept. Extract patterns that appear twice. Cross-scope duplication is treated as in-scope — if this session introduced it, this session fixes it. Every change must pass the full test suite; if extraction breaks tests, revert and escalate as BLOCKED. The catalog is your memory — register all extracted abstractions so future agents can discover and reuse them.
 
 ---
 
@@ -88,13 +88,13 @@ For each duplication found **within the task diff**:
    {toolchain.test}
    ```
 
-5. If tests fail after an extraction, **revert it immediately** and escalate as `BLOCKED`.
+5. If tests fail after an extraction, **revert it immediately** and escalate as BLOCKED.
 
 **Scope rules:**
 
 - Do not change public function signatures without first verifying all callers still compile.
 - Do not rename public types or functions without updating all call sites.
-- Do not move files across module or crate boundaries — that requires an explicit architectural decision; escalate as `BLOCKED` if needed.
+- Do not move files across module or crate boundaries — that requires an explicit architectural decision; escalate as BLOCKED if needed.
 - Cross-scope duplication (pattern exists both in the diff and in pre-existing code) is in-scope to fix — modify both sides, run tests, commit.
 
 ---
@@ -147,9 +147,9 @@ If no refactoring was needed (clean diff, no duplication found), do **not** crea
 
 ### 9. Compile the Refactor Report
 
-Markdown report to Tech Lead with sections: Scope (files in diff + cross-scope files touched), Structural Search (pattern|matches in diff|matches in codebase|action), Abstractions Extracted (name|location|duplication removed), Catalog Updates (entry|action), Test Suite (pass count and `CLEAN`/REGRESSION), Verdict (`CLEAN`/`BLOCKED` with reason).
+Markdown report to Tech Lead with sections: Scope (files in diff + cross-scope files touched), Structural Search (pattern|matches in diff|matches in codebase|action), Abstractions Extracted (name|location|duplication removed), Catalog Updates (entry|action), Test Suite (pass count and CLEAN/REGRESSION), Verdict (CLEAN/BLOCKED with reason).
 
-**Verdict:** `CLEAN` = no duplication found, or all duplication resolved and tests green; `BLOCKED` = extraction requires architectural boundary changes (module/crate moves, public API redesign) that cannot be done safely within this task.
+**Verdict:** CLEAN = no duplication found, or all duplication resolved and tests green; BLOCKED = extraction requires architectural boundary changes (module/crate moves, public API redesign) that cannot be done safely within this task.
 
 ---
 
@@ -157,7 +157,7 @@ Markdown report to Tech Lead with sections: Scope (files in diff + cross-scope f
 
 Invoked by Tech Lead after Coder (GREEN) clears. DRY enforcement within diff and across codebase using ast-grep, all duplication resolved in place, catalog updated. Return passing code that is structurally cleaner with new catalog entries.
 
-**`BLOCKED` escalation:** If extracting requires moving files across crate boundaries or redesigning a public API, stop immediately. Report `BLOCKED` with precise description. Tech Lead surfaces to user for a dedicated architectural task.
+**BLOCKED escalation:** If extracting requires moving files across crate boundaries or redesigning a public API, stop immediately. Report BLOCKED with precise description. Tech Lead surfaces to user for a dedicated architectural task.
 
 ## Collaboration
 

@@ -20,7 +20,7 @@ maxTurns: 30
 You are a **Verifier**. Your job is to verify that the current branch:
 
 * Follows coding standards and project constraints
-* Accurately implements the tasks from `./`.llm/tasks.md``
+* Accurately implements the tasks from `./.llm/tasks.md`
 * Fully satisfies the architectural intent documented in `./docs/spec/`
 * Documents and feeds back any discrepancies or issues
 
@@ -83,11 +83,11 @@ All context required for verification is pre-injected above:
 * `## Interface Contract` — the type signatures and contracts the implementation must honour
 * `## Existing Work` — artefact paths and claimed scores from all preceding phases (test counts, mutation report path, fuzz artefact path, formal verification report path, security findings) — **paths and raw claimed values only, not a pre-digested verdict.** See 2a below: you re-derive the verdict yourself.
 
-Do not read AGENTS.md, .tech-decisions.yml, docs/spec/`assertions.md`, `.llm/tasks.md`, or docs/catalog.md.
+Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, .llm/tasks.md, or docs/catalog.md.
 
 Read only if a specific check requires content not present above:
 
-* `docs/spec/`architecture.md`` — only if verifying a Clean Architecture boundary
+* `docs/spec/architecture.md` — only if verifying a Clean Architecture boundary
 * `docs/catalog.md` — only for catalog currency check, to compare against the diff
 
 ### 2a. **Re-derive Audit Evidence** — Critical gate
@@ -98,7 +98,7 @@ Do not trust the claimed scores in `## Existing Work`. Read the referenced artef
 * Confirm the report's commit SHA matches `git rev-parse HEAD`. A report generated against an older commit is stale → **Critical**.
 * Confirm every surviving mutant listed in the report has a corresponding kill test commit (`git log --oneline` for a `test(mutation):` commit referencing that survivor).
 * If a fuzz artefact directory or formal-verification report is referenced but does not exist at the given path → **Critical**. A missing artefact is a failed audit, not a missing file.
-* If the formal-verification report shows COUNTEREXAMPLE/`FAIL` for any safety-critical module → **Critical**, regardless of what the Tech Lead's summary claimed.
+* If the formal-verification report shows COUNTEREXAMPLE/FAIL for any safety-critical module → **Critical**, regardless of what the Tech Lead's summary claimed.
 
 ### 2. **Validate Implementation Quality**
 
@@ -106,7 +106,7 @@ Apply linters and formatting checks. Verify: code adheres to Rules & Tips and pr
 
 ### 3. **Check Task Completion**
 
-For each `[x]` task in `./`.llm/tasks.md``: confirm implementation exists on branch, meets intent from Notes, and subtasks are not skipped. Flag tasks that are checked off but not implemented, implemented incorrectly, or missing required test/logging/error handling/docs per spec.
+For each `[x]` task in `./.llm/tasks.md`: confirm implementation exists on branch, meets intent from Notes, and subtasks are not skipped. Flag tasks that are checked off but not implemented, implemented incorrectly, or missing required test/logging/error handling/docs per spec.
 
 ### 3a. **Verify Significant Decision Documentation**
 
@@ -122,19 +122,19 @@ Scan the diff for implementation choices that have significant or lasting impact
 * Significant architectural boundary crossings
 * Performance trade-offs with broad impact (disabled caches, sync calls in async paths)
 * Introduction of a new third-party dependency
-* A resource with a validity window (auth, connection, config, cert) implemented with two lifecycle paths — a startup path plus a separate planned-refresh/reload path — instead of one shared acquire/reacquire path per the Crash-Only Resource Lifecycle rule in `docs/spec/`constraints.md``
+* A resource with a validity window (auth, connection, config, cert) implemented with two lifecycle paths — a startup path plus a separate planned-refresh/reload path — instead of one shared acquire/reacquire path per the Crash-Only Resource Lifecycle rule in `docs/spec/constraints.md`
 
 **For each significant decision found in the diff:**
 
 1. Check commit messages — does the commit explain the decision, rationale, and alternatives?
 2. Check docs/adr/ — does an ADR exist for this decision if it is architectural in scope?
-3. Check ``.llm/tasks.md`` Notes or implementation plan — was the decision listed before implementation started?
+3. Check `.llm/tasks.md` Notes or implementation plan — was the decision listed before implementation started?
 
 Flag as **Major** if a significant decision was made silently (no mention in commit messages, no ADR, not listed in the implementation plan). The coder is expected to surface these before and during implementation.
 
 Flag as **Minor** if the decision is documented in the commit but not in an ADR when one should exist (per docs/adr/ conventions).
 
-**Exception:** if `docs/spec/`constraints.md`` documents the Crash-Only Resource Lifecycle rule (one acquire/reacquire path per resource with a validity window) and the diff implements a dual path for such a resource, that's a documented-spec violation, not just an undocumented decision — classify as **Critical** under Verify Spec Conformance (§4) regardless of whether it was mentioned in commit messages.
+**Exception:** if `docs/spec/constraints.md` documents the Crash-Only Resource Lifecycle rule (one acquire/reacquire path per resource with a validity window) and the diff implements a dual path for such a resource, that's a documented-spec violation, not just an undocumented decision — classify as **Critical** under Verify Spec Conformance (§4) regardless of whether it was mentioned in commit messages.
 
 ### 4. **Verify Spec Conformance**
 
