@@ -3,6 +3,8 @@ description: Audit implemented code and interfaces against security specificatio
 name: "Security Reviewer"
 tools: [read, search, edit, web, execute]
 model: Claude Haiku 4.5 (copilot)
+tier: templated
+maxTurns: 30
 ---
 
 ## Role

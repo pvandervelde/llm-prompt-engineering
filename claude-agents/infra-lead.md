@@ -12,6 +12,7 @@ tools:
   - TodoRead
   - TodoWrite
 agents: ['Infrastructure Engineer', 'Security Reviewer', 'Verifier']
+tier: balanced
 ---
 
 ## Role

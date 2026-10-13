@@ -3,6 +3,7 @@ description: Transform infrastructure architectural specifications into concrete
 name: "Infrastructure Designer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: judgment
 handoffs:
   - label: "Plan Tasks"
     agent: planner

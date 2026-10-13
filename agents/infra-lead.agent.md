@@ -3,6 +3,7 @@ description: Drive a single infrastructure task through the implementation pipel
 name: "Infrastructure Lead"
 tools: [agent, read, search, edit, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 agents: ['Infrastructure Engineer', 'Security Reviewer', 'Verifier']
 ---
 

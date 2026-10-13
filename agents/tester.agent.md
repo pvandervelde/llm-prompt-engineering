@@ -3,6 +3,7 @@ description: Generate adversarial, spec-driven test suites before implementation
 name: "Tester"
 tools: [read, search, edit, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Hand to Coder"
     agent: coder

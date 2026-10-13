@@ -11,6 +11,8 @@ tools:
   - TodoRead
   - TodoWrite
 disallowedTools: Task
+tier: templated
+maxTurns: 30
 ---
 
 ## 🧪 Role

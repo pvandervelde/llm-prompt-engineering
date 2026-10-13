@@ -3,6 +3,7 @@ description: Guide the software planning phase with technical analysis, tradeoff
 name: "Software Architect"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: judgment
 handoffs:
   - label: "Design Interfaces"
     agent: interface-designer

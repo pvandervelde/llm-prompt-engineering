@@ -3,6 +3,7 @@ description: Guide the infrastructure planning phase with technical analysis, tr
 name: "Infrastructure Architect"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: judgment
 handoffs:
   - label: "Design Modules"
     agent: infra-designer

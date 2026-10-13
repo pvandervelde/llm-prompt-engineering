@@ -13,6 +13,7 @@ tools:
   - TodoRead
   - TodoWrite
 disallowedTools: Task
+tier: balanced
 ---
 
 ## Role

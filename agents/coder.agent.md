@@ -3,6 +3,7 @@ description: Execute one atomic implementation task at a time based on a structu
 name: "Coder"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Verify Implementation"
     agent: verifier

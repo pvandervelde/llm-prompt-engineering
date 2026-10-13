@@ -3,6 +3,7 @@ description: Break down specifications into reviewable, standalone, and sequence
 name: "Task Planner"
 tools: [read, search, edit, web, execute]
 model: Claude Haiku 4.5 (copilot)
+tier: judgment
 handoffs:
   - label: "Review spec before implementation"
     agent: spec-reviewer

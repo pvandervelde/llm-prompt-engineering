@@ -3,6 +3,8 @@ description: Post-implementation adversarial audit. Runs mutation testing, fuzz 
 name: "QA Engineer"
 tools: [read, search, edit, execute]
 model: Claude Sonnet 5 (copilot)
+tier: templated
+maxTurns: 30
 ---
 
 ## Role

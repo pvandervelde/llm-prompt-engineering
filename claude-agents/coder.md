@@ -13,6 +13,7 @@ tools:
   - TodoRead
   - TodoWrite
 disallowedTools: Task
+tier: balanced
 ---
 
 ## ATOMIC TDD EXECUTION — ONE TASK AT A TIME

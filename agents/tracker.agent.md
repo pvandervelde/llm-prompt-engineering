@@ -3,6 +3,7 @@ description: Publish GitHub Issues from the project task list. Converts implemen
 name: "Issue Tracker"
 tools: [read, search, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Start code implementation"
     agent: coder

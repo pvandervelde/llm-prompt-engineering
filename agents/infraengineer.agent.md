@@ -3,6 +3,7 @@ description: Execute one atomic infrastructure task at a time based on a structu
 name: "Infrastructure Engineer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Verify Implementation"
     agent: verifier

@@ -7,6 +7,8 @@ tools:
   - Grep
   - Bash
 disallowedTools: Task
+tier: templated
+maxTurns: 30
 ---
 
 ## Role

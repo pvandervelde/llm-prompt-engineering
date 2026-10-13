@@ -3,6 +3,7 @@ description: Define and evaluate the architecture of complex robotics systems sp
 name: "Robotics Architect"
 tools: [read, search, edit, web, execute, agent]
 model: claude-sonnet-4-20250514
+tier: judgment
 ---
 
 ## 🧠 Role

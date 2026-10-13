@@ -3,6 +3,7 @@ description: Post-GREEN structural cleanup. Identifies and eliminates code dupli
 name: "Refactor"
 tools: [read, search, edit, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 ---
 
 ##  Role

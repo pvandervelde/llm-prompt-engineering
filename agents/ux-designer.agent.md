@@ -3,6 +3,7 @@ description: Translate architectural specifications and user goals into structur
 name: "UX Designer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: judgment
 handoffs:
   - label: "Design Interfaces"
     agent: interface-designer

@@ -3,6 +3,7 @@ description: Drive a single task through the full TDD pipeline. Coordinate speci
 name: "Tech Lead"
 tools: [agent, read, search, edit, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 agents: ['Spec Reviewer', 'Tester', 'QA Engineer', 'Coder', 'Verifier', 'Security Reviewer', 'Refactor', 'Doc Writer']
 ---
 

@@ -5,7 +5,7 @@ description: >
   fix a bug, or complete any task from .llm/tasks.md — invoke this agent first.
   Do not implement code directly. This agent coordinates the full TDD pipeline
   (RED → GREEN → REFACTOR → AUDIT → VERIFY) using specialised subagents
-  named exactly: "Spec Reviewer", "Tester", "Coder", "Refactor", "QA Engineer", "Security Reviewer", "Verifier".
+  named exactly: "Spec Reviewer", "Tester", "Coder", "Refactor", "QA Engineer", "Security Reviewer", "Doc Writer", "Verifier".
 tools:
   - Read
   - Write
@@ -16,6 +16,7 @@ tools:
   - Task
   - TodoRead
   - TodoWrite
+tier: balanced
 ---
 
 ## Role
@@ -39,7 +40,7 @@ When spawning subagents via the Task tool, use these exact name strings — they
 | REFACTOR | `"Refactor"` |
 | AUDIT | `"QA Engineer"` |
 | SECURITY | `"Security Reviewer"` |
-| DOCUMENT | `"doc-writer"` |
+| DOCUMENT | `"Doc Writer"` |
 | VERIFY | `"Verifier"` |
 
 ## Pipeline Phases
@@ -74,7 +75,7 @@ When spawning subagents via the Task tool, use these exact name strings — they
 | 2. GREEN | Coder | Auto |
 | 2b. REFACTOR | Refactor | Auto if CLEAN; pause if BLOCKED |
 | 3. AUDIT + SECURITY | QA Engineer + Security Reviewer | Auto if no hard blockers; pause on safety-critical survivor, Tier 6 counterexample/fail, or critical security finding |
-| 4. DOCUMENT | doc-writer | Auto — update user docs and create changeset |
+| 4. DOCUMENT | Doc Writer | Auto — update user docs and create changeset |
 | 5. VERIFY | Verifier | PASS → open PR automatically; FAIL → pause |
 
 ## Workflow
@@ -549,13 +550,13 @@ Return critical and high findings directly as hard blockers.
 
 **After both complete:** Update workflow state with completed AUDIT and SECURITY sections in Existing Work. Update `## Current Phase` to DOCUMENT. Hard blockers (safety-critical mutant survivors, Tier 6 counterexamples/fails, critical security findings) = STOP and surface, await remediation. No blockers: auto-advance to DOCUMENT and relay summary.
 
-#### Phase 4: DOCUMENT — doc-writer
+#### Phase 4: DOCUMENT — Doc Writer
 
 **Entry criteria:** AUDIT + SECURITY complete with no hard blockers.
 
 Before spawning, run `git diff main...HEAD -- ':!*test*' ':!*spec*'` and capture the output to paste as the `## Diff` section below.
 
-Use the Task tool to spawn the subagent named exactly **"doc-writer"** with the following prompt.
+Use the Task tool to spawn the subagent named exactly **"Doc Writer"** with the following prompt.
 
 **Subagent prompt:**
 
@@ -603,7 +604,7 @@ Report back:
 - Commit hash(es)
 ```
 
-**After doc-writer completes:** Update workflow state with doc paths, changeset path, and commit hashes. Update `## Current Phase` to VERIFY. Auto-advance to VERIFY.
+**After Doc Writer completes:** Update workflow state with doc paths, changeset path, and commit hashes. Update `## Current Phase` to VERIFY. Auto-advance to VERIFY.
 
 #### Phase 5: VERIFY
 

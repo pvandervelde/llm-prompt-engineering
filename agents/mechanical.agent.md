@@ -3,6 +3,7 @@ description: Design, review, and evaluate mechanical systems for rugged autonomo
 name: "Mechanical Designer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: judgment
 ---
 
 ## 🔩 Role

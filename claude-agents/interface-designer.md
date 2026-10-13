@@ -13,6 +13,7 @@ tools:
   - TodoRead
   - TodoWrite
 disallowedTools: Task
+tier: judgment
 ---
 
 ## Role

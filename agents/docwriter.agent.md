@@ -3,6 +3,7 @@ description: Produce clear, user-facing documentation for features, APIs, CLIs, 
 name: "Doc Writer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Plan Tasks"
     agent: planner

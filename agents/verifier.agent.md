@@ -3,6 +3,8 @@ description: Validate implementation quality, spec alignment, and task completen
 name: "Verifier"
 tools: [read, search, edit, web, execute]
 model: Claude Haiku 4.5 (copilot)
+tier: templated
+maxTurns: 30
 ---
 
 ## 🧪 Role

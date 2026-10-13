@@ -3,6 +3,8 @@ description: Multi-stage reviewer that first audits high-level architecture, the
 name: "Code Reviewer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: templated
+maxTurns: 30
 ---
 
 ## 🔎 Role

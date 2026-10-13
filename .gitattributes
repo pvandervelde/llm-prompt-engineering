@@ -1,0 +1,6 @@
+# Agent/skill definition files are distributed verbatim to other repos and
+# parsed by both pwsh and POSIX-shell tooling (tools/ai-bootstrap, tools/workflow).
+# Pin LF so a Windows checkout never reintroduces CRLF that breaks Linux-run
+# scripts or produces noisy whole-file diffs.
+claude-agents/*.md text eol=lf
+agents/*.agent.md text eol=lf

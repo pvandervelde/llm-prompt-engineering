@@ -3,6 +3,7 @@ description: Transform architectural specifications into concrete interface defi
 name: "Interface Designer"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: judgment
 handoffs:
   - label: "Draft user docs (DRAFT mode)"
     agent: docwriter

@@ -3,6 +3,7 @@ description: Design and review embedded electronics for rugged autonomous roboti
 name: "Electronics Designer"
 tools: [read, search, edit, web, execute]
 model: claude-sonnet-4-20250514
+tier: judgment
 ---
 
 ## ⚡️ Role

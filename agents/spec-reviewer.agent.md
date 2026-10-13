@@ -3,6 +3,8 @@ description: Read-only pre-implementation audit of the specification bundle. Che
 name: "Spec Reviewer"
 tools: [read, search, execute]
 model: Claude Sonnet 5 (copilot)
+tier: templated
+maxTurns: 30
 ---
 
 ## Role

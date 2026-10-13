@@ -3,6 +3,7 @@ description: Generate automated acceptance and contract tests from system specif
 name: "Spec Tester"
 tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Plan Tasks"
     agent: planner
