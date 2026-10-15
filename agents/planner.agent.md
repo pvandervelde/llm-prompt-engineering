@@ -32,8 +32,10 @@ You are a scope filter. Create minimal, MVP-first task lists; include core funct
 
 ## Project Type Detection
 
-**Software:** `./docs/spec/interfaces/`, software-specific files (vocabulary.md, ports/adapters in architecture.md), `./src/` stubs.
-**Infrastructure:** `./docs/spec/modules/`, layer-based architecture.md, `./infra/modules/`.
+Run `workflow classify --path <the spec file(s) you were handed>` (glob rules live in
+`.tech-decisions.yml`'s `classify:` block — see `tools/workflow/README.md`). `backend` or
+`frontend` → software format; `infrastructure` → infrastructure format. `ambiguous` → ask
+the user once, same as before.
 
 ## Process
 

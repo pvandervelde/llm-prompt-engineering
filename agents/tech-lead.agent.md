@@ -70,16 +70,11 @@ If `CLEAR`: proceed to Step 2.
 
 Read the provided task. If invoked with task ID, load it; if not, identify the next `ready` task and confirm before proceeding. Extract: description, acceptance criteria, spec references, criticality level, notes, and dependencies.
 
-**Determine task domain** — governs agent in GREEN:
-
-| Signal | Domain | Agent |
-|--------|--------|-------|
-| References `docs/spec/components/`, `docs/spec/ui/`, design tokens, accessibility spec | **Frontend** → Coder with Domain: Frontend |
-| Mentions UI components, rendering, browser, ARIA, CSS, bundle | **Frontend** → Coder with Domain: Frontend |
-| References `docs/spec/interfaces/`, Rust modules, firmware, CAN, protocol, API | **Backend** → Coder with Domain: Backend |
-| No clear signal | Ambiguous → Ask the user before proceeding |
-
-If domain cannot be determined from the signals above, ask the user once. Otherwise proceed immediately.
+**Determine task domain** — governs agent in GREEN. Run `workflow classify --task <id>`
+(glob rules live in `.tech-decisions.yml`'s `classify:` block, not here — see
+`tools/workflow/README.md`). Its `domain` field is `frontend`, `backend`, or `infrastructure`
+→ dispatch Coder with the matching `Domain:`. If it returns `ambiguous`, ask the user once
+before proceeding — that is the only case that still reaches a human.
 
 ### 2b. Check and Set Working Branch
 

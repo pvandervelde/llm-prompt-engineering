@@ -409,10 +409,105 @@ function Invoke-Complete {
     [PSCustomObject]@{ status = "complete"; task = $task; taskMarked = $marked } | ConvertTo-Json -Compress
 }
 
+# Reads the inline bracket-list for one domain under .tech-decisions.yml's
+# top-level `classify:` key. Missing file or domain -> empty list (no globs),
+# so every path for that domain comes back "none" rather than an error.
+function Get-ClassifyGlobs {
+    param([string]$Path, [string]$Domain)
+    if (-not (Test-Path $Path)) { return @() }
+    $lines = Get-Content $Path
+    $inBlock = $false
+    foreach ($line in $lines) {
+        if ($line -match '^classify:') { $inBlock = $true; continue }
+        if ($inBlock -and $line -match '^[A-Za-z]') { break }
+        if ($inBlock -and $line -match "^\s\s${Domain}:\s*(.*)") {
+            $raw = $Matches[1].Trim()
+            $raw = $raw.TrimStart('[').TrimEnd(']')
+            if (-not $raw) { return @() }
+            return @($raw -split ',' | ForEach-Object { $_.Trim().Trim('"') })
+        }
+    }
+    return @()
+}
+
+function Test-PathMatchesDomain {
+    param([string]$Path, [string[]]$Globs)
+    foreach ($g in $Globs) {
+        $pattern = $g -replace '\*\*', '*'
+        if ($Path -like $pattern) { return $true }
+    }
+    return $false
+}
+
+function Invoke-Classify {
+    param([string[]]$ArgList)
+    $task = ""
+    $paths = @()
+    for ($i = 0; $i -lt $ArgList.Count; $i += 2) {
+        switch ($ArgList[$i]) {
+            "--task" { $task = $ArgList[$i + 1] }
+            "--path" { $paths += $ArgList[$i + 1] }
+            default { Fail "classify: unknown argument $($ArgList[$i])" }
+        }
+    }
+
+    $root = Get-RepoRoot
+    $techFile = Join-Path $root ".tech-decisions.yml"
+
+    if ($task) {
+        $tasksFile = Join-Path $root ".llm/tasks.md"
+        if (Test-Path $tasksFile) {
+            $lines = Get-Content $tasksFile
+            $pattern = "^- \[[ x]\] $([regex]::Escape($task)) "
+            $inBlock = $false
+            $block = @()
+            foreach ($line in $lines) {
+                if ($line -match $pattern) { $inBlock = $true; $block += $line; continue }
+                if ($inBlock -and $line -match '^- \[') { break }
+                if ($inBlock) { $block += $line }
+            }
+            foreach ($line in $block) {
+                $pathMatches = [regex]::Matches($line, 'docs/spec/[A-Za-z0-9_./*-]+')
+                foreach ($m in $pathMatches) { $paths += $m.Value }
+            }
+        }
+    }
+
+    if ($paths.Count -eq 0) {
+        [PSCustomObject]@{ domain = "ambiguous"; reason = "no-paths-resolved"; paths = @() } | ConvertTo-Json -Compress
+        return
+    }
+
+    $frontendGlobs = Get-ClassifyGlobs -Path $techFile -Domain "frontend"
+    $backendGlobs = Get-ClassifyGlobs -Path $techFile -Domain "backend"
+    $infraGlobs = Get-ClassifyGlobs -Path $techFile -Domain "infrastructure"
+
+    $verdict = ""
+    $pathResults = @()
+    foreach ($p in $paths) {
+        $hits = @()
+        if (Test-PathMatchesDomain -Path $p -Globs $frontendGlobs) { $hits += "frontend" }
+        if (Test-PathMatchesDomain -Path $p -Globs $backendGlobs) { $hits += "backend" }
+        if (Test-PathMatchesDomain -Path $p -Globs $infraGlobs) { $hits += "infrastructure" }
+
+        $pathDomain = if ($hits.Count -eq 0) { "none" } elseif ($hits.Count -gt 1) { "ambiguous" } else { $hits[0] }
+        $pathResults += [PSCustomObject]@{ path = $p; domain = $pathDomain }
+
+        if ($pathDomain -ne "none") {
+            if (-not $verdict) { $verdict = $pathDomain }
+            elseif ($verdict -ne $pathDomain) { $verdict = "ambiguous" }
+        }
+    }
+    if (-not $verdict) { $verdict = "ambiguous" }
+
+    [PSCustomObject]@{ domain = $verdict; paths = $pathResults } | ConvertTo-Json -Compress -Depth 5
+}
+
 switch ($Command) {
     "init" { Invoke-Init -ArgList $Rest }
     "next" { Invoke-Next -ArgList $Rest }
     "gate" { Invoke-Gate -ArgList $Rest }
     "complete" { Invoke-Complete -ArgList $Rest }
+    "classify" { Invoke-Classify -ArgList $Rest }
     default { Fail "unknown command: $Command" }
 }

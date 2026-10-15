@@ -75,6 +75,28 @@ Marks the task's checkbox in `.llm/tasks.md` (`- [ ] <id> ...` → `- [x] <id> .
 best-effort match against today's unstructured task list — this becomes exact once
 structured task records land) and sets the state file's `Status` to `complete`.
 
+### `classify [--task <id>] [--path <p> ...]`
+
+Replaces the hand-written Frontend/Backend/Infrastructure prose tables that used to live in
+`tech-lead.md` Step 2 and `planner.md`'s Project Type Detection section. Returns:
+
+```json
+{"domain": "backend", "paths": [{"path": "docs/spec/interfaces/auth-operations.md", "domain": "backend"}]}
+```
+
+`domain` is `frontend`, `backend`, `infrastructure`, or `ambiguous`. Resolution is glob-based
+against the `classify:` block in `.tech-decisions.yml` (`frontend:`, `backend:`,
+`infrastructure:` — each an inline list of path globs; see the block
+`tools/ai-bootstrap/bootstrap-ai-repo.ps1`/`.sh` generate). `--path` can be given directly
+(repeatable); `--task <id>` instead scans that task's block in `.llm/tasks.md` for
+`docs/spec/...`-looking references and classifies those — a best-effort text scan today,
+exact once structured `specRefs` fields exist.
+
+`ambiguous` is returned — never an error — when: no path resolves at all, a path matches
+more than one domain's globs, two resolved paths disagree, or `.tech-decisions.yml` doesn't
+exist yet. This is deliberate: `ambiguous` is the one case the old prose got right (ask the
+human once) and the only case that should still reach one.
+
 ## State file
 
 Both engines read/write a fixed machine-managed header (`**Task:**`, `**Pipeline:**`,

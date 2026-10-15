@@ -211,6 +211,41 @@ out=$(wf "$SCR6" complete --task t1 2>&1); code=$?
 assert_eq "36 complete refuses when the pipeline isn't finished" "1" "$code"
 
 echo
+echo "Tier 3 - classify"
+
+SCR7="$(mktemp -d)"; new_scratch "$SCR7"
+cat > "$SCR7/.tech-decisions.yml" <<'TD'
+classify:
+  frontend: ["docs/spec/components/**", "docs/spec/ui/**"]
+  backend: ["docs/spec/interfaces/**"]
+  infrastructure: ["docs/spec/infrastructure/**", "docs/spec/modules/**"]
+TD
+cat > "$SCR7/.llm/tasks.md" <<'TASKS'
+- [ ] t1 Implement auth
+  - Context: docs/spec/interfaces/auth-operations.md
+- [ ] t2 Build login form
+  - Context: docs/spec/components/login-form.md
+- [ ] t3 Nothing resolvable
+  - Context: no spec path here
+- [ ] t4 Conflicting signals
+  - Context: docs/spec/interfaces/x.md and docs/spec/components/y.md
+TASKS
+
+out=$(wf "$SCR7" classify --task t1)
+assert_eq "37 classify resolves backend from docs/spec/interfaces/" "backend" "$(json_field "$out" domain)"
+out=$(wf "$SCR7" classify --task t2)
+assert_eq "38 classify resolves frontend from docs/spec/components/" "frontend" "$(json_field "$out" domain)"
+out=$(wf "$SCR7" classify --task t3)
+assert_eq "39 classify with no resolvable path is ambiguous" "ambiguous" "$(json_field "$out" domain)"
+out=$(wf "$SCR7" classify --task t4)
+assert_eq "40 classify with conflicting signals is ambiguous (preserved from the old prose)" "ambiguous" "$(json_field "$out" domain)"
+out=$(wf "$SCR7" classify --path docs/spec/infrastructure/network-vpc.md)
+assert_eq "41 classify resolves infrastructure via direct --path" "infrastructure" "$(json_field "$out" domain)"
+rm "$SCR7/.tech-decisions.yml"
+out=$(wf "$SCR7" classify --task t1)
+assert_eq "42 classify is ambiguous (not an error) when .tech-decisions.yml is absent" "ambiguous" "$(json_field "$out" domain)"
+
+echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed scenarios:"

@@ -227,6 +227,42 @@ $r = Invoke-Wf $scr6 @("complete", "--task", "t1")
 Assert-Eq "36 complete refuses when the pipeline isn't finished" "1" $r.ExitCode
 
 Write-Host ""
+Write-Host "Tier 3 - classify"
+
+$scr7 = Join-Path $env:TEMP "wf-ps-t7-$(Get-Random)"
+New-Scratch $scr7
+@'
+classify:
+  frontend: ["docs/spec/components/**", "docs/spec/ui/**"]
+  backend: ["docs/spec/interfaces/**"]
+  infrastructure: ["docs/spec/infrastructure/**", "docs/spec/modules/**"]
+'@ | Set-Content (Join-Path $scr7 ".tech-decisions.yml")
+@'
+- [ ] t1 Implement auth
+  - Context: docs/spec/interfaces/auth-operations.md
+- [ ] t2 Build login form
+  - Context: docs/spec/components/login-form.md
+- [ ] t3 Nothing resolvable
+  - Context: no spec path here
+- [ ] t4 Conflicting signals
+  - Context: docs/spec/interfaces/x.md and docs/spec/components/y.md
+'@ | Set-Content (Join-Path $scr7 ".llm/tasks.md")
+
+$r = Invoke-Wf $scr7 @("classify", "--task", "t1")
+Assert-Eq "37 classify resolves backend from docs/spec/interfaces/" "backend" (Get-JsonField $r.Output "domain")
+$r = Invoke-Wf $scr7 @("classify", "--task", "t2")
+Assert-Eq "38 classify resolves frontend from docs/spec/components/" "frontend" (Get-JsonField $r.Output "domain")
+$r = Invoke-Wf $scr7 @("classify", "--task", "t3")
+Assert-Eq "39 classify with no resolvable path is ambiguous" "ambiguous" (Get-JsonField $r.Output "domain")
+$r = Invoke-Wf $scr7 @("classify", "--task", "t4")
+Assert-Eq "40 classify with conflicting signals is ambiguous (preserved from the old prose)" "ambiguous" (Get-JsonField $r.Output "domain")
+$r = Invoke-Wf $scr7 @("classify", "--path", "docs/spec/infrastructure/network-vpc.md")
+Assert-Eq "41 classify resolves infrastructure via direct --path" "infrastructure" (Get-JsonField $r.Output "domain")
+Remove-Item (Join-Path $scr7 ".tech-decisions.yml")
+$r = Invoke-Wf $scr7 @("classify", "--task", "t1")
+Assert-Eq "42 classify is ambiguous (not an error) when .tech-decisions.yml is absent" "ambiguous" (Get-JsonField $r.Output "domain")
+
+Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="
 if ($script:FailCount -gt 0) {
     Write-Host "Failed scenarios:"

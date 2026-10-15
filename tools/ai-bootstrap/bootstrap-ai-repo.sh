@@ -510,6 +510,16 @@ criticality:
   api_boundary: []      # e.g. ["src/api/**"]
   adapter: []           # e.g. ["src/infra/**"]
 
+# Maps task-referenced paths to a domain for `workflow classify` (replaces
+# the hand-written Frontend/Backend/Infrastructure prose tables in
+# tech-lead.md Step 2 and planner.md's old Project Type Detection section).
+# A path matching zero or more-than-one domain's globs is "ambiguous" --
+# classify asks the human once in that case, same as the prose it replaces.
+classify:
+  frontend: ["docs/spec/components/**", "docs/spec/ui/**", "src/components/**", "src/ui/**"]
+  backend: ["docs/spec/interfaces/**", "src/**"]
+  infrastructure: ["docs/spec/infrastructure/**", "docs/spec/modules/**", "infra/**"]
+
 # Database (customize for your project)
 database:
   choice: null  # e.g., postgresql, mongodb, sqlite

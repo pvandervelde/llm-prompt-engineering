@@ -432,15 +432,113 @@ cmd_complete() {
   printf '{"status":"complete","task":"%s","taskMarked":%s}\n' "$(json_escape "$task")" "$marked"
 }
 
+# Reads the inline bracket-list for one domain under .tech-decisions.yml's
+# top-level `classify:` key. Missing file or missing domain -> empty (no
+# globs), which makes every path for that domain "none" rather than an error.
+classify_globs() {
+  local file="$1" domain="$2"
+  [ -f "$file" ] || return 0
+  local raw
+  raw=$(awk '
+    /^classify:/ { found=1; next }
+    found && /^[A-Za-z]/ { exit }
+    found { print }
+  ' "$file" | { grep -m1 -E "^  ${domain}:" || true; } | sed -E "s/^  ${domain}: *//")
+  raw="${raw#\[}"
+  raw="${raw%\]}"
+  [ -z "$raw" ] && return 0
+  printf '%s\n' "$raw" | tr ',' '\n' | sed -E 's/^ +//; s/ +$//' | sed -E 's/^"(.*)"$/\1/'
+}
+
+# Classifies one path against one domain's globs. Prints "hit" once per
+# matching glob (so the caller can detect a path matching >1 domain).
+path_matches_domain() {
+  local path="$1" globs="$2"
+  local g matched=1
+  while IFS= read -r g; do
+    [ -z "$g" ] && continue
+    case "$path" in
+      $g) matched=0 ;;
+    esac
+  done <<< "$globs"
+  return $matched
+}
+
+cmd_classify() {
+  local task="" paths=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --task) task="$2"; shift 2 ;;
+      --path) paths+=("$2"); shift 2 ;;
+      *) die "classify: unknown argument $1" ;;
+    esac
+  done
+
+  local root tech_file
+  root="$(repo_root)"
+  tech_file="${root}/.tech-decisions.yml"
+
+  if [ -n "$task" ]; then
+    local tasks_file="${root}/.llm/tasks.md" block
+    if [ -f "$tasks_file" ]; then
+      block=$(awk -v id="$task" '
+        $0 ~ "^- \\[[ x]\\] " id " " { found=1; print; next }
+        found && /^- \[/ { exit }
+        found { print }
+      ' "$tasks_file")
+      while IFS= read -r p; do
+        [ -n "$p" ] && paths+=("$p")
+      done < <(printf '%s\n' "$block" | { grep -oE 'docs/spec/[A-Za-z0-9_./*-]+' || true; })
+    fi
+  fi
+
+  if [ "${#paths[@]}" -eq 0 ]; then
+    printf '{"domain":"ambiguous","reason":"no-paths-resolved","paths":[]}\n'
+    return 0
+  fi
+
+  local frontend_globs backend_globs infra_globs
+  frontend_globs=$(classify_globs "$tech_file" frontend)
+  backend_globs=$(classify_globs "$tech_file" backend)
+  infra_globs=$(classify_globs "$tech_file" infrastructure)
+
+  local verdict="" p path_domain hit_count paths_json="[" first=1
+  for p in "${paths[@]}"; do
+    path_domain="none"
+    hit_count=0
+    if path_matches_domain "$p" "$frontend_globs"; then path_domain="frontend"; hit_count=$((hit_count + 1)); fi
+    if path_matches_domain "$p" "$backend_globs"; then path_domain="backend"; hit_count=$((hit_count + 1)); fi
+    if path_matches_domain "$p" "$infra_globs"; then path_domain="infrastructure"; hit_count=$((hit_count + 1)); fi
+    [ "$hit_count" -gt 1 ] && path_domain="ambiguous"
+
+    [ "$first" -eq 1 ] || paths_json+=","
+    paths_json+=$(printf '{"path":"%s","domain":"%s"}' "$(json_escape "$p")" "$path_domain")
+    first=0
+
+    if [ "$path_domain" != "none" ]; then
+      if [ -z "$verdict" ]; then
+        verdict="$path_domain"
+      elif [ "$verdict" != "$path_domain" ]; then
+        verdict="ambiguous"
+      fi
+    fi
+  done
+  paths_json+="]"
+  [ -z "$verdict" ] && verdict="ambiguous"
+
+  printf '{"domain":"%s","paths":%s}\n' "$verdict" "$paths_json"
+}
+
 main() {
   local cmd="${1:-}"
-  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete> [options]"
+  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify> [options]"
   shift
   case "$cmd" in
     init) cmd_init "$@" ;;
     next) cmd_next "$@" ;;
     gate) cmd_gate "$@" ;;
     complete) cmd_complete "$@" ;;
+    classify) cmd_classify "$@" ;;
     *) die "unknown command: ${cmd}" ;;
   esac
 }
