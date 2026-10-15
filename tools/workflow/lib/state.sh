@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# Read/write helpers for the workflow state file's machine-managed header.
+#
+# The header is a fixed set of "**Field:** value" lines plus a "## Existing
+# Work" section the engine appends to. Everything else in the file (Standards,
+# Context Bundle, etc.) is written by the conductor/agent, never by this
+# engine, and these functions never touch it.
+
+# Prints the value of **Field:** line, or empty if absent.
+state_get_field() {
+  local file="$1" field="$2"
+  [ -f "$file" ] || return 0
+  { grep -m1 -E "^\*\*${field}:\*\*" "$file" || true; } | sed -E "s/^\*\*${field}:\*\* *//"
+}
+
+# Replaces (or appends, if missing) a **Field:** line with a new value.
+state_set_field() {
+  local file="$1" field="$2" value="$3"
+  if grep -q -E "^\*\*${field}:\*\*" "$file" 2>/dev/null; then
+    local esc_value
+    esc_value=$(printf '%s' "$value" | sed -E 's/[&/\]/\\&/g')
+    sed -i -E "s/^\*\*${field}:\*\*.*/\*\*${field}:\*\* ${esc_value}/" "$file"
+  else
+    printf '**%s:** %s\n' "$field" "$value" >> "$file"
+  fi
+}
+
+# Space-separated list of phase ids already completed in the current
+# parallel stage (reset whenever a new stage begins).
+state_phases_done_get() {
+  local file="$1"
+  state_get_field "$file" "Phases Done"
+}
+
+state_phases_done_add() {
+  local file="$1" phase_id="$2"
+  local current new
+  current=$(state_phases_done_get "$file")
+  case " $current " in
+    *" $phase_id "*) new="$current" ;;
+    *) new="${current:+$current }$phase_id" ;;
+  esac
+  state_set_field "$file" "Phases Done" "$new"
+}
+
+state_phases_done_clear() {
+  local file="$1"
+  state_set_field "$file" "Phases Done" ""
+}
+
+# Appends one bullet under "## Blocking Issues", replacing a lone "[None]"
+# placeholder on first use.
+state_append_blocking_issue() {
+  local file="$1" line="$2"
+  awk -v newline="- ${line}" '
+    BEGIN { done = 0 }
+    {
+      print
+      if (!done && $0 == "## Blocking Issues") {
+        getline nxt
+        if (nxt != "[None]") print nxt
+        print newline
+        done = 1
+      }
+    }
+  ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+}
+
+# Resets "## Blocking Issues" to "[None]", discarding whatever was there.
+# Called once a gate that previously paused finally advances clean.
+state_clear_blocking_issues() {
+  local file="$1"
+  awk '
+    BEGIN { skip = 0 }
+    $0 == "## Blocking Issues" { print; print "[None]"; skip = 1; next }
+    skip && /^## / { skip = 0 }
+    skip { next }
+    { print }
+  ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+}
+
+# Appends one bullet under "## Existing Work", replacing a lone placeholder
+# line ("[None yet]") on first use.
+state_append_existing_work() {
+  local file="$1" line="$2"
+  awk -v newline="- ${line}" '
+    BEGIN { done = 0 }
+    {
+      print
+      if (!done && $0 == "## Existing Work") {
+        getline nxt
+        if (nxt != "[None yet]") print nxt
+        print newline
+        done = 1
+      }
+    }
+  ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+}
+
+# Writes the initial skeleton for a new task. Fails (returns 1) rather than
+# overwriting if a state file already exists for a *different* task -- the
+# caller must resolve that before calling init.
+state_init() {
+  local file="$1" task="$2" pipeline="$3" branch="$4" first_phase="$5"
+  mkdir -p "$(dirname "$file")"
+  cat > "$file" <<EOF
+# Workflow State — ${task}
+
+**Task:** ${task}
+**Pipeline:** ${pipeline}
+**Branch:** ${branch}
+**Current Phase:** ${first_phase}
+**Phases Done:**
+**Status:** in-progress
+
+## Standards
+[Not yet extracted — filled by the conductor/Tech Lead, not this engine]
+
+## Toolchain
+[Not yet extracted]
+
+## Relevant Assertions
+[Not yet extracted]
+
+## Interface Contract
+[Not yet extracted]
+
+## Catalog Slice
+[Not yet extracted]
+
+## Security Rules
+[Not yet extracted]
+
+## Existing Work
+[None yet]
+
+## Blocking Issues
+[None]
+EOF
+}
