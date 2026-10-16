@@ -98,6 +98,29 @@ more than one domain's globs, two resolved paths disagree, or `.tech-decisions.y
 exist yet. This is deliberate: `ambiguous` is the one case the old prose got right (ask the
 human once) and the only case that should still reach one.
 
+### `context --module <name> [--agent <name>] [--task <id>]`
+
+Queries the fenced ```yaml blocks in `docs/spec/assertions.md` (see #59) instead of asking
+an LLM to read and filter the file fresh on every task — this is what used to be tech-
+lead.md's "extract only the assertions that reference the module(s) this task touches, and
+tag each as `[security]` if..." step. Returns:
+
+```json
+{"module": "auth", "assertions": [{"id": "ASSERT-0001", "module": "auth", "tags": "[security]", "given": "...", "when": "...", "then": "...", "and": ""}]}
+```
+
+- `--module` (required): exact match against each assertion's `module:` field.
+- `--agent security-reviewer` (or `"Security Reviewer"`): additionally filters to only
+  assertions whose `tags` contains `security` — the subset Security Reviewer gets.
+- `--task` is accepted for logging/audit purposes only; module resolution is always via
+  `--module`, not derived from the task (that mapping needs structured task records, #60).
+- Returns `{"module": "...", "assertions": []}` — never an error — when the file doesn't
+  exist, or nothing matches `--module`.
+
+If `docs/spec/assertions.md` predates this schema (prose only, no yaml blocks), run
+`tools/workflow/migrate-assertions.ps1`/`.sh` once to back-fill them — idempotent, safe to
+run again on a partially-migrated file.
+
 ## State file
 
 Both engines read/write a fixed machine-managed header (`**Task:**`, `**Pipeline:**`,

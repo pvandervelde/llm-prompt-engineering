@@ -246,6 +246,52 @@ out=$(wf "$SCR7" classify --task t1)
 assert_eq "42 classify is ambiguous (not an error) when .tech-decisions.yml is absent" "ambiguous" "$(json_field "$out" domain)"
 
 echo
+echo "Tier 4 - context"
+
+SCR8="$(mktemp -d)"; new_scratch "$SCR8"
+mkdir -p "$SCR8/docs/spec"
+cat > "$SCR8/docs/spec/assertions.md" <<'ASSERTIONS'
+### ASSERT-0001: Login succeeds
+
+```yaml
+id: ASSERT-0001
+module: auth
+tags: [security]
+given: a registered user with correct credentials
+when: they submit the login form
+then: a session token is issued
+```
+
+### ASSERT-0002: Order total excludes tax
+
+```yaml
+id: ASSERT-0002
+module: orders
+given: a tax-exempt customer
+when: an order total is calculated
+then: tax is not applied
+```
+ASSERTIONS
+
+out=$(wf "$SCR8" context --module auth)
+assert_contains "43 context returns matching-module assertions" "$out" "ASSERT-0001"
+out=$(wf "$SCR8" context --module orders)
+assert_contains "44 context scopes strictly to the requested module" "$out" "ASSERT-0002"
+case "$out" in
+  *ASSERT-0001*) fail "44b context must not leak other modules' assertions" "found ASSERT-0001 in orders query" ;;
+  *) pass "44b context must not leak other modules' assertions" ;;
+esac
+out=$(wf "$SCR8" context --module orders --agent security-reviewer)
+assert_eq "45 context filters to security-tagged only for security-reviewer" '{"module":"orders","assertions":[]}' "$out"
+out=$(wf "$SCR8" context --module auth --agent security-reviewer)
+assert_contains "46 security-reviewer still sees security-tagged assertions for its module" "$out" "ASSERT-0001"
+out=$(wf "$SCR8" context --module nothing)
+assert_eq "47 context returns an empty list for an unmatched module, not an error" '{"module":"nothing","assertions":[]}' "$out"
+rm "$SCR8/docs/spec/assertions.md"
+out=$(wf "$SCR8" context --module auth)
+assert_eq "48 context is empty (not an error) when assertions.md doesn't exist" '{"module":"auth","assertions":[]}' "$out"
+
+echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed scenarios:"

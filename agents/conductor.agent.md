@@ -55,10 +55,13 @@ Write the rest under `## Context`, as subsections — the engine leaves this sec
 to you since it differs by pipeline:
 
 **Software** (`### Relevant Assertions`, `### Interface Contract`, `### Catalog Slice`,
-`### Security Rules`): read `docs/spec/assertions.md`; keep only assertions (ASSERT-NNNN IDs
-preserved) that reference this task's module(s), tagging `[security]` any that reference
-auth, validation, secrets, or error handling — or write `None found for this module.` if
-there are none. Read the task's interface spec file; keep only type/struct/enum
+`### Security Rules`): run `workflow context --module <this task's module>` (the same
+module name responsibilities.md and the task's spec references use) to get this task's
+assertions pre-filtered and pre-tagged — do not read or filter `docs/spec/assertions.md`
+yourself, the engine already resolved that. Write `None found for this module.` if the
+returned list is empty. (For the security-tagged subset passed to Security Reviewer later,
+re-run with `--agent security-reviewer`; don't re-filter the full list by hand.) Read the
+task's interface spec file; keep only type/struct/enum
 declarations, function signatures, and error variants (no prose, no examples). Read
 `docs/catalog.md`; keep only entries matching this task's domain, or write `No existing
 abstractions for this domain.`. Read `docs/spec/security-controls.md`; keep the

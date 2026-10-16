@@ -81,18 +81,31 @@ Evaluate alternatives with pros/cons. Consider: security, data integrity, observ
 
 ### 5. Define Behavioral Assertions
 
-Create explicit, testable Given/When/Then assertions for each significant behavior. These guide error type design, test coverage requirements, and implementation targets. Document in `docs/spec/assertions.md`, each assertion given a **stable ID** (`ASSERT-NNNN`, zero-padded, assigned in creation order):
+Create explicit, testable Given/When/Then assertions for each significant behavior. These guide error type design, test coverage requirements, and implementation targets. Document in `docs/spec/assertions.md`, each assertion given a **stable ID** (`ASSERT-NNNN`, zero-padded, assigned in creation order), as **both** a fenced YAML block (machine-readable — the `workflow context` command queries this, not the prose) **and** the matching prose immediately after it (human-readable; keep both in sync):
 
-```markdown
+````markdown
 ### ASSERT-0001: <assertion name>
+
+```yaml
+id: ASSERT-0001
+module: <module or component — match responsibilities.md's naming exactly>
+tags: [security]  # omit if none apply; include "security" if this references auth, validation, secrets, or error handling
+given: <precondition>
+when: <action>
+then: <expected outcome>
+and: <additional clause>  # omit if not needed
+```
+
 **Module:** <module or component>
 **Given** <precondition>
 **When** <action>
 **Then** <expected outcome>
 **And** <additional clause, optional>
-```
+````
 
-**Append-only rule:** IDs are assigned once and never reused, renumbered, or reordered — including by later edits from the feedback loop (Step 10) or the Security Reviewer. A new assertion always gets the next unused ID, appended at the end of the file, regardless of where it fits thematically. If an assertion is superseded, mark it `**Status:** deprecated — superseded by ASSERT-NNNN` rather than deleting or renumbering it — downstream files (test names, task Context blocks, traceability tooling) reference these IDs directly and a renumber silently breaks every reference.
+**Append-only rule:** IDs are assigned once and never reused, renumbered, or reordered — including by later edits from the feedback loop (Step 10) or the Security Reviewer. A new assertion always gets the next unused ID, appended at the end of the file, regardless of where it fits thematically. If an assertion is superseded, mark it `**Status:** deprecated — superseded by ASSERT-NNNN` in the prose **and** add `status: deprecated` to its YAML block, rather than deleting or renumbering it — downstream files (test names, task Context blocks, traceability tooling) reference these IDs directly and a renumber silently breaks every reference.
+
+If you're adding assertions to a spec folder that predates this schema (no YAML blocks yet), run `tools/workflow/migrate-assertions.ps1`/`.sh` once to back-fill them from the existing prose rather than hand-converting each one.
 
 ### 6. Produce a Modular Spec
 

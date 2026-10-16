@@ -263,6 +263,50 @@ $r = Invoke-Wf $scr7 @("classify", "--task", "t1")
 Assert-Eq "42 classify is ambiguous (not an error) when .tech-decisions.yml is absent" "ambiguous" (Get-JsonField $r.Output "domain")
 
 Write-Host ""
+Write-Host "Tier 4 - context"
+
+$scr8 = Join-Path $env:TEMP "wf-ps-t8-$(Get-Random)"
+New-Scratch $scr8
+New-Item -ItemType Directory -Path (Join-Path $scr8 "docs/spec") -Force | Out-Null
+@'
+### ASSERT-0001: Login succeeds
+
+```yaml
+id: ASSERT-0001
+module: auth
+tags: [security]
+given: a registered user with correct credentials
+when: they submit the login form
+then: a session token is issued
+```
+
+### ASSERT-0002: Order total excludes tax
+
+```yaml
+id: ASSERT-0002
+module: orders
+given: a tax-exempt customer
+when: an order total is calculated
+then: tax is not applied
+```
+'@ | Set-Content (Join-Path $scr8 "docs/spec/assertions.md")
+
+$r = Invoke-Wf $scr8 @("context", "--module", "auth")
+Assert-Contains "43 context returns matching-module assertions" $r.Output "ASSERT-0001"
+$r = Invoke-Wf $scr8 @("context", "--module", "orders")
+Assert-Contains "44 context scopes strictly to the requested module" $r.Output "ASSERT-0002"
+if ($r.Output.Contains("ASSERT-0001")) { Fail "44b context must not leak other modules' assertions" "found ASSERT-0001 in orders query" } else { Pass "44b context must not leak other modules' assertions" }
+$r = Invoke-Wf $scr8 @("context", "--module", "orders", "--agent", "security-reviewer")
+Assert-Eq "45 context filters to security-tagged only for security-reviewer" '{"module":"orders","assertions":[]}' $r.Output
+$r = Invoke-Wf $scr8 @("context", "--module", "auth", "--agent", "security-reviewer")
+Assert-Contains "46 security-reviewer still sees security-tagged assertions for its module" $r.Output "ASSERT-0001"
+$r = Invoke-Wf $scr8 @("context", "--module", "nothing")
+Assert-Eq "47 context returns an empty list for an unmatched module, not an error" '{"module":"nothing","assertions":[]}' $r.Output
+Remove-Item (Join-Path $scr8 "docs/spec/assertions.md")
+$r = Invoke-Wf $scr8 @("context", "--module", "auth")
+Assert-Eq "48 context is empty (not an error) when assertions.md doesn't exist" '{"module":"auth","assertions":[]}' $r.Output
+
+Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="
 if ($script:FailCount -gt 0) {
     Write-Host "Failed scenarios:"

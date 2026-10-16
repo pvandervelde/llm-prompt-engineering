@@ -529,9 +529,77 @@ cmd_classify() {
   printf '{"domain":"%s","paths":%s}\n' "$verdict" "$paths_json"
 }
 
+# Extracts fenced ```yaml blocks from docs/spec/assertions.md, filters by
+# module (exact match) and, for security-sensitive agents, by the
+# "security" tag, and prints one JSON object per matching assertion
+# (comma-separated, ready to wrap in `[...]`). Building JSON inside awk --
+# rather than handing tab/newline-separated rows back to the shell -- sidesteps
+# bash `read`'s IFS-whitespace collapsing, which silently drops empty fields
+# (e.g. a block with no `tags:` line) when the delimiter is a tab.
+assertions_json() {
+  local file="$1" module="$2" require_security="$3"
+  awk -v mod="$module" -v want_sec="$require_security" '
+    function jesc(s) {
+      gsub(/\\/, "\\\\", s)
+      gsub(/"/, "\\\"", s)
+      return s
+    }
+    function emit() {
+      if (module == mod) {
+        has_sec = (tags ~ /security/) ? 1 : 0
+        if (want_sec == "0" || has_sec == 1) {
+          if (count > 0) printf ","
+          printf "{\"id\":\"%s\",\"module\":\"%s\",\"tags\":\"%s\",\"given\":\"%s\",\"when\":\"%s\",\"then\":\"%s\",\"and\":\"%s\"}", \
+            jesc(id), jesc(module), jesc(tags), jesc(given), jesc(when), jesc(then_), jesc(and_)
+          count++
+        }
+      }
+    }
+    BEGIN { count = 0 }
+    /^```yaml$/ { inb=1; id=""; module=""; tags=""; given=""; when=""; then_=""; and_=""; next }
+    /^```$/ { if (inb) { inb=0; emit() }; next }
+    inb && /^id: */ { sub(/^id: */, ""); id=$0 }
+    inb && /^module: */ { sub(/^module: */, ""); module=$0 }
+    inb && /^tags: */ { sub(/^tags: */, ""); tags=$0 }
+    inb && /^given: */ { sub(/^given: */, ""); given=$0 }
+    inb && /^when: */ { sub(/^when: */, ""); when=$0 }
+    inb && /^then: */ { sub(/^then: */, ""); then_=$0 }
+    inb && /^and: */ { sub(/^and: */, ""); and_=$0 }
+  ' "$file"
+}
+
+cmd_context() {
+  local agent="" task="" module=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --agent) agent="$2"; shift 2 ;;
+      --task) task="$2"; shift 2 ;;
+      --module) module="$2"; shift 2 ;;
+      *) die "context: unknown argument $1" ;;
+    esac
+  done
+  [ -n "$module" ] || die "context: --module is required"
+
+  local root assertions_file require_security="0"
+  root="$(repo_root)"
+  assertions_file="${root}/docs/spec/assertions.md"
+  if [ "$agent" = "security-reviewer" ] || [ "$agent" = "Security Reviewer" ]; then
+    require_security="1"
+  fi
+
+  if [ ! -f "$assertions_file" ]; then
+    printf '{"module":"%s","assertions":[]}\n' "$(json_escape "$module")"
+    return 0
+  fi
+
+  local items
+  items=$(assertions_json "$assertions_file" "$module" "$require_security")
+  printf '{"module":"%s","assertions":[%s]}\n' "$(json_escape "$module")" "$items"
+}
+
 main() {
   local cmd="${1:-}"
-  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify> [options]"
+  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify|context> [options]"
   shift
   case "$cmd" in
     init) cmd_init "$@" ;;
@@ -539,6 +607,7 @@ main() {
     gate) cmd_gate "$@" ;;
     complete) cmd_complete "$@" ;;
     classify) cmd_classify "$@" ;;
+    context) cmd_context "$@" ;;
     *) die "unknown command: ${cmd}" ;;
   esac
 }

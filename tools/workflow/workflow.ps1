@@ -503,11 +503,69 @@ function Invoke-Classify {
     [PSCustomObject]@{ domain = $verdict; paths = $pathResults } | ConvertTo-Json -Compress -Depth 5
 }
 
+# Extracts fenced ```yaml blocks from docs/spec/assertions.md, filters by
+# module (exact match) and, for security-sensitive agents, by the
+# "security" tag.
+function Invoke-Context {
+    param([string[]]$ArgList)
+    $agent = ""; $task = ""; $module = ""
+    for ($i = 0; $i -lt $ArgList.Count; $i += 2) {
+        switch ($ArgList[$i]) {
+            "--agent" { $agent = $ArgList[$i + 1] }
+            "--task" { $task = $ArgList[$i + 1] }
+            "--module" { $module = $ArgList[$i + 1] }
+            default { Fail "context: unknown argument $($ArgList[$i])" }
+        }
+    }
+    if (-not $module) { Fail "context: --module is required" }
+
+    $root = Get-RepoRoot
+    $assertionsFile = Join-Path $root "docs/spec/assertions.md"
+    $requireSecurity = ($agent -eq "security-reviewer") -or ($agent -eq "Security Reviewer")
+
+    $results = @()
+    if (Test-Path $assertionsFile) {
+        $lines = Get-Content $assertionsFile
+        $inBlock = $false
+        $current = $null
+        foreach ($line in $lines) {
+            if ($line -eq '```yaml') {
+                $inBlock = $true
+                $current = @{ id = ""; module = ""; tags = ""; given = ""; when = ""; then = ""; and = "" }
+                continue
+            }
+            if ($line -eq '```') {
+                if ($inBlock) {
+                    $inBlock = $false
+                    if ($current.module -eq $module) {
+                        $hasSecurity = $current.tags -match "security"
+                        if (-not $requireSecurity -or $hasSecurity) {
+                            $results += [PSCustomObject]$current
+                        }
+                    }
+                }
+                continue
+            }
+            if (-not $inBlock) { continue }
+            if ($line -match '^id:\s*(.*)$') { $current.id = $Matches[1] }
+            elseif ($line -match '^module:\s*(.*)$') { $current.module = $Matches[1] }
+            elseif ($line -match '^tags:\s*(.*)$') { $current.tags = $Matches[1] }
+            elseif ($line -match '^given:\s*(.*)$') { $current.given = $Matches[1] }
+            elseif ($line -match '^when:\s*(.*)$') { $current.when = $Matches[1] }
+            elseif ($line -match '^then:\s*(.*)$') { $current.then = $Matches[1] }
+            elseif ($line -match '^and:\s*(.*)$') { $current.and = $Matches[1] }
+        }
+    }
+
+    [PSCustomObject]@{ module = $module; assertions = $results } | ConvertTo-Json -Compress -Depth 5
+}
+
 switch ($Command) {
     "init" { Invoke-Init -ArgList $Rest }
     "next" { Invoke-Next -ArgList $Rest }
     "gate" { Invoke-Gate -ArgList $Rest }
     "complete" { Invoke-Complete -ArgList $Rest }
     "classify" { Invoke-Classify -ArgList $Rest }
+    "context" { Invoke-Context -ArgList $Rest }
     default { Fail "unknown command: $Command" }
 }
