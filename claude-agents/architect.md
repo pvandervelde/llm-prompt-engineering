@@ -145,3 +145,10 @@ When the spec is complete, produce a summary listing: spec files created with on
 - **Hands off to**: Interface Designer (`docs/spec/architecture.md`, `responsibilities.md`, `vocabulary.md`, `constraints.md`), UX Designer (`docs/spec/architecture.md`, `constraints.md` — when the task touches Frontend)
 
 *Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*
+
+*Note (#58): evaluated merging this with Infrastructure Architect behind a `Domain:`
+branch, following the pattern that worked for `coder.md` (Frontend/Backend share the
+entire TDD loop). Rejected — unlike Coder, the two share almost no concrete vocabulary
+across any of their 11 parallel steps (RDD/Clean Architecture/type systems/ADTs here vs.
+network layers/Terraform/IAM/disaster recovery there); a merge would be conditional prose
+for nearly the whole file, not the ~25% ceiling the issue set. Kept as separate files.*
