@@ -71,9 +71,9 @@ Applies the deterministic gate logic and returns one of `ADVANCE | PAUSE | FAIL`
 
 Only succeeds once the pipeline has reached its last phase (state file's `Current Phase` is
 the sentinel `DONE`); otherwise it refuses with an error naming the phase still outstanding.
-Marks the task's checkbox in `.llm/tasks.md` (`- [ ] <id> ...` → `- [x] <id> ...`, a
-best-effort match against today's unstructured task list — this becomes exact once
-structured task records land) and sets the state file's `Status` to `complete`.
+Marks the task's checkbox in `.llm/tasks.md` (`- [ ] <id> ...` → `- [x] <id> ...`) and, if
+that id has a structured task record (#60), flips its `status:` field to `done` too — then
+sets the state file's `Status` to `complete`.
 
 ### `classify [--task <id>] [--path <p> ...]`
 
@@ -113,9 +113,33 @@ tag each as `[security]` if..." step. Returns:
 - `--agent security-reviewer` (or `"Security Reviewer"`): additionally filters to only
   assertions whose `tags` contains `security` — the subset Security Reviewer gets.
 - `--task` is accepted for logging/audit purposes only; module resolution is always via
-  `--module`, not derived from the task (that mapping needs structured task records, #60).
+  `--module`, not derived from the task. Structured task records (#60) carry `domain`, not
+  a module name matching `assertions.md`'s `module:` field, so this still isn't automatic.
 - Returns `{"module": "...", "assertions": []}` — never an error — when the file doesn't
   exist, or nothing matches `--module`.
+
+### `tasks next`
+
+Queries the fenced ```yaml task blocks in `.llm/tasks.md` (see #60) instead of hand-
+sequencing the task list — this is what used to be planner.md's "Core/shared types →
+Domain types → Port interfaces → ..." prose. Returns the first task (in file order) that
+isn't `done`/`blocked` and whose every `deps` entry is `done`:
+
+```json
+{"task": {"id": "1.1", "title": "Domain types", "deps": "1.0", "criticality": "domain_logic", "specRefs": "...", "status": "ready", "domain": "backend"}}
+```
+
+- `{"task": null, "reason": "none-ready"}` when every task is done or every remaining task
+  is blocked on something not yet done.
+- `{"task": null, "reason": "cycle-detected", "cycle": "1.0 -> 1.1 -> 1.0"}` if `deps` forms
+  a cycle anywhere in the file — checked across the whole graph before picking a task, not
+  just the one that happened to be selected, so a cycle elsewhere can't hide behind an
+  unrelated ready task.
+- `{"task": null, "reason": "no-tasks-file"}` / `"no-structured-tasks"` when `.llm/tasks.md`
+  doesn't exist, or exists but has no yaml blocks yet (pre-#60 prose-only file).
+
+`workflow complete` (above) also flips a matching task record's `status` to `done`
+alongside the prose checkbox it already updated.
 
 If `docs/spec/assertions.md` predates this schema (prose only, no yaml blocks), run
 `tools/workflow/migrate-assertions.ps1`/`.sh` once to back-fill them — idempotent, safe to

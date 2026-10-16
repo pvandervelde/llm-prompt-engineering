@@ -394,15 +394,28 @@ function Invoke-Complete {
     if (Test-Path $tasksFile) {
         $lines = Get-Content $tasksFile
         $pattern = "^- \[ \] $([regex]::Escape($task)) "
+        $inBlock = $false
+        $idMatch = $false
         $result = foreach ($line in $lines) {
             if ($line -match $pattern) {
-                $line -replace "^- \[ \] ", "- [x] "
                 $marked = $true
-            } else {
-                $line
+                $line -replace "^- \[ \] ", "- [x] "
+                continue
             }
+            if ($line -eq '```yaml') { $inBlock = $true; $idMatch = $false; $line; continue }
+            if ($line -eq '```') { $inBlock = $false; $line; continue }
+            if ($inBlock -and $line -match '^id:\s*(.*)$') {
+                $idMatch = ($Matches[1].Trim('"') -eq $task)
+                $line
+                continue
+            }
+            if ($inBlock -and $idMatch -and $line -match '^status:\s*') {
+                "status: done"
+                continue
+            }
+            $line
         }
-        if ($marked) { Set-Content -Path $tasksFile -Value $result }
+        Set-Content -Path $tasksFile -Value $result
     }
 
     Set-StateField -Path $stateFile -Field "Status" -Value "complete"
@@ -560,6 +573,108 @@ function Invoke-Context {
     [PSCustomObject]@{ module = $module; assertions = $results } | ConvertTo-Json -Compress -Depth 5
 }
 
+# Strips a YAML inline-list `[a, b]` or `["a", "b"]` down to a comma-joined,
+# unquoted, trimmed scalar list (empty string if the list is empty).
+function Get-InlineListString {
+    param([string]$Raw)
+    $trimmed = $Raw.Trim().TrimStart('[').TrimEnd(']')
+    if (-not $trimmed) { return "" }
+    $items = $trimmed -split ',' | ForEach-Object { $_.Trim().Trim('"') } | Where-Object { $_ -ne '' }
+    return ($items -join ',')
+}
+
+function Invoke-TasksNext {
+    $root = Get-RepoRoot
+    $tasksFile = Join-Path $root ".llm/tasks.md"
+    if (-not (Test-Path $tasksFile)) {
+        [PSCustomObject]@{ task = $null; reason = "no-tasks-file" } | ConvertTo-Json -Compress
+        return
+    }
+
+    $lines = Get-Content $tasksFile
+    $tasks = [ordered]@{}
+    $inBlock = $false
+    $current = $null
+    foreach ($line in $lines) {
+        if ($line -eq '```yaml') {
+            $inBlock = $true
+            $current = @{ id = ""; title = ""; deps = ""; criticality = ""; specRefs = ""; status = ""; domain = "" }
+            continue
+        }
+        if ($line -eq '```') {
+            if ($inBlock -and $current.id) {
+                $current.deps = Get-InlineListString $current.deps
+                $current.specRefs = Get-InlineListString $current.specRefs
+                $tasks[$current.id] = $current
+            }
+            $inBlock = $false
+            continue
+        }
+        if (-not $inBlock) { continue }
+        if ($line -match '^id:\s*(.*)$') { $current.id = $Matches[1].Trim('"') }
+        elseif ($line -match '^title:\s*(.*)$') { $current.title = $Matches[1].Trim('"') }
+        elseif ($line -match '^deps:\s*(.*)$') { $current.deps = $Matches[1] }
+        elseif ($line -match '^criticality:\s*(.*)$') { $current.criticality = $Matches[1] }
+        elseif ($line -match '^specRefs:\s*(.*)$') { $current.specRefs = $Matches[1] }
+        elseif ($line -match '^status:\s*(.*)$') { $current.status = $Matches[1] }
+        elseif ($line -match '^domain:\s*(.*)$') { $current.domain = $Matches[1] }
+    }
+
+    if ($tasks.Count -eq 0) {
+        [PSCustomObject]@{ task = $null; reason = "no-structured-tasks" } | ConvertTo-Json -Compress
+        return
+    }
+
+    # Cycle detection (DFS, 0=unvisited 1=visiting 2=done) before picking "next".
+    $mark = @{}
+    $cyclePath = $null
+    function Test-Cycle {
+        param([string]$NodeId, [string]$Path)
+        $state = if ($mark.ContainsKey($NodeId)) { $mark[$NodeId] } else { 0 }
+        if ($state -eq 2) { return $true }
+        if ($state -eq 1) { $script:cyclePath = "$Path -> $NodeId"; return $false }
+        $mark[$NodeId] = 1
+        $depsStr = $tasks[$NodeId].deps
+        if ($depsStr) {
+            foreach ($dep in ($depsStr -split ',')) {
+                if (-not $tasks.Contains($dep)) { continue }
+                if (-not (Test-Cycle -NodeId $dep -Path "$Path -> $NodeId")) { return $false }
+            }
+        }
+        $mark[$NodeId] = 2
+        return $true
+    }
+    foreach ($id in $tasks.Keys) {
+        if (-not $mark.ContainsKey($id) -or $mark[$id] -eq 0) {
+            if (-not (Test-Cycle -NodeId $id -Path "")) {
+                $clean = $script:cyclePath -replace '^ -> ', ''
+                [PSCustomObject]@{ task = $null; reason = "cycle-detected"; cycle = $clean } | ConvertTo-Json -Compress
+                return
+            }
+        }
+    }
+
+    foreach ($id in $tasks.Keys) {
+        $t = $tasks[$id]
+        if ($t.status -eq "done" -or $t.status -eq "blocked") { continue }
+        $allDepsDone = $true
+        if ($t.deps) {
+            foreach ($dep in ($t.deps -split ',')) {
+                if (-not $tasks.Contains($dep) -or $tasks[$dep].status -ne "done") {
+                    $allDepsDone = $false
+                    break
+                }
+            }
+        }
+        if ($allDepsDone) {
+            [PSCustomObject]@{ task = [PSCustomObject]$t } | ConvertTo-Json -Compress -Depth 5
+            return
+        }
+    }
+
+    [PSCustomObject]@{ task = $null; reason = "none-ready" } | ConvertTo-Json -Compress
+}
+
 switch ($Command) {
     "init" { Invoke-Init -ArgList $Rest }
     "next" { Invoke-Next -ArgList $Rest }
@@ -567,5 +682,9 @@ switch ($Command) {
     "complete" { Invoke-Complete -ArgList $Rest }
     "classify" { Invoke-Classify -ArgList $Rest }
     "context" { Invoke-Context -ArgList $Rest }
+    "tasks" {
+        if ($Rest.Count -lt 1 -or $Rest[0] -ne "next") { Fail "tasks: usage: workflow.ps1 tasks next" }
+        Invoke-TasksNext
+    }
     default { Fail "unknown command: $Command" }
 }

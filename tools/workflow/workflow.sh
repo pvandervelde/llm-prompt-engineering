@@ -426,6 +426,20 @@ cmd_complete() {
       sed -i -E "s/^- \[ \] ${task} /- [x] ${task} /" "$tasks_file"
       marked="true"
     fi
+    # Also flip the structured task record's status, if this task id has one.
+    awk -v target="$task" '
+      BEGIN { inb = 0; idmatch = 0 }
+      /^```yaml$/ { inb = 1; idmatch = 0; print; next }
+      /^```$/ { inb = 0; print; next }
+      inb && /^id: */ {
+        v = $0; sub(/^id: */, "", v); gsub(/^"|"$/, "", v)
+        idmatch = (v == target)
+        print
+        next
+      }
+      inb && idmatch && /^status: */ { print "status: done"; next }
+      { print }
+    ' "$tasks_file" > "${tasks_file}.tmp" && mv "${tasks_file}.tmp" "$tasks_file"
   fi
 
   state_set_field "$state_file" "Status" "complete"
@@ -597,9 +611,133 @@ cmd_context() {
   printf '{"module":"%s","assertions":[%s]}\n' "$(json_escape "$module")" "$items"
 }
 
+# Extracts each ```yaml task block from .llm/tasks.md as one record, fields
+# joined with \x01 (not tab -- bash `read`'s IFS-whitespace collapsing drops
+# empty fields on tab, same bug class fixed in assertions_json; \x01 isn't
+# IFS-whitespace so it never collapses). One record per line:
+# id\x01title\x01deps\x01criticality\x01specRefs\x01status\x01domain
+tasks_records() {
+  local file="$1"
+  awk '
+    function emit() { if (id != "") printf "%s\x01%s\x01%s\x01%s\x01%s\x01%s\x01%s\n", id, title, deps, criticality, specrefs, status, domain }
+    /^```yaml$/ { inb=1; id=""; title=""; deps=""; criticality=""; specrefs=""; status=""; domain=""; next }
+    /^```$/ { if (inb) { inb=0; emit() }; next }
+    inb && /^id: */ { sub(/^id: */, ""); gsub(/^"|"$/, ""); id=$0 }
+    inb && /^title: */ { sub(/^title: */, ""); gsub(/^"|"$/, ""); title=$0 }
+    inb && /^deps: */ { sub(/^deps: */, ""); deps=$0 }
+    inb && /^criticality: */ { sub(/^criticality: */, ""); criticality=$0 }
+    inb && /^specRefs: */ { sub(/^specRefs: */, ""); specrefs=$0 }
+    inb && /^status: */ { sub(/^status: */, ""); status=$0 }
+    inb && /^domain: */ { sub(/^domain: */, ""); domain=$0 }
+  ' "$file"
+}
+
+# Strips a YAML inline-list `[a, b]` or `["a", "b"]` down to a comma-joined,
+# unquoted, space-trimmed scalar list (empty string if the list is empty).
+strip_inline_list() {
+  local raw="$1"
+  raw="${raw#\[}"
+  raw="${raw%\]}"
+  printf '%s\n' "$raw" | tr ',' '\n' | sed -E 's/^ +//; s/ +$//; s/^"(.*)"$/\1/' | grep -v '^$' | paste -sd, - 2>/dev/null || true
+}
+
+cmd_tasks() {
+  local sub="${1:-}"
+  [ -n "$sub" ] || die "tasks: usage: workflow.sh tasks next"
+  shift
+  case "$sub" in
+    next) cmd_tasks_next "$@" ;;
+    *) die "tasks: unknown subcommand '${sub}' (expected 'next')" ;;
+  esac
+}
+
+cmd_tasks_next() {
+  local root tasks_file
+  root="$(repo_root)"
+  tasks_file="${root}/.llm/tasks.md"
+  if [ ! -f "$tasks_file" ]; then
+    printf '{"task":null,"reason":"no-tasks-file"}\n'
+    return 0
+  fi
+
+  local records
+  records=$(tasks_records "$tasks_file")
+  if [ -z "$records" ]; then
+    printf '{"task":null,"reason":"no-structured-tasks"}\n'
+    return 0
+  fi
+
+  declare -A deps_of status_of title_of criticality_of specrefs_of domain_of
+  local ids=() id title deps criticality specrefs status domain
+
+  while IFS=$'\x01' read -r id title deps criticality specrefs status domain; do
+    [ -z "$id" ] && continue
+    ids+=("$id")
+    deps_of["$id"]=$(strip_inline_list "$deps")
+    status_of["$id"]="$status"
+    title_of["$id"]="$title"
+    criticality_of["$id"]="$criticality"
+    specrefs_of["$id"]=$(strip_inline_list "$specrefs")
+    domain_of["$id"]="$domain"
+  done <<< "$records"
+
+  # Cycle detection (DFS, 0=unvisited 1=visiting 2=done) over the whole graph
+  # before picking a "next" task -- a cycle can silently strand a task behind
+  # a dependency that will never be satisfiable.
+  declare -A mark
+  local cycle_path=""
+  dfs_cycle() {
+    local node="$1" path="$2" d dep
+    case "${mark[$node]:-0}" in
+      2) return 0 ;;
+      1) cycle_path="${path} -> ${node}"; return 1 ;;
+    esac
+    mark["$node"]=1
+    d="${deps_of[$node]:-}"
+    if [ -n "$d" ]; then
+      for dep in ${d//,/ }; do
+        [ -n "${deps_of[$dep]+x}" ] || continue
+        dfs_cycle "$dep" "${path} -> ${node}" || return 1
+      done
+    fi
+    mark["$node"]=2
+    return 0
+  }
+  for id in "${ids[@]}"; do
+    if [ "${mark[$id]:-0}" = "0" ]; then
+      dfs_cycle "$id" "" || { printf '{"task":null,"reason":"cycle-detected","cycle":"%s"}\n' "$(json_escape "${cycle_path#* -> }")"; return 0; }
+    fi
+  done
+
+  # First task in file order that's not done and whose deps are all done.
+  for id in "${ids[@]}"; do
+    [ "${status_of[$id]}" = "done" ] && continue
+    [ "${status_of[$id]}" = "blocked" ] && continue
+    local all_deps_done=1 dep d
+    d="${deps_of[$id]:-}"
+    if [ -n "$d" ]; then
+      for dep in ${d//,/ }; do
+        if [ "${status_of[$dep]:-}" != "done" ]; then
+          all_deps_done=0
+          break
+        fi
+      done
+    fi
+    if [ "$all_deps_done" -eq 1 ]; then
+      printf '{"task":{"id":"%s","title":"%s","deps":"%s","criticality":"%s","specRefs":"%s","status":"%s","domain":"%s"}}\n' \
+        "$(json_escape "$id")" "$(json_escape "${title_of[$id]}")" "$(json_escape "${deps_of[$id]}")" \
+        "$(json_escape "${criticality_of[$id]}")" "$(json_escape "${specrefs_of[$id]}")" \
+        "$(json_escape "${status_of[$id]}")" "$(json_escape "${domain_of[$id]}")"
+      return 0
+    fi
+  done
+
+  printf '{"task":null,"reason":"none-ready"}\n'
+}
+
 main() {
   local cmd="${1:-}"
-  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify|context> [options]"
+  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify|context|tasks> [options]"
   shift
   case "$cmd" in
     init) cmd_init "$@" ;;
@@ -607,6 +745,7 @@ main() {
     gate) cmd_gate "$@" ;;
     complete) cmd_complete "$@" ;;
     classify) cmd_classify "$@" ;;
+    tasks) cmd_tasks "$@" ;;
     context) cmd_context "$@" ;;
     *) die "unknown command: ${cmd}" ;;
   esac

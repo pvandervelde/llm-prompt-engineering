@@ -307,6 +307,117 @@ $r = Invoke-Wf $scr8 @("context", "--module", "auth")
 Assert-Eq "48 context is empty (not an error) when assertions.md doesn't exist" '{"module":"auth","assertions":[]}' $r.Output
 
 Write-Host ""
+Write-Host "Tier 5 - tasks next"
+
+$scr9 = Join-Path $env:TEMP "wf-ps-t9-$(Get-Random)"
+New-Scratch $scr9
+@'
+- [ ] 1.0 Core shared types
+
+```yaml
+id: "1.0"
+title: "Core shared types"
+deps: []
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+
+- [ ] 1.1 Domain types
+
+```yaml
+id: "1.1"
+title: "Domain types"
+deps: ["1.0"]
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+'@ | Set-Content (Join-Path $scr9 ".llm/tasks.md")
+
+$r = Invoke-Wf $scr9 @("tasks", "next")
+Assert-Contains "49 tasks next returns the task with no unmet deps first" $r.Output '"id":"1.0"'
+
+function Set-FirstReadyDone([string]$Dir) {
+    $path = Join-Path $Dir ".llm/tasks.md"
+    $raw = Get-Content $path -Raw
+    $idx = $raw.IndexOf("status: ready")
+    $raw = $raw.Remove($idx, "status: ready".Length).Insert($idx, "status: done")
+    Set-Content -Path $path -Value $raw -NoNewline
+}
+
+Set-FirstReadyDone $scr9
+$r = Invoke-Wf $scr9 @("tasks", "next")
+Assert-Contains "50 tasks next advances once the dependency is done" $r.Output '"id":"1.1"'
+
+Set-FirstReadyDone $scr9
+$r = Invoke-Wf $scr9 @("tasks", "next")
+Assert-Eq "51 tasks next reports none-ready once every task is done" '{"task":null,"reason":"none-ready"}' $r.Output
+
+@'
+- [ ] 2.0 A
+
+```yaml
+id: "2.0"
+title: "A"
+deps: ["2.1"]
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+
+- [ ] 2.1 B
+
+```yaml
+id: "2.1"
+title: "B"
+deps: ["2.0"]
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+'@ | Set-Content (Join-Path $scr9 ".llm/tasks.md")
+$r = Invoke-Wf $scr9 @("tasks", "next")
+Assert-Eq "52 tasks next detects a dependency cycle instead of silently misordering" "cycle-detected" (Get-JsonField $r.Output "reason")
+
+Remove-Item (Join-Path $scr9 ".llm/tasks.md")
+$r = Invoke-Wf $scr9 @("tasks", "next")
+Assert-Eq "53 tasks next is a clean no-op (not an error) when tasks.md is absent" '{"task":null,"reason":"no-tasks-file"}' $r.Output
+
+$scr10 = Join-Path $env:TEMP "wf-ps-t10-$(Get-Random)"
+New-Scratch $scr10
+@'
+- [ ] c1 Some task
+
+```yaml
+id: "c1"
+title: "Some task"
+deps: []
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+'@ | Set-Content (Join-Path $scr10 ".llm/tasks.md")
+Invoke-Wf $scr10 @("init", "--task", "c1", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr10 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr10 @("gate", "--phase", "RED", "--verdict", "done") | Out-Null
+Invoke-Wf $scr10 @("gate", "--phase", "GREEN", "--verdict", "done") | Out-Null
+Invoke-Wf $scr10 @("gate", "--phase", "REFACTOR", "--verdict", "CLEAN") | Out-Null
+Invoke-Wf $scr10 @("gate", "--phase", "AUDIT", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr10 @("gate", "--phase", "SECURITY", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr10 @("gate", "--phase", "DOCUMENT", "--verdict", "done") | Out-Null
+Invoke-Wf $scr10 @("gate", "--phase", "VERIFY", "--verdict", "PASS") | Out-Null
+Invoke-Wf $scr10 @("complete", "--task", "c1") | Out-Null
+$content = Get-Content (Join-Path $scr10 ".llm/tasks.md") -Raw
+Assert-Contains "54 complete also flips the structured task record's status to done" $content "status: done"
+Assert-Contains "55 complete still flips the prose checkbox too" $content "- [x] c1"
+
+Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="
 if ($script:FailCount -gt 0) {
     Write-Host "Failed scenarios:"

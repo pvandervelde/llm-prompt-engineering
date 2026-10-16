@@ -24,8 +24,10 @@ default action.
 
 ## Step 1. Resolve Task and Pipeline
 
-Identify the task (by ID if given, else the next `ready` task from `.llm/tasks.md` — confirm
-with the user before proceeding on an inferred task). Run `workflow classify --task <id>`
+Identify the task: use the given ID, or run `workflow tasks next` for the next ready one
+from `.llm/tasks.md`'s dependency graph — confirm with the user before proceeding on an
+inferred task. A `cycle-detected` result means the task list itself is broken; stop and
+report it rather than guessing an order. Run `workflow classify --task <id>`
 (or `--path` against its spec references, if `classify --task` returns no paths). `backend`
 or `frontend` → `--pipeline software`; `infrastructure` → `--pipeline infrastructure`.
 `ambiguous` → ask the user once which pipeline applies.

@@ -105,21 +105,38 @@ Generate `./.llm/tasks.md` markdown file.
 
 **Each parent task:** Context (spec refs, files, dependencies, constraints), Assertions reference, Quality Checklist (coverage min from .tech-decisions.yml, integration tests if applicable, security review if needed, ADR if architectural), atomic subtasks (one PR each), integration verification (last subtask).
 
-**Task structure:**
-```
+**Task structure:** each parent task gets a fenced YAML block (machine-readable — `workflow
+tasks next` queries this, not the checkbox tree) immediately after its checkbox line, kept
+in sync with the prose below it:
+
+````
 - [ ] 1.0 Title
+
+```yaml
+id: "1.0"
+title: "Title"
+deps: []  # ids of parent tasks this one depends on, e.g. ["0.0"]; [] if none
+criticality: domain_logic  # one of the classes in .tech-decisions.yml's criticality: block
+specRefs: ["docs/spec/interfaces/auth-operations.md"]  # [] if none
+status: ready  # ready | blocked | in-progress | done
+domain: backend  # frontend | backend | infrastructure
+```
+
   - Context: spec refs, file locations, dependencies, constraints
   - Assertions: ASSERT-NNNN, ASSERT-NNNN, ... (stable IDs from docs/spec/assertions.md, not descriptions)
   - [ ] 1.1 Subtask (atomic, one PR)
   - [ ] 1.2 Subtask
   - [ ] 1.3 Verify <component> is integrated into the system
-```
+````
 
 ### 5. Task Sequencing
 
-**Software:** Core/shared types → Domain types → Port interfaces → Domain operations → Adapters.
-
-**Infrastructure:** Backend setup → Network (VPC) → Security (IAM, groups, KMS) → Compute (ECS, Lambda, ALB) → Data (RDS, S3, DynamoDB) → Observability (CloudWatch).
+Declare each parent task's `deps` (above) — do not hand-order the task list yourself.
+`workflow tasks next` computes the next ready task from the dependency graph (and rejects
+the whole file if `deps` forms a cycle, rather than silently misordering). You are only
+declaring prerequisites, the same judgment call as before (which core types must exist
+before which domain types, which network layer must exist before which compute layer); the
+ordering arithmetic itself is the engine's job now, not yours.
 
 ### 6. Context Annotation
 

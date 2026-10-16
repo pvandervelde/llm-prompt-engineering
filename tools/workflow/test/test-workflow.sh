@@ -292,6 +292,109 @@ out=$(wf "$SCR8" context --module auth)
 assert_eq "48 context is empty (not an error) when assertions.md doesn't exist" '{"module":"auth","assertions":[]}' "$out"
 
 echo
+echo "Tier 5 - tasks next"
+
+SCR9="$(mktemp -d)"; new_scratch "$SCR9"
+cat > "$SCR9/.llm/tasks.md" <<'TASKS'
+- [ ] 1.0 Core shared types
+
+```yaml
+id: "1.0"
+title: "Core shared types"
+deps: []
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+
+- [ ] 1.1 Domain types
+
+```yaml
+id: "1.1"
+title: "Domain types"
+deps: ["1.0"]
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+TASKS
+
+out=$(wf "$SCR9" tasks next)
+assert_contains "49 tasks next returns the task with no unmet deps first" "$out" '"id":"1.0"'
+
+# Mark 1.0 done via a targeted line edit (sed -i global would touch every status: line).
+line=$(grep -n '^status: ready' "$SCR9/.llm/tasks.md" | head -1 | cut -d: -f1)
+sed -i "${line}s/status: ready/status: done/" "$SCR9/.llm/tasks.md"
+out=$(wf "$SCR9" tasks next)
+assert_contains "50 tasks next advances once the dependency is done" "$out" '"id":"1.1"'
+
+line=$(grep -n '^status: ready' "$SCR9/.llm/tasks.md" | head -1 | cut -d: -f1)
+sed -i "${line}s/status: ready/status: done/" "$SCR9/.llm/tasks.md"
+out=$(wf "$SCR9" tasks next)
+assert_eq "51 tasks next reports none-ready once every task is done" '{"task":null,"reason":"none-ready"}' "$out"
+
+cat > "$SCR9/.llm/tasks.md" <<'CYCLE'
+- [ ] 2.0 A
+
+```yaml
+id: "2.0"
+title: "A"
+deps: ["2.1"]
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+
+- [ ] 2.1 B
+
+```yaml
+id: "2.1"
+title: "B"
+deps: ["2.0"]
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+CYCLE
+out=$(wf "$SCR9" tasks next)
+assert_eq "52 tasks next detects a dependency cycle instead of silently misordering" "cycle-detected" "$(json_field "$out" reason)"
+
+rm "$SCR9/.llm/tasks.md"
+out=$(wf "$SCR9" tasks next)
+assert_eq "53 tasks next is a clean no-op (not an error) when tasks.md is absent" '{"task":null,"reason":"no-tasks-file"}' "$out"
+
+SCR10="$(mktemp -d)"; new_scratch "$SCR10"
+cat > "$SCR10/.llm/tasks.md" <<'CTASK'
+- [ ] c1 Some task
+
+```yaml
+id: "c1"
+title: "Some task"
+deps: []
+criticality: domain_logic
+specRefs: []
+status: ready
+domain: backend
+```
+CTASK
+wf "$SCR10" init --task c1 --pipeline software >/dev/null
+wf "$SCR10" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR10" gate --phase RED --verdict done >/dev/null
+wf "$SCR10" gate --phase GREEN --verdict done >/dev/null
+wf "$SCR10" gate --phase REFACTOR --verdict CLEAN >/dev/null
+wf "$SCR10" gate --phase AUDIT --verdict CLEAR >/dev/null
+wf "$SCR10" gate --phase SECURITY --verdict CLEAR >/dev/null
+wf "$SCR10" gate --phase DOCUMENT --verdict done >/dev/null
+wf "$SCR10" gate --phase VERIFY --verdict PASS >/dev/null
+wf "$SCR10" complete --task c1 >/dev/null
+assert_contains "54 complete also flips the structured task record's status to done" "$(cat "$SCR10/.llm/tasks.md")" "status: done"
+assert_contains "55 complete still flips the prose checkbox too" "$(cat "$SCR10/.llm/tasks.md")" "- [x] c1"
+
+echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed scenarios:"
