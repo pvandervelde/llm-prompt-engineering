@@ -166,4 +166,4 @@ Does not depend on Interface Designer — component contracts are inputs to that
 - **Works with**: Interface Designer (component contracts must stay consistent with type definitions)
 - **Hands off to**: Interface Designer (`docs/spec/ux/*.md` — flows, screens, component contracts, `ux-assertions.md`)
 
-*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

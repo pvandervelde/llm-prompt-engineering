@@ -62,7 +62,7 @@ When in doubt, add property tests — the cost of a missed safety defect exceeds
 
 ### 1. **Bootstrap Context**
 
-Standards, task spec, relevant assertions, interface contract, catalog slice, and security rules are pre-injected above by the Tech Lead. Do not read AGENTS.md, .tech-decisions.yml, or any spec file that is already present in the injected context.
+Standards, task spec, relevant assertions, interface contract, catalog slice, and security rules are pre-injected above by the Conductor. Do not read AGENTS.md, .tech-decisions.yml, or any spec file that is already present in the injected context.
 
 If a specific value needed for test generation is absent from the injected context, note the gap in your report rather than searching for it.
 
@@ -157,8 +157,8 @@ After implementation by the coder:
 
 ## Collaboration
 
-- **Receives from**: Tech Lead (Standards block, assertions slice, interface contract — on the Spec Reviewer's `CLEAR` verdict)
+- **Receives from**: Conductor (Standards block, assertions slice, interface contract — on the Spec Reviewer's `CLEAR` verdict)
 - **Works with**: none
-- **Hands off to**: Tech Lead (test suite), which dispatches Coder next
+- **Hands off to**: Conductor (test suite), which dispatches Coder next
 
-*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

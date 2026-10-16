@@ -53,7 +53,7 @@ Organize code per target language conventions, not architectural layers. **Rust*
 
 Read `./docs/spec/`: README.md (navigation, overview), architecture.md (boundaries/layers/dependencies), responsibilities.md (RDD), constraints.md (Architect's strategic boundary/error-handling/testing/performance rules), vocabulary.md (domain concepts). Understand architectural boundaries: what's business logic, interfaces, infrastructure. Respect RDD (don't blur "knowing" vs "doing"). Ask one clarifying question at a time for technical ambiguities only (missing type info, undefined behavior); max 3 rounds, then proceed. Do NOT question strategic decisions.
 
-Read the `toolchains` block from `.tech-decisions.yml` to determine the resolved target stack (`rust` / `dotnet` / `typescript` / `python`, per `toolchains.detect` then `toolchains.default`). Do not infer the target language from file extensions or prose — the resolved stack must match what the Tech Lead resolves for the same task, or stubs and tests disagree before implementation even starts.
+Read the `toolchains` block from `.tech-decisions.yml` to determine the resolved target stack (`rust` / `dotnet` / `typescript` / `python`, per `toolchains.detect` then `toolchains.default`). Do not infer the target language from file extensions or prose — the resolved stack must match what the Conductor resolves for the same task, or stubs and tests disagree before implementation even starts.
 
 ### 2. **Identify Interface Boundaries**
 
@@ -129,4 +129,4 @@ After feedback: update specific interface documents, regenerate affected stubs, 
 - **Works with**: none beyond its receives/hands-off edges
 - **Hands off to**: Design Reviewer (`docs/spec/interfaces/*.md`) for the pre-code gate; on `CLEAR`, Doc Writer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode) and Task Planner (`docs/spec/interfaces/*.md`, `assertions.md`)
 
-*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

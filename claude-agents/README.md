@@ -5,9 +5,9 @@ remove, or reorder an agent, update that agent's Collaboration block (and the bl
 every agent it now hands off to or receives from) and update this diagram to match — the
 two must never drift apart.
 
-The Tech Lead and Infrastructure Lead are the only agents that may invoke another agent
-directly (via the `Task` tool). Every edge below is a logical artifact handoff, not a
-literal subagent call made by the producing agent itself.
+The Conductor is the only agent that may invoke another agent directly (via the `Task`
+tool) — the same agent drives both pipelines below. Every edge below is a logical artifact
+handoff, not a literal subagent call made by the producing agent itself.
 
 ```mermaid
 flowchart TD
@@ -19,7 +19,7 @@ flowchart TD
         Doc["Doc Writer"]
         Plan["Task Planner"]
         SpecRev["Spec Reviewer"]
-        TechLead["Tech Lead (orchestrator)"]
+        CondSW["Conductor — software pipeline"]
         Tester["Tester"]
         Coder["Coder"]
         Refactor["Refactor"]
@@ -36,9 +36,9 @@ flowchart TD
         DesignRev -.->|BLOCKED: routes to owning agent| Architect
         Doc --> Plan
         Plan --> SpecRev
-        SpecRev -->|CLEAR| TechLead
+        SpecRev -->|CLEAR| CondSW
         SpecRev -.->|BLOCKED: routes to owning agent| Architect
-        TechLead --> Tester --> Coder --> Refactor
+        CondSW --> Tester --> Coder --> Refactor
         Refactor --> QA
         Refactor --> Sec
         QA --> Doc2["Doc Writer (DOCUMENT mode)"]
@@ -50,14 +50,14 @@ flowchart TD
     subgraph Infrastructure Pipeline
         InfraArch["Infrastructure Architect"]
         InfraDes["Infrastructure Designer"]
-        InfraLead["Infrastructure Lead (orchestrator)"]
+        CondInfra["Conductor — infrastructure pipeline"]
         InfraEng["Infrastructure Engineer"]
         Sec2["Security Reviewer"]
         Verifier2["Verifier"]
 
         InfraArch --> InfraDes --> Plan
-        Plan -->|no Spec Reviewer gate| InfraLead
-        InfraLead --> InfraEng --> Sec2 --> Verifier2
+        Plan -->|no Spec Reviewer gate| CondInfra
+        CondInfra --> InfraEng --> Sec2 --> Verifier2
         Verifier2 -->|PASS| PR2[("Open PR")]
     end
 ```
@@ -75,5 +75,7 @@ flowchart TD
   gate on the same Refactor output); Security Reviewer is reused standalone in the
   infrastructure pipeline, where there is no QA Engineer phase.
 - **Spec Reviewer** only gates the software pipeline. The infrastructure pipeline has no
-  pre-implementation spec-review gate (see `infra-lead.md` / `planner.md` Collaboration
+  pre-implementation spec-review gate (see `conductor.md` / `planner.md` Collaboration
   blocks).
+- **Conductor** is one agent (`conductor.md`) driving both pipelines — it appears twice in
+  the diagram (once per subgraph) purely for layout clarity, not because it's two agents.

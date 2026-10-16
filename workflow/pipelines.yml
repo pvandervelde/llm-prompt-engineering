@@ -1,15 +1,15 @@
 # Pipeline definitions for the workflow engine (tools/workflow/).
 #
 # This file is the single source of truth for phase order, gate conditions, and
-# subagent dispatch names for both pipelines that today live as prose inside
-# claude-agents/tech-lead.md and claude-agents/infra-lead.md. See workflow/README.md
-# for the full schema reference.
+# subagent dispatch names for both pipelines, read by claude-agents/conductor.md
+# (formerly encoded as prose in tech-lead.md and infra-lead.md). See
+# workflow/README.md for the full schema reference.
 #
-# Scope note: this covers only the TDD execution pipelines that Tech Lead and
-# Infrastructure Lead actually orchestrate (RED..VERIFY / IMPLEMENT..VERIFY). The
-# upstream spec-authoring chain (Architect -> Interface Designer -> Design Reviewer
-# -> Doc Writer(DRAFT)/Task Planner) has no single orchestrating agent today and is
-# out of scope until a conductor-style agent takes it over (tracked separately).
+# Scope note: this covers only the TDD execution pipelines the Conductor actually
+# orchestrates (RED..VERIFY / IMPLEMENT..VERIFY). The upstream spec-authoring chain
+# (Architect -> Interface Designer -> Design Reviewer -> Doc Writer(DRAFT)/Task
+# Planner) has no single orchestrating agent today and is out of scope until one
+# takes it over (tracked separately).
 
 pipelines:
   software:

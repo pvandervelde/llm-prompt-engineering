@@ -135,22 +135,15 @@ function Initialize-StateFile {
 **Status:** in-progress
 
 ## Standards
-[Not yet extracted — filled by the conductor/Tech Lead, not this engine]
+[Not yet extracted — filled by the Conductor, not this engine]
 
 ## Toolchain
 [Not yet extracted]
 
-## Relevant Assertions
-[Not yet extracted]
-
-## Interface Contract
-[Not yet extracted]
-
-## Catalog Slice
-[Not yet extracted]
-
-## Security Rules
-[Not yet extracted]
+## Context
+[Not yet extracted — software: Relevant Assertions / Interface Contract / Catalog Slice /
+Security Rules; infrastructure: Module Spec / Conventions / Module Registry Slice. The
+engine doesn't know pipeline-specific section shapes; see tools/workflow/README.md.]
 
 ## Existing Work
 [None yet]

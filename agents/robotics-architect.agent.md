@@ -188,4 +188,4 @@ ADR process:
 - **Works with**: Mechanical Designer, Electronics Designer, Firmware Engineer (dispatches and arbitrates cross-domain conflicts between them)
 - **Hands off to**: dispatches specialist design agents directly via the agent tool; owns `index.md`, `interfaces.md`, `safety.md`, `requirements.md`
 
-*Note: this agent is a second orchestrator, independent of the Tech Lead — it performs all inter-agent delegation for robotics systems work via the agent tool.*
+*Note: this agent is a second orchestrator, independent of the Conductor — it performs all inter-agent delegation for robotics systems work via the agent tool.*

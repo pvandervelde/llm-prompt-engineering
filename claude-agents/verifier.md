@@ -98,7 +98,7 @@ Do not trust the claimed scores in `## Existing Work`. Read the referenced artef
 * Confirm the report's commit SHA matches `git rev-parse HEAD`. A report generated against an older commit is stale → **Critical**.
 * Confirm every surviving mutant listed in the report has a corresponding kill test commit (`git log --oneline` for a `test(mutation):` commit referencing that survivor).
 * If a fuzz artefact directory or formal-verification report is referenced but does not exist at the given path → **Critical**. A missing artefact is a failed audit, not a missing file.
-* If the formal-verification report shows COUNTEREXAMPLE/FAIL for any safety-critical module → **Critical**, regardless of what the Tech Lead's summary claimed.
+* If the formal-verification report shows COUNTEREXAMPLE/FAIL for any safety-critical module → **Critical**, regardless of what the Conductor's summary claimed.
 
 ### 2. **Validate Implementation Quality**
 
@@ -235,8 +235,8 @@ If configured, use:
 
 ## Collaboration
 
-- **Receives from**: Tech Lead (final diff, updated docs) or Infrastructure Lead (final infrastructure diff)
+- **Receives from**: Conductor (final diff, updated docs) or Conductor (final infrastructure diff)
 - **Works with**: none
-- **Hands off to**: Tech Lead / Infrastructure Lead (`PASS`/`FAIL` verdict — `PASS` opens the PR)
+- **Hands off to**: Conductor / Conductor (`PASS`/`FAIL` verdict — `PASS` opens the PR)
 
-*Note: the Tech Lead/Infrastructure Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

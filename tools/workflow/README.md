@@ -14,7 +14,7 @@ non-zero.
 
 ### `init --task <id> --pipeline <software|infrastructure> [--slug <slug>]`
 
-Resolves the working branch (create / use / ask, per `tech-lead.md` Step 2b — see
+Resolves the working branch (create / use / ask, per the branch decision table that used to live in `tech-lead.md` Step 2b (now conductor.md) — see
 `workflow/README.md`), writes the state-file skeleton, and returns the first phase:
 
 ```json
@@ -78,7 +78,8 @@ structured task records land) and sets the state file's `Status` to `complete`.
 ### `classify [--task <id>] [--path <p> ...]`
 
 Replaces the hand-written Frontend/Backend/Infrastructure prose tables that used to live in
-`tech-lead.md` Step 2 and `planner.md`'s Project Type Detection section. Returns:
+`tech-lead.md` Step 2 and `planner.md`'s old Project Type Detection section (both now
+`conductor.md`). Returns:
 
 ```json
 {"domain": "backend", "paths": [{"path": "docs/spec/interfaces/auth-operations.md", "domain": "backend"}]}
@@ -102,9 +103,11 @@ human once) and the only case that should still reach one.
 Both engines read/write a fixed machine-managed header (`**Task:**`, `**Pipeline:**`,
 `**Branch:**`, `**Current Phase:**`, `**Phases Done:**`, `**Status:**`) plus
 `## Existing Work` and `## Blocking Issues` sections they append to. Everything else in the
-file — `## Standards`, `## Toolchain`, `## Relevant Assertions`, etc. — is written by the
-conductor/agent, never by this engine; `init` writes those sections as empty placeholders
-and leaves them alone afterward.
+file — `## Standards`, `## Toolchain`, `## Context`, etc. — is written by the Conductor,
+never by this engine; `init` writes those sections as empty placeholders and leaves them
+alone afterward. `## Context`'s internal shape is deliberately not the engine's concern —
+it differs by pipeline (software vs. infrastructure need different slices); see
+`claude-agents/conductor.md` Step 2 for what the Conductor writes there.
 
 ## Testing
 

@@ -123,4 +123,4 @@ Provide summary: list modules created by layer with specs in `./docs/spec/infras
 - **Works with**: none
 - **Hands off to**: Task Planner (Terraform module contracts); Infrastructure Engineer (optional direct handoff)
 
-*Note: the Infrastructure Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

@@ -87,7 +87,7 @@ Write to `.llm/security-review/YYYY-MM-DD-[scope].md`. Output: header (date, sco
 
 ### 11. **Write Non-Blocking Findings**
 
-Write Medium, Low, and Info findings to `.llm/findings/[descriptive-slug].md` under `## Security Notes` with format: [SEVERITY] title, location, spec ref, description, remediation. Critical and High findings are **hard blockers** to Tech Lead—do NOT write these to the findings file.
+Write Medium, Low, and Info findings to `.llm/findings/[descriptive-slug].md` under `## Security Notes` with format: [SEVERITY] title, location, spec ref, description, remediation. Critical and High findings are **hard blockers** to Conductor—do NOT write these to the findings file.
 
 ### 12. **Update Security Spec if Gaps Found**
 
@@ -103,8 +103,8 @@ Run after Coder produces implementation against Interface Designer specs: audit 
 
 ## Collaboration
 
-- **Receives from**: Tech Lead (security rules slice, implementation) or Infrastructure Lead (infrastructure implementation)
+- **Receives from**: Conductor (security rules slice, implementation) or Conductor (infrastructure implementation)
 - **Works with**: QA Engineer (parallel audit of the same implementation, software pipeline only)
-- **Hands off to**: Tech Lead / Infrastructure Lead (findings with severity ratings)
+- **Hands off to**: Conductor / Conductor (findings with severity ratings)
 
-*Note: the Tech Lead/Infrastructure Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

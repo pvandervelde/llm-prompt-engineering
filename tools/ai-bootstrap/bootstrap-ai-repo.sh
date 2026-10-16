@@ -406,7 +406,7 @@ else
 languages: [$LANGS_STR]
 
 # Toolchain resolution layer. Agents describe what they need in abstract
-# capability terms (test, mutation, fuzz, formal, ...); the Tech Lead resolves
+# capability terms (test, mutation, fuzz, formal, ...); the Conductor resolves
 # this block to concrete commands for the active stack and injects them into
 # every subagent prompt as a \`## Toolchain\` block. Mutation scores are NOT
 # comparable across engines - see mutation_targets below.

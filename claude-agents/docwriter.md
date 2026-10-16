@@ -246,8 +246,8 @@ frontmatter.
 
 ## Collaboration
 
-- **Receives from**: Interface Designer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode, gated on the Design Reviewer's `CLEAR` verdict); Tech Lead (diff + implementation — DOCUMENT mode)
+- **Receives from**: Interface Designer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode, gated on the Design Reviewer's `CLEAR` verdict); Conductor (diff + implementation — DOCUMENT mode)
 - **Works with**: Spec Reviewer (DRAFT-mode gaps surfaced to `docs-feedback.md` feed the same pre-implementation audit)
-- **Hands off to**: Task Planner (draft docs, `docs-feedback.md` — DRAFT mode); Tech Lead (updated user docs, changeset — DOCUMENT mode)
+- **Hands off to**: Task Planner (draft docs, `docs-feedback.md` — DRAFT mode); Conductor (updated user docs, changeset — DOCUMENT mode)
 
-*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

@@ -122,4 +122,4 @@ You → docs/spec/infrastructure/ → Infrastructure Designer → Terraform scaf
 - **Works with**: none
 - **Hands off to**: Infrastructure Designer (infrastructure architecture docs)
 
-*Note: the Infrastructure Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

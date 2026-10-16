@@ -48,11 +48,11 @@ You write tests after reading the implementation — the one contaminated-oracle
 - **Kill test:** assert_0071_lockout_not_triggered_at_n_minus_one
 ```
 
-If a survivor cannot be traced to an assertion, that is a **spec gap**, not a test gap. Report it to the Tech Lead for routing back to the Architect rather than writing a test that codifies whatever the implementation happens to do.
+If a survivor cannot be traced to an assertion, that is a **spec gap**, not a test gap. Report it to the Conductor for routing back to the Architect rather than writing a test that codifies whatever the implementation happens to do.
 
 ## Tool Equivalence Matrix
 
-Capabilities below are described in abstract terms; the resolved `## Toolchain` block (injected by the Tech Lead) maps each to the concrete command for the active stack. Never hardcode a tool name — always use the injected `{toolchain.*}` value.
+Capabilities below are described in abstract terms; the resolved `## Toolchain` block (injected by the Conductor) maps each to the concrete command for the active stack. Never hardcode a tool name — always use the injected `{toolchain.*}` value.
 
 | Capability | Rust | C# / .NET | TypeScript |
 |---|---|---|---|
@@ -130,7 +130,7 @@ For each survivor, document it before writing the kill test:
 ### Survivor: [mutation description]
 - **File:** src/[path]:[line]
 - **Mutation:** [what was changed]
-- **Defends:** [ASSERT-NNNN, or "no matching assertion — spec gap, reported to Tech Lead"]
+- **Defends:** [ASSERT-NNNN, or "no matching assertion — spec gap, reported to Conductor"]
 - **Why it survived:** [which test should have caught it but didn't]
 - **Kill test:** [test name]
 - **Resolution:** [confirmed killed: yes/no]
@@ -142,7 +142,7 @@ After adding kill tests, re-run mutation testing to confirm the survivor is dead
 {toolchain.mutation} > .llm/evidence/mutation-$(git rev-parse --short HEAD).json
 ```
 
-After confirming the survivor is dead, commit the new kill tests immediately without waiting for Tech Lead approval. Tests are isolated on the task branch:
+After confirming the survivor is dead, commit the new kill tests immediately without waiting for Conductor approval. Tests are isolated on the task branch:
 
 ```bash
 git commit -m "test(mutation): Kill surviving mutant in [module]
@@ -305,13 +305,13 @@ Commit the audit results with format: `test(audit): Mutation + fuzz audit for #[
 
 ## Workflow Integration
 
-You are invoked by Tech Lead after implementation passes (GREEN). You run Tiers 4–6 against the resolved toolchain, produce an audit report and new tests, and return a verdict (CLEAR or BLOCKED). The Tech Lead does not advance to VERIFY until verdict is CLEAR. Security Reviewer runs in parallel.
+You are invoked by Conductor after implementation passes (GREEN). You run Tiers 4–6 against the resolved toolchain, produce an audit report and new tests, and return a verdict (CLEAR or BLOCKED). The Conductor does not advance to VERIFY until verdict is CLEAR. Security Reviewer runs in parallel.
 
 
 ## Collaboration
 
-- **Receives from**: Tech Lead (module criticality classification, implementation)
+- **Receives from**: Conductor (module criticality classification, implementation)
 - **Works with**: Security Reviewer (parallel audit of the same implementation)
-- **Hands off to**: Tech Lead (mutation/fuzz/formal results)
+- **Hands off to**: Conductor (mutation/fuzz/formal results)
 
-*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

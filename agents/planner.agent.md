@@ -139,6 +139,6 @@ Save `./.llm/tasks.md` with appropriate format per Section 4. Your task list is 
 
 - **Receives from**: Interface Designer (`docs/spec/interfaces/*.md`, software tasks, gated on the Design Reviewer's `CLEAR` verdict), Doc Writer (`docs-feedback.md`, draft docs), Infrastructure Designer (Terraform module contracts, infrastructure tasks), Spec Tester (spec tests, when that path is used instead of Doc Writer DRAFT mode)
 - **Works with**: none
-- **Hands off to**: Spec Reviewer (`.llm/tasks.md`, software tasks); Infrastructure Lead (`.llm/tasks.md`, infrastructure tasks — no Spec Reviewer gate on this path); Issue Tracker (published GitHub issues, optional)
+- **Hands off to**: Spec Reviewer (`.llm/tasks.md`, software tasks); Conductor (`.llm/tasks.md`, infrastructure tasks — no Spec Reviewer gate on this path); Issue Tracker (published GitHub issues, optional)
 
-*Note: the Tech Lead/Infrastructure Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

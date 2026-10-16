@@ -2,10 +2,11 @@
 
 `pipelines.yml` in this directory is the single source of truth for phase order, gate
 conditions, and subagent dispatch names, consumed by the workflow engine in
-`tools/workflow/` (see #55). It replaces the branch-decision table, phase-gate logic,
-and dispatch table that today live as prose inside `claude-agents/tech-lead.md` and
-`claude-agents/infra-lead.md` — those files describe *when* a human reads this schema
-and acts on it; they no longer encode the schema itself.
+`tools/workflow/` (see #55). It replaces the branch-decision table, phase-gate logic, and
+dispatch table that used to live as prose inside `claude-agents/tech-lead.md` and
+`claude-agents/infra-lead.md` — both deleted (#57), replaced by
+`claude-agents/conductor.md`, which reads this schema via the engine rather than encoding
+it itself.
 
 ## Top-level shape
 
@@ -20,7 +21,7 @@ pipelines:
 
 ## `branchRules` (list, evaluated top to bottom, first match wins)
 
-Mirrors `tech-lead.md` Step 2b's branch decision table. Each entry:
+Mirrors the branch decision table that used to live in `tech-lead.md` Step 2b (now conductor.md). Each entry:
 
 | Key | Meaning |
 |---|---|
@@ -70,12 +71,11 @@ skipWhen:
 Both conditions must hold for the engine to skip invoking the agent: the most recent
 `.llm/spec-review/*.md` report's verdict must equal `reportVerdict`, and its mtime must
 be newer than the latest change under the path named by `reportNewerThan` (resolved via
-`git log -1 --format=%cI -- <path>`, same check `tech-lead.md` Step 1a describes today).
+`git log -1 --format=%cI -- <path>`, same check that used to live in `tech-lead.md` Step 1a (now conductor.md).
 
 ## Scope boundary
 
-This file covers only the TDD execution pipelines Tech Lead and Infrastructure Lead
-actually dispatch. The upstream spec-authoring chain (Software Architect → Interface
+This file covers only the TDD execution pipelines the Conductor actually dispatches. The upstream spec-authoring chain (Software Architect → Interface
 Designer → Design Reviewer → Doc Writer DRAFT mode / Task Planner) has no single
 orchestrating agent today — each step is invoked directly by the human or via a Copilot
 handoff — so it is not represented here. If a future agent takes over orchestrating that

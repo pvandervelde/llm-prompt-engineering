@@ -149,4 +149,4 @@ When the spec is complete, produce a summary listing: spec files created with on
 - **Works with**: UX Designer (shared ownership of Frontend-facing scope)
 - **Hands off to**: Interface Designer (`architecture.md`, `responsibilities.md`, `vocabulary.md`, `constraints.md`), UX Designer (`architecture.md`, `constraints.md` — when the task touches Frontend)
 
-*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

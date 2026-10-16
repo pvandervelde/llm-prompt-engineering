@@ -175,4 +175,4 @@ the agent that owns the fix — you do not fix anything yourself.
 - **Works with**: none — read-only gate
 - **Hands off to**: Doc Writer (`CLEAR` verdict unblocks DRAFT mode) and Task Planner. On `BLOCKED`, findings route back to whichever of Software Architect / Interface Designer / UX Designer owns the flagged section.
 
-*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

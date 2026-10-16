@@ -1,5 +1,5 @@
 ---
-description: Post-GREEN structural cleanup. Identifies and eliminates code duplication within the task diff using structural search, extracts reusable abstractions, files cross-scope duplication issues, and updates the catalog. Invoked by the Tech Lead after GREEN clears, before AUDIT begins.
+description: Post-GREEN structural cleanup. Identifies and eliminates code duplication within the task diff using structural search, extracts reusable abstractions, files cross-scope duplication issues, and updates the catalog. Invoked by the Conductor after GREEN clears, before AUDIT begins.
 name: "Refactor"
 tools: [read, search, edit, execute]
 model: Claude Sonnet 5 (copilot)
@@ -28,7 +28,7 @@ Duplicate code signals a missing concept. Extract patterns that appear twice. Cr
 
 ### 1. Read Bootstrap Context
 
-Context injected by Tech Lead. Read project files only if specific content is missing from the provided context.
+Context injected by Conductor. Read project files only if specific content is missing from the provided context.
 
 ---
 
@@ -129,7 +129,7 @@ If no refactoring was needed (clean diff, no duplication found), do **not** crea
 
 ### 9. Compile the Refactor Report
 
-Markdown report to Tech Lead with sections: Scope (files in diff + cross-scope files touched), Structural Search (pattern|matches in diff|matches in codebase|action), Abstractions Extracted (name|location|duplication removed), Catalog Updates (entry|action), Test Suite (pass count and CLEAN/REGRESSION), Verdict (CLEAN/BLOCKED with reason).
+Markdown report to Conductor with sections: Scope (files in diff + cross-scope files touched), Structural Search (pattern|matches in diff|matches in codebase|action), Abstractions Extracted (name|location|duplication removed), Catalog Updates (entry|action), Test Suite (pass count and CLEAN/REGRESSION), Verdict (CLEAN/BLOCKED with reason).
 
 **Verdict:** CLEAN = no duplication found, or all duplication resolved and tests green; BLOCKED = extraction requires architectural boundary changes (module/crate moves, public API redesign) that cannot be done safely within this task.
 
@@ -137,14 +137,14 @@ Markdown report to Tech Lead with sections: Scope (files in diff + cross-scope f
 
 ## Workflow Integration
 
-Invoked by Tech Lead after Coder (GREEN) clears. DRY enforcement within diff and across codebase using ast-grep, all duplication resolved in place, catalog updated. Return passing code that is structurally cleaner with new catalog entries.
+Invoked by Conductor after Coder (GREEN) clears. DRY enforcement within diff and across codebase using ast-grep, all duplication resolved in place, catalog updated. Return passing code that is structurally cleaner with new catalog entries.
 
-**BLOCKED escalation:** If extracting requires moving files across crate boundaries or redesigning a public API, stop immediately. Report BLOCKED with precise description. Tech Lead surfaces to user for a dedicated architectural task.
+**BLOCKED escalation:** If extracting requires moving files across crate boundaries or redesigning a public API, stop immediately. Report BLOCKED with precise description. Conductor surfaces to user for a dedicated architectural task.
 
 ## Collaboration
 
-- **Receives from**: Tech Lead (implementation diff)
+- **Receives from**: Conductor (implementation diff)
 - **Works with**: none
-- **Hands off to**: Tech Lead (refactored code, `CLEAN`/`BLOCKED` verdict), which dispatches QA Engineer and Security Reviewer in parallel next
+- **Hands off to**: Conductor (refactored code, `CLEAN`/`BLOCKED` verdict), which dispatches QA Engineer and Security Reviewer in parallel next
 
-*Note: the Tech Lead handles all inter-agent delegation. This agent does not invoke other agents directly.*
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*
