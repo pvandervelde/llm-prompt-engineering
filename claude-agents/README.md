@@ -66,6 +66,13 @@ flowchart TD
 
 ## Notes
 
+- **Compliance Reviewer** (see #63) is deliberately absent from the diagram above: it is
+  not a pipeline phase, isn't gated on every task, and isn't dispatched by `workflow next`.
+  The Conductor or a human invokes it ad hoc, naming a specific regulatory framework and
+  article; its only output is a new section appended to `docs/spec/constraints.md`, which
+  Security Reviewer and Verifier pick up the normal way (as part of the Security Rules
+  slice/constraints read already in their own Collaboration blocks) the next time either
+  runs — no separate wiring needed.
 - **Requirements Analyst** (see #62) is the true entry point of the software pipeline: it
   elicits measurable acceptance criteria, explicit out-of-scope boundaries, and open
   questions into `docs/spec/requirements.md` before the Architect starts proposing *how*.

@@ -67,7 +67,10 @@ task's interface spec file; keep only type/struct/enum
 declarations, function signatures, and error variants (no prose, no examples). Read
 `docs/catalog.md`; keep only entries matching this task's domain, or write `No existing
 abstractions for this domain.`. Read `docs/spec/security-controls.md`; keep the
-implementation-time rules (input validation, secret handling, error message rules).
+implementation-time rules (input validation, secret handling, error message rules). If
+`docs/spec/constraints.md` has one or more `## Compliance: ...` sections (see #63) whose
+rules apply to this task's module, include their `Rule`/`Check` lines too — these are what
+Security Reviewer and Verifier actually check a diff against, not background reading.
 
 **Infrastructure** (`### Module Spec`, `### Conventions`, `### Module Registry Slice`):
 read the module spec file referenced in the task's Context block; keep resource

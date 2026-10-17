@@ -103,7 +103,7 @@ Run after Coder produces implementation against Interface Designer specs: audit 
 
 ## Collaboration
 
-- **Receives from**: Conductor (security rules slice, implementation) or Conductor (infrastructure implementation)
+- **Receives from**: Conductor (security rules slice, implementation) or Conductor (infrastructure implementation); indirectly, Compliance Reviewer (`constraints.md` rules for any framework in scope, via the same slice)
 - **Works with**: QA Engineer (parallel audit of the same implementation, software pipeline only)
 - **Hands off to**: Conductor / Conductor (findings with severity ratings)
 

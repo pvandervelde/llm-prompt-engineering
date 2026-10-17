@@ -235,7 +235,7 @@ If configured, use:
 
 ## Collaboration
 
-- **Receives from**: Conductor (final diff, updated docs) or Conductor (final infrastructure diff)
+- **Receives from**: Conductor (final diff, updated docs) or Conductor (final infrastructure diff); indirectly, Compliance Reviewer (`constraints.md` rules for any framework in scope)
 - **Works with**: none
 - **Hands off to**: Conductor / Conductor (`PASS`/`FAIL` verdict — `PASS` opens the PR)
 
