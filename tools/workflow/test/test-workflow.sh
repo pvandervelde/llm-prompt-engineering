@@ -260,6 +260,7 @@ tags: [security]
 given: a registered user with correct credentials
 when: they submit the login form
 then: a session token is issued
+requirementRef: REQ-0001
 ```
 
 ### ASSERT-0002: Order total excludes tax
@@ -275,6 +276,7 @@ ASSERTIONS
 
 out=$(wf "$SCR8" context --module auth)
 assert_contains "43 context returns matching-module assertions" "$out" "ASSERT-0001"
+assert_contains "43b context surfaces an assertion's requirementRef when present" "$out" "REQ-0001"
 out=$(wf "$SCR8" context --module orders)
 assert_contains "44 context scopes strictly to the requested module" "$out" "ASSERT-0002"
 case "$out" in

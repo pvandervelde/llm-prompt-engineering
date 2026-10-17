@@ -76,7 +76,7 @@ be newer than the latest change under the path named by `reportNewerThan` (resol
 
 ## Scope boundary
 
-This file covers only the TDD execution pipelines the Conductor actually dispatches. The upstream spec-authoring chain (Software Architect → Interface
+This file covers only the TDD execution pipelines the Conductor actually dispatches. The upstream spec-authoring chain (Requirements Analyst → Software Architect → Interface
 Designer → Design Reviewer → Doc Writer DRAFT mode / Task Planner) has no single
 orchestrating agent today — each step is invoked directly by the human or via a Copilot
 handoff — so it is not represented here. If a future agent takes over orchestrating that

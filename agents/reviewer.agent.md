@@ -115,7 +115,7 @@ Artifacts in `reviews/` (markdown). Code quotes: `path:line-start-line-end`. Dif
 
 ## Collaboration
 
-- **Receives from**: Business Analyst (requirements doc, for a pre-architecture review) — otherwise invoked standalone, outside the TDD pipeline
+- **Receives from**: Requirements Analyst (`docs/spec/requirements.md`, for a pre-architecture review) — otherwise invoked standalone, outside the TDD pipeline
 - **Works with**: none
 - **Hands off to**: none — produces review artifacts and a prioritized remediation backlog for a human to act on; not wired back into the pipeline
 

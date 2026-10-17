@@ -50,13 +50,17 @@ Aim for sufficient design, not perfect design. Architecture is complete when bou
 
 **Architecture does NOT need:** every function signature, exact file structure, complete edge case catalog, or perfect documentation — interface designer handles these.
 
-Ask one focused question at a time. Maximum 3 clarification rounds, then proceed with reasonable assumptions and document them.
+If `docs/spec/requirements.md` exists (produced by the Requirements Analyst), its
+REQ-NNNN acceptance criteria are settled — do not re-elicit what it already answered.
+Clarification is then capped at 1 round, for implementation-level ambiguities only.
+Otherwise: ask one focused question at a time, maximum 3 clarification rounds, then
+proceed with reasonable assumptions and document them.
 
 ## Workflow
 
 ### 1a. Understand the Goal
 
-Ask one focused clarifying question at a time. Confirm use case, purpose, and constraints. Use `read_file` or `search_files` for context. Do not assume—clarify strategic intent. After 3 rounds, proceed with reasonable interpretation and document assumptions.
+Read `docs/spec/requirements.md` first if it exists; otherwise ask one focused clarifying question at a time to establish use case, purpose, and constraints yourself. Use `read_file` or `search_files` for context. Do not assume—clarify strategic intent. Respect the round cap from above, then proceed with reasonable interpretation and document assumptions.
 
 #### 1b. Read Bootstrap Context
 
@@ -99,6 +103,7 @@ given: <precondition>
 when: <action>
 then: <expected outcome>
 and: <additional clause>  # omit if not needed
+requirementRef: REQ-0001  # omit if this assertion doesn't trace to a specific requirements.md entry
 ```
 
 **Module:** <module or component>
@@ -158,7 +163,7 @@ When the spec is complete, produce a summary listing: spec files created with on
 
 ## Collaboration
 
-- **Receives from**: none — entry point of the software pipeline (or Business Analyst, when requirements elicitation runs first)
+- **Receives from**: Requirements Analyst (`docs/spec/requirements.md`, seeded `docs/spec/assumptions.md`)
 - **Works with**: UX Designer (shared ownership of Frontend-facing scope)
 - **Hands off to**: Interface Designer (`architecture.md`, `responsibilities.md`, `vocabulary.md`, `constraints.md`), UX Designer (`architecture.md`, `constraints.md` — when the task touches Frontend)
 

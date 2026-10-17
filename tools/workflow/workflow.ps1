@@ -653,7 +653,7 @@ function Invoke-Context {
         foreach ($line in $lines) {
             if ($line -eq '```yaml') {
                 $inBlock = $true
-                $current = @{ id = ""; module = ""; tags = ""; given = ""; when = ""; then = ""; and = "" }
+                $current = @{ id = ""; module = ""; tags = ""; given = ""; when = ""; then = ""; and = ""; requirementRef = "" }
                 continue
             }
             if ($line -eq '```') {
@@ -676,6 +676,7 @@ function Invoke-Context {
             elseif ($line -match '^when:\s*(.*)$') { $current.when = $Matches[1] }
             elseif ($line -match '^then:\s*(.*)$') { $current.then = $Matches[1] }
             elseif ($line -match '^and:\s*(.*)$') { $current.and = $Matches[1] }
+            elseif ($line -match '^requirementRef:\s*(.*)$') { $current.requirementRef = $Matches[1] }
         }
     }
 

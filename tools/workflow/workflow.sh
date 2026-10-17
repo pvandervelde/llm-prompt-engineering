@@ -687,14 +687,14 @@ assertions_json() {
         has_sec = (tags ~ /security/) ? 1 : 0
         if (want_sec == "0" || has_sec == 1) {
           if (count > 0) printf ","
-          printf "{\"id\":\"%s\",\"module\":\"%s\",\"tags\":\"%s\",\"given\":\"%s\",\"when\":\"%s\",\"then\":\"%s\",\"and\":\"%s\"}", \
-            jesc(id), jesc(module), jesc(tags), jesc(given), jesc(when), jesc(then_), jesc(and_)
+          printf "{\"id\":\"%s\",\"module\":\"%s\",\"tags\":\"%s\",\"given\":\"%s\",\"when\":\"%s\",\"then\":\"%s\",\"and\":\"%s\",\"requirementRef\":\"%s\"}", \
+            jesc(id), jesc(module), jesc(tags), jesc(given), jesc(when), jesc(then_), jesc(and_), jesc(reqref)
           count++
         }
       }
     }
     BEGIN { count = 0 }
-    /^```yaml$/ { inb=1; id=""; module=""; tags=""; given=""; when=""; then_=""; and_=""; next }
+    /^```yaml$/ { inb=1; id=""; module=""; tags=""; given=""; when=""; then_=""; and_=""; reqref=""; next }
     /^```$/ { if (inb) { inb=0; emit() }; next }
     inb && /^id: */ { sub(/^id: */, ""); id=$0 }
     inb && /^module: */ { sub(/^module: */, ""); module=$0 }
@@ -703,6 +703,7 @@ assertions_json() {
     inb && /^when: */ { sub(/^when: */, ""); when=$0 }
     inb && /^then: */ { sub(/^then: */, ""); then_=$0 }
     inb && /^and: */ { sub(/^and: */, ""); and_=$0 }
+    inb && /^requirementRef: */ { sub(/^requirementRef: */, ""); reqref=$0 }
   ' "$file"
 }
 

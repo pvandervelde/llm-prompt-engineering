@@ -12,6 +12,7 @@ handoff, not a literal subagent call made by the producing agent itself.
 ```mermaid
 flowchart TD
     subgraph Software Pipeline
+        ReqAnalyst["Requirements Analyst"]
         Architect["Software Architect"]
         UX["UX Designer"]
         IFace["Interface Designer"]
@@ -27,6 +28,7 @@ flowchart TD
         Sec["Security Reviewer"]
         Verifier["Verifier"]
 
+        ReqAnalyst --> Architect
         Architect --> IFace
         Architect --> UX
         UX --> IFace
@@ -64,6 +66,9 @@ flowchart TD
 
 ## Notes
 
+- **Requirements Analyst** (see #62) is the true entry point of the software pipeline: it
+  elicits measurable acceptance criteria, explicit out-of-scope boundaries, and open
+  questions into `docs/spec/requirements.md` before the Architect starts proposing *how*.
 - **Doc Writer** appears twice in the diagram above (DRAFT mode, between Interface Designer
   and Task Planner; DOCUMENT mode, after AUDIT + SECURITY) because it is one file operating
   in two explicit modes — see `docwriter.md`.

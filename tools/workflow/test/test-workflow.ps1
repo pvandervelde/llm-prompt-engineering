@@ -278,6 +278,7 @@ tags: [security]
 given: a registered user with correct credentials
 when: they submit the login form
 then: a session token is issued
+requirementRef: REQ-0001
 ```
 
 ### ASSERT-0002: Order total excludes tax
@@ -293,6 +294,7 @@ then: tax is not applied
 
 $r = Invoke-Wf $scr8 @("context", "--module", "auth")
 Assert-Contains "43 context returns matching-module assertions" $r.Output "ASSERT-0001"
+Assert-Contains "43b context surfaces an assertion's requirementRef when present" $r.Output "REQ-0001"
 $r = Invoke-Wf $scr8 @("context", "--module", "orders")
 Assert-Contains "44 context scopes strictly to the requested module" $r.Output "ASSERT-0002"
 if ($r.Output.Contains("ASSERT-0001")) { Fail "44b context must not leak other modules' assertions" "found ASSERT-0001 in orders query" } else { Pass "44b context must not leak other modules' assertions" }

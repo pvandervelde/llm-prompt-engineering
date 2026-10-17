@@ -106,7 +106,7 @@ lead.md's "extract only the assertions that reference the module(s) this task to
 tag each as `[security]` if..." step. Returns:
 
 ```json
-{"module": "auth", "assertions": [{"id": "ASSERT-0001", "module": "auth", "tags": "[security]", "given": "...", "when": "...", "then": "...", "and": ""}]}
+{"module": "auth", "assertions": [{"id": "ASSERT-0001", "module": "auth", "tags": "[security]", "given": "...", "when": "...", "then": "...", "and": "", "requirementRef": "REQ-0001"}]}
 ```
 
 - `--module` (required): exact match against each assertion's `module:` field.
