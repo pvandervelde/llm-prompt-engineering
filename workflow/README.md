@@ -44,6 +44,7 @@ does not manage branch resolution for it — add the block if that changes.
 | `pauseWhen` | list of reason strings (below) that force a human gate instead of auto-advancing |
 | `parallelWith` | list of phase `id`s that run concurrently with this one; both must clear before the engine advances past either |
 | `skipWhen` | (only with `advance: conditional`) conditions under which the engine auto-advances *without* invoking `agent` at all |
+| `skipOnTier` | list of risk tiers (see #61, `workflow tier`) for which this phase is auto-marked done without invoking `agent` — unconditional, unlike `skipWhen`; checked by `next` before every phase it would otherwise return |
 | `onPass` | side effect to run when this phase's gate passes with no blocking reasons; currently only `open-pr` is defined |
 
 ### `pauseWhen` reason strings

@@ -13,7 +13,12 @@ state_get_field() {
   { grep -m1 -E "^\*\*${field}:\*\*" "$file" || true; } | sed -E "s/^\*\*${field}:\*\* *//"
 }
 
-# Replaces (or appends, if missing) a **Field:** line with a new value.
+# Replaces (or inserts, if missing) a **Field:** line with a new value. A
+# missing field is inserted right before the first "## " heading (i.e. at
+# the end of the header block), never appended at EOF -- EOF may be inside
+# or after a section whose own rewrite logic (e.g.
+# state_clear_blocking_issues, which stops skipping only at the next
+# "## " heading) assumes nothing meaningful follows it.
 state_set_field() {
   local file="$1" field="$2" value="$3"
   if grep -q -E "^\*\*${field}:\*\*" "$file" 2>/dev/null; then
@@ -21,7 +26,12 @@ state_set_field() {
     esc_value=$(printf '%s' "$value" | sed -E 's/[&/\]/\\&/g')
     sed -i -E "s/^\*\*${field}:\*\*.*/\*\*${field}:\*\* ${esc_value}/" "$file"
   else
-    printf '**%s:** %s\n' "$field" "$value" >> "$file"
+    awk -v field="$field" -v value="$value" '
+      BEGIN { inserted = 0 }
+      !inserted && /^## / { print "**" field ":** " value; inserted = 1 }
+      { print }
+      END { if (!inserted) print "**" field ":** " value }
+    ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
   fi
 }
 

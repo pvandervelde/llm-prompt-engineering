@@ -13,21 +13,32 @@ function Get-StateField {
     return ($line -replace "^\*\*$([regex]::Escape($Field)):\*\*\s*", "")
 }
 
+# Replaces (or inserts, if missing) a **Field:** line. A missing field is
+# inserted right before the first "## " heading (end of the header block),
+# never appended at EOF -- EOF may be inside or after a section whose own
+# rewrite logic (e.g. Clear-StateBlockingIssues) assumes nothing meaningful
+# follows it.
 function Set-StateField {
     param([string]$Path, [string]$Field, [string]$Value)
     $lines = Get-Content $Path
     $pattern = "^\*\*$([regex]::Escape($Field)):\*\*"
     $found = $false
-    $result = foreach ($line in $lines) {
+    $inserted = $false
+    $result = New-Object System.Collections.Generic.List[string]
+    foreach ($line in $lines) {
         if ($line -match $pattern) {
-            "**${Field}:** ${Value}"
+            $result.Add("**${Field}:** ${Value}")
             $found = $true
-        } else {
-            $line
+            continue
         }
+        if (-not $found -and -not $inserted -and $line -like "## *") {
+            $result.Add("**${Field}:** ${Value}")
+            $inserted = $true
+        }
+        $result.Add($line)
     }
-    if (-not $found) {
-        $result += "**${Field}:** ${Value}"
+    if (-not $found -and -not $inserted) {
+        $result.Add("**${Field}:** ${Value}")
     }
     Set-Content -Path $Path -Value $result
 }

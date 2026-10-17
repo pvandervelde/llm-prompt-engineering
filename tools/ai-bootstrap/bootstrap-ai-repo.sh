@@ -520,6 +520,11 @@ classify:
   backend: ["docs/spec/interfaces/**", "src/**"]
   infrastructure: ["docs/spec/infrastructure/**", "docs/spec/modules/**", "infra/**"]
 
+# A diff touching any of these paths is always `elevated` -- never
+# `minimal` or `standard`, regardless of diff size or test coverage, and
+# a human cannot override it down. Used by `workflow tier`.
+risk_paths: []  # e.g. ["src/auth/**", "src/safety/**", "**/secrets/**"]
+
 # Database (customize for your project)
 database:
   choice: null  # e.g., postgresql, mongodb, sqlite

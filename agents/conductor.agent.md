@@ -76,6 +76,32 @@ requirements. Read `docs/spec/infrastructure/conventions.md`; keep naming patter
 tagging, and validation rules. Read `docs/spec/infrastructure/module-registry.md`; keep
 only modules in the same layer as this task.
 
+## Step 2b. Compute the Risk Tier
+
+Skip if the state file already has a `**Tier:**` line (resuming). Otherwise, before
+driving the loop below, run `workflow tier --files-changed <n> [--path <p> ...]
+[--untested-module <m> ...] [--pipeline <resolved>]`.
+
+- `--files-changed`: your best estimate of how many files this task will touch, from its
+  spec/interface files and `git diff --name-only` against the branch's base if any work has
+  already happened.
+- `--path`: every file or module path the task is expected to touch (repeatable) — this is
+  what gets checked against `.tech-decisions.yml`'s `risk_paths:` globs.
+- `--untested-module`: any touched module with no existing test file today; omit entirely
+  if every touched module already has coverage.
+
+This is a one-time estimate, not a guess you need to get perfect: if the task's actual
+scope turns out materially larger (e.g. REFACTOR reveals a much bigger blast radius than
+planned), re-run `workflow tier` with the corrected inputs. A human can move the tier *up*
+at any later gate with `--override`; neither you nor a human can move it down out of
+**elevated** once a `risk_paths` match triggered it — the engine refuses that outright
+(see `tools/workflow/README.md`).
+
+The recorded tier controls which phases `workflow next` auto-skips (`AUDIT`/`DOCUMENT`
+today under `minimal` — see `skipOnTier` in `pipelines.yml`). You never decide this
+yourself and never tell a dispatched agent to skip its phase: if `workflow next` didn't
+return it, it isn't happening this task.
+
 ## Step 3. Drive the Pipeline
 
 Loop:

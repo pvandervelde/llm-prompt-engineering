@@ -395,6 +395,59 @@ assert_contains "54 complete also flips the structured task record's status to d
 assert_contains "55 complete still flips the prose checkbox too" "$(cat "$SCR10/.llm/tasks.md")" "- [x] c1"
 
 echo
+echo "Tier 6 - risk-tier gate"
+
+SCR11="$(mktemp -d)"; new_scratch "$SCR11"
+wf "$SCR11" init --task r1 --pipeline software >/dev/null
+
+out=$(wf "$SCR11" tier --files-changed 2)
+assert_eq "56 tier computes minimal for <=3 files changed, no risk paths" "minimal" "$(json_field "$out" tier)"
+assert_contains "57 tier writes Tier + Tier Reason into the active state file" "$(cat "$SCR11/.llm/workflow-state.md")" "**Tier:** minimal"
+
+out=$(wf "$SCR11" tier --files-changed 8)
+assert_eq "58 tier computes standard for a mid-range file count" "standard" "$(json_field "$out" tier)"
+
+out=$(wf "$SCR11" tier --files-changed 20)
+assert_eq "59 tier computes elevated for >15 files changed" "elevated" "$(json_field "$out" tier)"
+
+out=$(wf "$SCR11" tier --files-changed 2 --untested-module auth)
+assert_eq "60 tier computes elevated when a touched module has no existing tests" "elevated" "$(json_field "$out" tier)"
+
+cat > "$SCR11/.tech-decisions.yml" <<'TD'
+risk_paths: ["src/auth/**", "src/safety/**"]
+TD
+out=$(wf "$SCR11" tier --files-changed 2 --path src/auth/session.rs)
+assert_eq "61 tier computes elevated when a touched path matches risk_paths, regardless of file count" "elevated" "$(json_field "$out" tier)"
+
+out=$(wf "$SCR11" tier --files-changed 2 --override elevated)
+assert_eq "62 human override up (minimal -> elevated) is accepted" "elevated" "$(json_field "$out" tier)"
+assert_eq "63 an accepted override reports overridden=true" "true" "$(json_field "$out" overridden)"
+
+out=$(wf "$SCR11" tier --files-changed 2 --path src/auth/session.rs --override minimal)
+assert_eq "64 override cannot force a risk_paths-triggered elevated tier down" "elevated" "$(json_field "$out" tier)"
+assert_contains "65 a rejected override explains the refusal" "$out" "cannot override down from elevated"
+rm "$SCR11/.tech-decisions.yml"
+
+SCR12="$(mktemp -d)"; new_scratch "$SCR12"
+wf "$SCR12" init --task r2 --pipeline software >/dev/null
+wf "$SCR12" tier --files-changed 2 >/dev/null
+wf "$SCR12" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR12" gate --phase RED --verdict done >/dev/null
+wf "$SCR12" gate --phase GREEN --verdict done >/dev/null
+out=$(wf "$SCR12" gate --phase REFACTOR --verdict CLEAN)
+assert_eq "66 gate on REFACTOR advances to AUDIT even under tier:minimal (the skip is lazy, applied only by next)" "AUDIT" "$(json_field "$out" nextPhase)"
+out=$(wf "$SCR12" next)
+assert_contains "67 next under tier:minimal returns only SECURITY (AUDIT auto-skipped)" "$out" '"phase":"SECURITY"'
+case "$out" in
+  *'"phase":"AUDIT"'*) fail "68 AUDIT must not appear in next's phases under tier:minimal" "found AUDIT in $out" ;;
+  *) pass "68 AUDIT must not appear in next's phases under tier:minimal" ;;
+esac
+out=$(wf "$SCR12" gate --phase SECURITY --verdict CLEAR)
+assert_eq "69 gate on SECURITY advances to DOCUMENT even under tier:minimal (the skip is lazy)" "DOCUMENT" "$(json_field "$out" nextPhase)"
+out=$(wf "$SCR12" next)
+assert_contains "70 next under tier:minimal returns VERIFY directly (DOCUMENT auto-skipped)" "$out" '"phase":"VERIFY"'
+
+echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed scenarios:"

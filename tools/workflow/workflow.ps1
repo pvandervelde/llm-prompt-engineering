@@ -203,7 +203,7 @@ function Invoke-Init {
         }
     }
 
-    $phaseIds = Get-PhaseIds -PipelineBlock $block
+    $phaseIds = @(Get-PhaseIds -PipelineBlock $block)
     if ($phaseIds.Count -eq 0) { Fail "pipeline $pipeline has no phases" }
     $firstPhase = $phaseIds[0]
     $firstAgent = (Get-Phase -PipelineBlock $block -PhaseId $firstPhase).agent
@@ -211,6 +211,36 @@ function Invoke-Init {
     Initialize-StateFile -Path $stateFile -Task $task -Pipeline $pipeline -Branch $branch -FirstPhase $firstPhase
 
     [PSCustomObject]@{ phase = $firstPhase; agent = $firstAgent; branch = $branch; stateFile = $stateFile } | ConvertTo-Json -Compress
+}
+
+# Given a phase (already marked done by the caller) and its parallel
+# siblings, checks whether the whole group has now gated clean and, if so,
+# advances Current Phase past it. Returns a hashtable
+# @{ Advanced = $true/$false; NextId = <id or $null>; OnPass = <value or $null> }.
+function Invoke-GroupAdvanceIfComplete {
+    param($StateFile, $Block, [string]$PhaseId, [string[]]$Parallel, $PhaseBlock)
+    $doneList = @((Get-StatePhasesDone -Path $StateFile) -split ' ' | Where-Object { $_ -ne '' })
+    $group = @($PhaseId) + $Parallel
+    $groupComplete = $true
+    foreach ($id in $group) {
+        if ($doneList -notcontains $id) { $groupComplete = $false }
+    }
+    if (-not $groupComplete) {
+        return @{ Advanced = $false; NextId = $null; OnPass = $null }
+    }
+    $ids = @(Get-PhaseIds -PipelineBlock $Block)
+    $maxIdx = -1
+    foreach ($id in $group) {
+        $idx = [array]::IndexOf($ids, $id)
+        if ($idx -gt $maxIdx) { $maxIdx = $idx }
+    }
+    $nextId = if ($maxIdx -ge 0 -and ($maxIdx + 1) -lt $ids.Count) { $ids[$maxIdx + 1] } else { "DONE" }
+    Clear-StatePhasesDone -Path $StateFile
+    Set-StateField -Path $StateFile -Field "Current Phase" -Value $nextId
+    Set-StateField -Path $StateFile -Field "Status" -Value "in-progress"
+    Clear-StateBlockingIssues -Path $StateFile
+    $onPass = if ($PhaseBlock.onPass) { $PhaseBlock.onPass } else { $null }
+    return @{ Advanced = $true; NextId = $(if ($nextId -ne "DONE") { $nextId } else { $null }); OnPass = $onPass }
 }
 
 function Get-NextPayload {
@@ -229,7 +259,7 @@ function Get-NextPayload {
         $reqVerdict = $phase.skipWhen.reportVerdict
         $watchPath = $phase.skipWhen.reportNewerThan
         if (Test-SpecReviewFresh -Root $Root -RequiredVerdict $reqVerdict -WatchPath $watchPath) {
-            $ids = Get-PhaseIds -PipelineBlock $Block
+            $ids = @(Get-PhaseIds -PipelineBlock $Block)
             $idx = [array]::IndexOf($ids, $currentPhase)
             $nextId = if ($idx + 1 -lt $ids.Count) { $ids[$idx + 1] } else { "DONE" }
             Set-StateField -Path $StateFile -Field "Current Phase" -Value $nextId
@@ -237,9 +267,32 @@ function Get-NextPayload {
         }
     }
 
-    $parallel = Get-PhaseList -Phase $phase -Field "parallelWith"
-    $doneList = @((Get-StatePhasesDone -Path $StateFile) -split ' ' | Where-Object { $_ -ne '' })
+    $parallel = @(Get-PhaseList -Phase $phase -Field "parallelWith")
+    $tier = Get-StateField -Path $StateFile -Field "Tier"
 
+    # Unconditional tier-based skip: mark any not-yet-done member of this
+    # stage as done without invoking its agent, if the recorded tier is in
+    # its skipOnTier list (e.g. AUDIT/DOCUMENT under tier: minimal).
+    if ($tier) {
+        $doneList = @((Get-StatePhasesDone -Path $StateFile) -split ' ' | Where-Object { $_ -ne '' })
+        foreach ($id in (@($currentPhase) + $parallel)) {
+            if ($doneList -contains $id) { continue }
+            $idPhase = Get-Phase -PipelineBlock $Block -PhaseId $id
+            $idSkip = @(Get-PhaseList -Phase $idPhase -Field "skipOnTier")
+            if ($idSkip -contains $tier) {
+                Add-StatePhaseDone -Path $StateFile -PhaseId $id
+            }
+        }
+    }
+
+    # If that skip completed the whole stage, advance and re-resolve from
+    # the new Current Phase.
+    $adv = Invoke-GroupAdvanceIfComplete -StateFile $StateFile -Block $Block -PhaseId $currentPhase -Parallel $parallel -PhaseBlock $phase
+    if ($adv.Advanced) {
+        return Get-NextPayload -Root $Root -Block $Block -StateFile $StateFile
+    }
+
+    $doneList = @((Get-StatePhasesDone -Path $StateFile) -split ' ' | Where-Object { $_ -ne '' })
     $pending = @()
     foreach ($id in (@($currentPhase) + $parallel)) {
         if ($doneList -contains $id) { continue }
@@ -302,7 +355,7 @@ function Invoke-Gate {
 
     $phase = Get-Phase -PipelineBlock $block -PhaseId $phaseId
     if (-not $phase) { Fail "unknown phase: $phaseId" }
-    $pauseWhen = Get-PhaseList -Phase $phase -Field "pauseWhen"
+    $pauseWhen = @(Get-PhaseList -Phase $phase -Field "pauseWhen")
 
     $result = "ADVANCE"
     $blockingReason = ""
@@ -332,31 +385,13 @@ function Invoke-Gate {
     $onPass = $null
 
     if ($result -eq "ADVANCE") {
-        $parallel = Get-PhaseList -Phase $phase -Field "parallelWith"
+        $parallel = @(Get-PhaseList -Phase $phase -Field "parallelWith")
         Add-StatePhaseDone -Path $stateFile -PhaseId $phaseId
-        $doneList = @((Get-StatePhasesDone -Path $stateFile) -split ' ' | Where-Object { $_ -ne '' })
 
-        $group = @($phaseId) + $parallel
-        $groupComplete = $true
-        foreach ($id in $group) {
-            if ($doneList -notcontains $id) { $groupComplete = $false }
-        }
-
-        if ($groupComplete) {
-            $ids = Get-PhaseIds -PipelineBlock $block
-            $maxIdx = -1
-            foreach ($id in $group) {
-                $idx = [array]::IndexOf($ids, $id)
-                if ($idx -gt $maxIdx) { $maxIdx = $idx }
-            }
-            $nextId = if ($maxIdx -ge 0 -and ($maxIdx + 1) -lt $ids.Count) { $ids[$maxIdx + 1] } else { "DONE" }
-
-            Clear-StatePhasesDone -Path $stateFile
-            Set-StateField -Path $stateFile -Field "Current Phase" -Value $nextId
-            Set-StateField -Path $stateFile -Field "Status" -Value "in-progress"
-            Clear-StateBlockingIssues -Path $stateFile
-            if ($nextId -ne "DONE") { $nextPhase = $nextId }
-            if ($phase.onPass) { $onPass = $phase.onPass }
+        $adv = Invoke-GroupAdvanceIfComplete -StateFile $stateFile -Block $block -PhaseId $phaseId -Parallel $parallel -PhaseBlock $phase
+        if ($adv.Advanced) {
+            $nextPhase = $adv.NextId
+            $onPass = $adv.OnPass
         } else {
             $nextPhase = $phaseId
         }
@@ -452,6 +487,80 @@ function Test-PathMatchesDomain {
     return $false
 }
 
+# Reads the top-level (not nested) `risk_paths:` inline list from
+# .tech-decisions.yml. Missing file or key -> empty list.
+function Get-RiskPaths {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return @() }
+    $line = Get-Content $Path | Where-Object { $_ -match '^risk_paths:' } | Select-Object -First 1
+    if (-not $line) { return @() }
+    $raw = ($line -replace '^risk_paths:\s*', '').Trim().TrimStart('[').TrimEnd(']')
+    if (-not $raw) { return @() }
+    return @($raw -split ',' | ForEach-Object { $_.Trim().Trim('"') } | Where-Object { $_ -ne '' })
+}
+
+function Invoke-Tier {
+    param([string[]]$ArgList)
+    $filesChanged = ""; $override = ""; $pipeline = ""
+    $paths = @(); $untested = @()
+    $i = 0
+    while ($i -lt $ArgList.Count) {
+        switch ($ArgList[$i]) {
+            "--files-changed" { $filesChanged = $ArgList[$i + 1]; $i += 2 }
+            "--path" { $paths += $ArgList[$i + 1]; $i += 2 }
+            "--untested-module" { $untested += $ArgList[$i + 1]; $i += 2 }
+            "--override" { $override = $ArgList[$i + 1]; $i += 2 }
+            "--pipeline" { $pipeline = $ArgList[$i + 1]; $i += 2 }
+            default { Fail "tier: unknown argument $($ArgList[$i])" }
+        }
+    }
+    if (-not $filesChanged) { Fail "tier: --files-changed is required" }
+
+    $root = Get-RepoRoot
+    $techFile = Join-Path $root ".tech-decisions.yml"
+    $riskGlobs = @(Get-RiskPaths -Path $techFile)
+    $riskHit = $false
+    foreach ($p in $paths) {
+        if (Test-PathMatchesDomain -Path $p -Globs $riskGlobs) { $riskHit = $true }
+    }
+
+    $filesChangedNum = [int]$filesChanged
+    $natural = ""; $reason = ""
+    if ($riskHit) {
+        $natural = "elevated"; $reason = "touches a risk_paths-tagged path"
+    } elseif ($filesChangedNum -gt 15) {
+        $natural = "elevated"; $reason = "$filesChangedNum files changed (>15)"
+    } elseif ($untested.Count -gt 0) {
+        $natural = "elevated"; $reason = "no existing tests for: $($untested -join ' ')"
+    } elseif ($filesChangedNum -le 3) {
+        $natural = "minimal"; $reason = "$filesChangedNum files changed (<=3), no risk paths, tests exist for every touched module"
+    } else {
+        $natural = "standard"; $reason = "$filesChangedNum files changed, no risk paths or untested modules triggering elevation"
+    }
+
+    $final = $natural
+    $overridden = $false
+    $rejectedOverride = $null
+    if ($override) {
+        if ($riskHit -and $override -ne "elevated") {
+            $rejectedOverride = "cannot override down from elevated: a risk_paths match is a hard rule"
+        } else {
+            $final = $override
+            $overridden = $true
+            $reason = "human override from $natural ($reason)"
+        }
+    }
+
+    $data = Get-PipelinesData -Root $root
+    $resolved = if ($pipeline) { Resolve-NamedPipeline -Data $data -Root $root -Pipeline $pipeline } else { Resolve-ActivePipeline -Data $data -Root $root }
+    if (Test-Path $resolved.StateFile) {
+        Set-StateField -Path $resolved.StateFile -Field "Tier" -Value $final
+        Set-StateField -Path $resolved.StateFile -Field "Tier Reason" -Value $reason
+    }
+
+    [PSCustomObject]@{ tier = $final; reason = $reason; overridden = $overridden; rejectedOverride = $rejectedOverride } | ConvertTo-Json -Compress
+}
+
 function Invoke-Classify {
     param([string[]]$ArgList)
     $task = ""
@@ -491,9 +600,9 @@ function Invoke-Classify {
         return
     }
 
-    $frontendGlobs = Get-ClassifyGlobs -Path $techFile -Domain "frontend"
-    $backendGlobs = Get-ClassifyGlobs -Path $techFile -Domain "backend"
-    $infraGlobs = Get-ClassifyGlobs -Path $techFile -Domain "infrastructure"
+    $frontendGlobs = @(Get-ClassifyGlobs -Path $techFile -Domain "frontend")
+    $backendGlobs = @(Get-ClassifyGlobs -Path $techFile -Domain "backend")
+    $infraGlobs = @(Get-ClassifyGlobs -Path $techFile -Domain "infrastructure")
 
     $verdict = ""
     $pathResults = @()
@@ -686,5 +795,6 @@ switch ($Command) {
         if ($Rest.Count -lt 1 -or $Rest[0] -ne "next") { Fail "tasks: usage: workflow.ps1 tasks next" }
         Invoke-TasksNext
     }
+    "tier" { Invoke-Tier -ArgList $Rest }
     default { Fail "unknown command: $Command" }
 }

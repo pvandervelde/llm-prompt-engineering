@@ -62,6 +62,7 @@ pipelines:
         parallelWith: [SECURITY]
         advance: auto
         pauseWhen: [safety-critical-survivor, formal-counterexample]
+        skipOnTier: [minimal]
 
       - id: SECURITY
         agent: "Security Reviewer"
@@ -72,6 +73,7 @@ pipelines:
       - id: DOCUMENT
         agent: "Doc Writer"
         advance: auto
+        skipOnTier: [minimal]
 
       - id: VERIFY
         agent: "Verifier"

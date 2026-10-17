@@ -246,9 +246,48 @@ cmd_next() {
   cmd_next_inner "$root" "$pfile" "$name" "$state_file"
 }
 
+# Given a phase (already marked done by the caller) and its parallel
+# siblings, checks whether the whole group has now gated clean and, if so,
+# advances Current Phase past it (clearing Phases Done / Blocking Issues,
+# finding the next phase order-independently by highest canonical index).
+# Prints "1|<nextId>|<onPassValue>" if it advanced, "0||" otherwise.
+advance_past_group_if_complete() {
+  local state_file="$1" block="$2" phase="$3" parallel="$4" phase_block="$5"
+  local done_list group_complete=1 id
+  done_list=$(state_phases_done_get "$state_file")
+  for id in "$phase" $parallel; do
+    case " $done_list " in
+      *" $id "*) : ;;
+      *) group_complete=0 ;;
+    esac
+  done
+  if [ "$group_complete" -eq 1 ]; then
+    local ids=() next_id="" max_idx=-1 i g onpass_raw
+    while IFS= read -r line; do ids+=("$line"); done < <(pl_phase_ids "$block")
+    for i in "${!ids[@]}"; do
+      for g in "$phase" $parallel; do
+        if [ "${ids[$i]}" = "$g" ] && [ "$i" -gt "$max_idx" ]; then
+          max_idx="$i"
+        fi
+      done
+    done
+    if [ "$max_idx" -ge 0 ] && [ $((max_idx + 1)) -lt "${#ids[@]}" ]; then
+      next_id="${ids[$((max_idx + 1))]}"
+    fi
+    state_phases_done_clear "$state_file"
+    state_set_field "$state_file" "Current Phase" "${next_id:-DONE}"
+    state_set_field "$state_file" "Status" "in-progress"
+    state_clear_blocking_issues "$state_file"
+    onpass_raw=$(pl_phase_scalar "$phase_block" onPass)
+    echo "1|${next_id}|${onpass_raw}"
+  else
+    echo "0||"
+  fi
+}
+
 cmd_next_inner() {
   local root="$1" pfile="$2" name="$3" state_file="$4"
-  local block current_phase phase_block parallel done_list phases_json first=1 id agent
+  local block current_phase phase_block parallel done_list phases_json first=1 id agent tier
 
   block=$(pl_pipeline_block "$pfile" "$name")
   current_phase=$(state_get_field "$state_file" "Current Phase")
@@ -260,8 +299,37 @@ cmd_next_inner() {
 
   phase_block=$(pl_phase_block "$block" "$current_phase")
   parallel=$(pl_phase_list "$phase_block" parallelWith)
-  done_list=$(state_phases_done_get "$state_file")
+  tier=$(state_get_field "$state_file" "Tier")
 
+  # Unconditional tier-based skip: mark any not-yet-done member of this
+  # stage as done without invoking its agent, if the recorded tier is in
+  # its skipOnTier list (e.g. AUDIT/DOCUMENT under tier: minimal).
+  if [ -n "$tier" ]; then
+    done_list=$(state_phases_done_get "$state_file")
+    for id in "$current_phase" $parallel; do
+      case " $done_list " in
+        *" $id "*) continue ;;
+      esac
+      local id_skip
+      id_skip=$(pl_phase_list "$(pl_phase_block "$block" "$id")" skipOnTier)
+      case " $id_skip " in
+        *" $tier "*) state_phases_done_add "$state_file" "$id" ;;
+      esac
+    done
+  fi
+
+  # If that skip completed the whole stage, advance and re-resolve from the
+  # new Current Phase (handles e.g. a parallel pair where only one member
+  # was tier-skipped and the other already gated clean earlier).
+  local adv_result group_complete next_id onpass_raw
+  adv_result=$(advance_past_group_if_complete "$state_file" "$block" "$current_phase" "$parallel" "$phase_block")
+  IFS='|' read -r group_complete next_id onpass_raw <<< "$adv_result"
+  if [ "$group_complete" = "1" ]; then
+    cmd_next_inner "$root" "$pfile" "$name" "$state_file"
+    return 0
+  fi
+
+  done_list=$(state_phases_done_get "$state_file")
   phases_json="["
   for id in "$current_phase" $parallel; do
     case " $done_list " in
@@ -347,42 +415,13 @@ cmd_gate() {
 
   local next_phase="null" onpass="null"
   if [ "$result" = "ADVANCE" ]; then
-    local parallel done_list group onpass_raw
-    parallel=$(pl_phase_list "$phase_block" parallelWith)
+    local parallel=$(pl_phase_list "$phase_block" parallelWith)
     state_phases_done_add "$state_file" "$phase"
-    done_list=$(state_phases_done_get "$state_file")
-    group_complete=1
-    for id in "$phase" $parallel; do
-      case " $done_list " in
-        *" $id "*) : ;;
-        *) group_complete=0 ;;
-      esac
-    done
-    if [ "$group_complete" -eq 1 ]; then
-      # Find the highest index among {phase, parallel...} in canonical phase
-      # order, then return the phase right after it -- order-independent, so
-      # it doesn't matter whether `phase` or one of its `parallel` siblings
-      # was declared first in pipelines.yml.
-      local ids=() next_id="" max_idx=-1 i g
-      while IFS= read -r line; do ids+=("$line"); done < <(pl_phase_ids "$block")
-      for i in "${!ids[@]}"; do
-        for g in "$phase" $parallel; do
-          if [ "${ids[$i]}" = "$g" ] && [ "$i" -gt "$max_idx" ]; then
-            max_idx="$i"
-          fi
-        done
-      done
-      if [ "$max_idx" -ge 0 ] && [ $((max_idx + 1)) -lt "${#ids[@]}" ]; then
-        next_id="${ids[$((max_idx + 1))]}"
-      fi
-      state_phases_done_clear "$state_file"
-      state_set_field "$state_file" "Current Phase" "${next_id:-DONE}"
-      state_set_field "$state_file" "Status" "in-progress"
-      state_clear_blocking_issues "$state_file"
-      if [ -n "$next_id" ]; then
-        next_phase="\"${next_id}\""
-      fi
-      onpass_raw=$(pl_phase_scalar "$phase_block" onPass)
+    local adv_result next_id group_complete onpass_raw
+    adv_result=$(advance_past_group_if_complete "$state_file" "$block" "$phase" "$parallel" "$phase_block")
+    IFS='|' read -r group_complete next_id onpass_raw <<< "$adv_result"
+    if [ "$group_complete" = "1" ]; then
+      [ -n "$next_id" ] && next_phase="\"${next_id}\""
       [ -n "$onpass_raw" ] && onpass="\"${onpass_raw}\""
     else
       next_phase="\"${phase}\""
@@ -476,6 +515,91 @@ path_matches_domain() {
     esac
   done <<< "$globs"
   return $matched
+}
+
+# Reads the top-level (not nested) `risk_paths:` inline list from
+# .tech-decisions.yml. Missing file or key -> empty list.
+risk_paths_list() {
+  local file="$1"
+  [ -f "$file" ] || return 0
+  local raw
+  raw=$({ grep -m1 -E "^risk_paths:" "$file" || true; } | sed -E "s/^risk_paths: *//")
+  raw="${raw#\[}"
+  raw="${raw%\]}"
+  [ -z "$raw" ] && return 0
+  printf '%s\n' "$raw" | tr ',' '\n' | sed -E 's/^ +//; s/ +$//' | sed -E 's/^"(.*)"$/\1/'
+}
+
+cmd_tier() {
+  local files_changed="" override="" pipeline=""
+  local paths=() untested=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --files-changed) files_changed="$2"; shift 2 ;;
+      --path) paths+=("$2"); shift 2 ;;
+      --untested-module) untested+=("$2"); shift 2 ;;
+      --override) override="$2"; shift 2 ;;
+      --pipeline) pipeline="$2"; shift 2 ;;
+      *) die "tier: unknown argument $1" ;;
+    esac
+  done
+  [ -n "$files_changed" ] || die "tier: --files-changed is required"
+
+  local root tech_file risk_globs p risk_hit=0
+  root="$(repo_root)"
+  tech_file="${root}/.tech-decisions.yml"
+  risk_globs=$(risk_paths_list "$tech_file")
+  for p in "${paths[@]:-}"; do
+    [ -z "$p" ] && continue
+    if path_matches_domain "$p" "$risk_globs"; then
+      risk_hit=1
+    fi
+  done
+
+  local natural="" reason=""
+  if [ "$risk_hit" -eq 1 ]; then
+    natural="elevated"
+    reason="touches a risk_paths-tagged path"
+  elif [ "$files_changed" -gt 15 ] 2>/dev/null; then
+    natural="elevated"
+    reason="${files_changed} files changed (>15)"
+  elif [ "${#untested[@]}" -gt 0 ]; then
+    natural="elevated"
+    reason="no existing tests for: ${untested[*]}"
+  elif [ "$files_changed" -le 3 ] 2>/dev/null; then
+    natural="minimal"
+    reason="${files_changed} files changed (<=3), no risk paths, tests exist for every touched module"
+  else
+    natural="standard"
+    reason="${files_changed} files changed, no risk paths or untested modules triggering elevation"
+  fi
+
+  local final="$natural" overridden="false" rejected="null"
+  if [ -n "$override" ]; then
+    if [ "$risk_hit" -eq 1 ] && [ "$override" != "elevated" ]; then
+      rejected="\"cannot override down from elevated: a risk_paths match is a hard rule\""
+    else
+      final="$override"
+      overridden="true"
+      reason="human override from ${natural} (${reason})"
+    fi
+  fi
+
+  local root2 resolved name state_file
+  if [ -n "$pipeline" ]; then
+    resolved=$(resolve_named_pipeline "$pipeline")
+  else
+    resolved=$(resolve_active_pipeline)
+  fi
+  name=$(echo "$resolved" | cut -d' ' -f1)
+  state_file=$(echo "$resolved" | cut -d' ' -f2-)
+  if [ -f "$state_file" ]; then
+    state_set_field "$state_file" "Tier" "$final"
+    state_set_field "$state_file" "Tier Reason" "$reason"
+  fi
+
+  printf '{"tier":"%s","reason":"%s","overridden":%s,"rejectedOverride":%s}\n' \
+    "$(json_escape "$final")" "$(json_escape "$reason")" "$overridden" "$rejected"
 }
 
 cmd_classify() {
@@ -737,7 +861,7 @@ cmd_tasks_next() {
 
 main() {
   local cmd="${1:-}"
-  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify|context|tasks> [options]"
+  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify|context|tasks|tier> [options]"
   shift
   case "$cmd" in
     init) cmd_init "$@" ;;
@@ -747,6 +871,7 @@ main() {
     classify) cmd_classify "$@" ;;
     tasks) cmd_tasks "$@" ;;
     context) cmd_context "$@" ;;
+    tier) cmd_tier "$@" ;;
     *) die "unknown command: ${cmd}" ;;
   esac
 }

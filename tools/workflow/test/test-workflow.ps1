@@ -418,6 +418,61 @@ Assert-Contains "54 complete also flips the structured task record's status to d
 Assert-Contains "55 complete still flips the prose checkbox too" $content "- [x] c1"
 
 Write-Host ""
+Write-Host "Tier 6 - risk-tier gate"
+
+$scr11 = Join-Path $env:TEMP "wf-ps-t11-$(Get-Random)"
+New-Scratch $scr11
+Invoke-Wf $scr11 @("init", "--task", "r1", "--pipeline", "software") | Out-Null
+
+$r = Invoke-Wf $scr11 @("tier", "--files-changed", "2")
+Assert-Eq "56 tier computes minimal for <=3 files changed, no risk paths" "minimal" (Get-JsonField $r.Output "tier")
+$stateContent = Get-Content (Join-Path $scr11 ".llm/workflow-state.md") -Raw
+Assert-Contains "57 tier writes Tier + Tier Reason into the active state file" $stateContent "**Tier:** minimal"
+
+$r = Invoke-Wf $scr11 @("tier", "--files-changed", "8")
+Assert-Eq "58 tier computes standard for a mid-range file count" "standard" (Get-JsonField $r.Output "tier")
+
+$r = Invoke-Wf $scr11 @("tier", "--files-changed", "20")
+Assert-Eq "59 tier computes elevated for >15 files changed" "elevated" (Get-JsonField $r.Output "tier")
+
+$r = Invoke-Wf $scr11 @("tier", "--files-changed", "2", "--untested-module", "auth")
+Assert-Eq "60 tier computes elevated when a touched module has no existing tests" "elevated" (Get-JsonField $r.Output "tier")
+
+'risk_paths: ["src/auth/**", "src/safety/**"]' | Set-Content (Join-Path $scr11 ".tech-decisions.yml")
+$r = Invoke-Wf $scr11 @("tier", "--files-changed", "2", "--path", "src/auth/session.rs")
+Assert-Eq "61 tier computes elevated when a touched path matches risk_paths, regardless of file count" "elevated" (Get-JsonField $r.Output "tier")
+
+$r = Invoke-Wf $scr11 @("tier", "--files-changed", "2", "--override", "elevated")
+Assert-Eq "62 human override up (minimal -> elevated) is accepted" "elevated" (Get-JsonField $r.Output "tier")
+Assert-Eq "63 an accepted override reports overridden=true" "true" (Get-JsonField $r.Output "overridden")
+
+$r = Invoke-Wf $scr11 @("tier", "--files-changed", "2", "--path", "src/auth/session.rs", "--override", "minimal")
+Assert-Eq "64 override cannot force a risk_paths-triggered elevated tier down" "elevated" (Get-JsonField $r.Output "tier")
+Assert-Contains "65 a rejected override explains the refusal" $r.Output "cannot override down from elevated"
+Remove-Item (Join-Path $scr11 ".tech-decisions.yml")
+
+$scr12 = Join-Path $env:TEMP "wf-ps-t12-$(Get-Random)"
+New-Scratch $scr12
+Invoke-Wf $scr12 @("init", "--task", "r2", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr12 @("tier", "--files-changed", "2") | Out-Null
+Invoke-Wf $scr12 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr12 @("gate", "--phase", "RED", "--verdict", "done") | Out-Null
+Invoke-Wf $scr12 @("gate", "--phase", "GREEN", "--verdict", "done") | Out-Null
+$r = Invoke-Wf $scr12 @("gate", "--phase", "REFACTOR", "--verdict", "CLEAN")
+Assert-Eq "66 gate on REFACTOR advances to AUDIT even under tier:minimal (the skip is lazy, applied only by next)" "AUDIT" (Get-JsonField $r.Output "nextPhase")
+$r = Invoke-Wf $scr12 @("next")
+Assert-Contains "67 next under tier:minimal returns only SECURITY (AUDIT auto-skipped)" $r.Output '"phase":"SECURITY"'
+if ($r.Output.Contains('"phase":"AUDIT"')) {
+    Fail "68 AUDIT must not appear in next's phases under tier:minimal" "found AUDIT in $($r.Output)"
+} else {
+    Pass "68 AUDIT must not appear in next's phases under tier:minimal"
+}
+$r = Invoke-Wf $scr12 @("gate", "--phase", "SECURITY", "--verdict", "CLEAR")
+Assert-Eq "69 gate on SECURITY advances to DOCUMENT even under tier:minimal (the skip is lazy)" "DOCUMENT" (Get-JsonField $r.Output "nextPhase")
+$r = Invoke-Wf $scr12 @("next")
+Assert-Contains "70 next under tier:minimal returns VERIFY directly (DOCUMENT auto-skipped)" $r.Output '"phase":"VERIFY"'
+
+Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="
 if ($script:FailCount -gt 0) {
     Write-Host "Failed scenarios:"

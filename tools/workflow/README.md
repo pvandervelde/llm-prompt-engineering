@@ -145,11 +145,42 @@ If `docs/spec/assertions.md` predates this schema (prose only, no yaml blocks), 
 `tools/workflow/migrate-assertions.ps1`/`.sh` once to back-fill them — idempotent, safe to
 run again on a partially-migrated file.
 
+### `tier --files-changed <n> [--path <p> ...] [--untested-module <m> ...] [--override <tier>] [--pipeline <name>]`
+
+Computes the task's risk tier deterministically (see #61 — three fixed tiers, not AWS's
+weighted composite) and records it on the active pipeline's state file for every later
+`gate`/`next` call to read. Returns:
+
+```json
+{"tier": "elevated", "reason": "touches a risk_paths-tagged path", "overridden": false, "rejectedOverride": null}
+```
+
+- **minimal**: `--files-changed` is `<=3`, no `--path` matches `.tech-decisions.yml`'s
+  `risk_paths:` glob list, and no `--untested-module` was given.
+- **elevated**: any `--path` matches `risk_paths:`, OR `--files-changed` is `>15`, OR any
+  `--untested-module` was given — checked in that order, so the reason reported is always
+  the first one that applies.
+- **standard**: everything else.
+- `--override <tier>`: a human can move the tier up at any time — `overridden` becomes
+  `true` and `reason` records the natural tier it moved from. Moving it *down* out of an
+  **elevated** tier triggered by a `risk_paths` match is refused outright (not just
+  discouraged): `tier` stays `elevated`, `overridden` stays `false`, and
+  `rejectedOverride` carries the refusal message. This is a hard rule, not a default —
+  there is no flag that bypasses it.
+- Requires an active, unfinished pipeline (same resolution as `gate`/`next`/`complete`) —
+  the tier is written into *that* task's state file as `**Tier:**` / `**Tier Reason:**`.
+- A phase's `skipOnTier` list in `pipelines.yml` (see `workflow/README.md`) is checked
+  lazily by `next`, not by `tier` or `gate` — `gate` always advances to the next phase in
+  sequence regardless of tier; it's the *next* `next` call that marks a `skipOnTier`-listed
+  phase done without dispatching its agent, before returning what's still pending. Run
+  `tier` any time before the phase it should affect is first requested via `next`.
+
 ## State file
 
 Both engines read/write a fixed machine-managed header (`**Task:**`, `**Pipeline:**`,
-`**Branch:**`, `**Current Phase:**`, `**Phases Done:**`, `**Status:**`) plus
-`## Existing Work` and `## Blocking Issues` sections they append to. Everything else in the
+`**Branch:**`, `**Current Phase:**`, `**Phases Done:**`, `**Status:**`, plus `**Tier:**` /
+`**Tier Reason:**` once `tier` has been run — see above) plus `## Existing Work` and
+`## Blocking Issues` sections they append to. Everything else in the
 file — `## Standards`, `## Toolchain`, `## Context`, etc. — is written by the Conductor,
 never by this engine; `init` writes those sections as empty placeholders and leaves them
 alone afterward. `## Context`'s internal shape is deliberately not the engine's concern —
