@@ -38,6 +38,12 @@ A one-page reference for using the AI-assisted development framework.
 | `.githooks/*` | Pre-commit checks | Adding new validation |
 | `.github/workflows/*.yml` | CI pipeline | Adding new checks |
 
+`.tech-decisions.yml` also carries `toolchains`, `mutation_targets`, `criticality`,
+`classify`, and `risk_paths` — blocks the workflow engine (`tools/workflow/`) reads
+directly, not just a human. See the table in
+[README.md's Technology Decision Registry section](./README.md#3-technology-decision-registry)
+for what each one does and update when your repo's directory layout changes.
+
 ---
 
 ## 🤖 For AI Agents
