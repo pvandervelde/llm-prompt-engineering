@@ -18,6 +18,7 @@ flowchart TD
         IFace["Interface Designer"]
         DesignRev["Design Reviewer"]
         Doc["Doc Writer"]
+        CodeSurvey["Codebase Surveyor"]
         Plan["Task Planner"]
         SpecRev["Spec Reviewer"]
         CondSW["Conductor — software pipeline"]
@@ -37,6 +38,7 @@ flowchart TD
         DesignRev -->|CLEAR| Plan
         DesignRev -.->|BLOCKED: routes to owning agent| Architect
         Doc --> Plan
+        CodeSurvey --> Plan
         Plan --> SpecRev
         SpecRev -->|CLEAR| CondSW
         SpecRev -.->|BLOCKED: routes to owning agent| Architect
@@ -73,6 +75,11 @@ flowchart TD
   Security Reviewer and Verifier pick up the normal way (as part of the Security Rules
   slice/constraints read already in their own Collaboration blocks) the next time either
   runs — no separate wiring needed.
+- **Codebase Surveyor** (see #64) feeds Task Planner for both project types (the edge
+  above is drawn once since Planner is one agent serving both subgraphs). It's a
+  durable-artifact producer, not a gate: Planner reads `.llm/codebase-survey.md` if it's
+  fresh (checked via a recorded git commit timestamp, not a new state file) and only asks
+  for a re-run when it's stale or missing.
 - **Requirements Analyst** (see #62) is the true entry point of the software pipeline: it
   elicits measurable acceptance criteria, explicit out-of-scope boundaries, and open
   questions into `docs/spec/requirements.md` before the Architect starts proposing *how*.

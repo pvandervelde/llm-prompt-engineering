@@ -51,41 +51,23 @@ Read `.tech-decisions.yml` (testing, code quality, security, docs standards), AG
 
 **Infrastructure projects:** Read `./docs/spec/` (README, conventions, module-registry, modules/, assertions, architecture).
 
-### 2b. **Survey Existing Codebase**
+### 2b. **Read the Codebase Survey**
 
-Scan package manifest (dependencies), source tree (patterns, naming conventions), partial implementations, and configuration (`config/`, `.env.example`, feature flags). Record findings in **"Codebase Context"** section in tasks.md (between `Project Context` and `Shared Types Registry`):
+The dependency/pattern/partial-implementation scan this step used to do inline now lives
+in `.llm/codebase-survey.md`, produced by the **Codebase Surveyor** (see #64) — you no
+longer scan the codebase yourself.
 
-```markdown
-## Codebase Context
+Read `.llm/codebase-survey.md` if it exists, and check its freshness: compare its
+`Surveyed at timestamp` field against a fresh `git log -1 --format=%ct -- <the same
+Surveyed paths field's paths>` — if the fresh value is newer, a commit touched those paths
+after the survey was taken and it's stale.
 
-> Surveyed by planner — gives coder orientation before implementing
-
-### Dependencies in Use
-| Capability         | Package / Library       | Notes                                      |
-|--------------------|-------------------------|--------------------------------------------|
-| HTTP server        | express ^4.18           | Use existing middleware chain in src/app.ts |
-| Database ORM       | prisma ^5.0             | Schema at prisma/schema.prisma              |
-| Validation         | zod ^3.22               | All input validation uses zod schemas       |
-| Testing            | vitest ^1.0             | Unit tests; use `createMockContext()` helper |
-| Logging            | pino ^8.0               | Logger created in src/logger.ts             |
-
-### Existing Patterns
-- **Error handling**: All domain functions return `Result<T, AppError>` (see src/core/result.ts)
-- **Repository pattern**: Repositories in `src/*/repository.ts`; always accept a `db: PrismaClient` argument
-- **Validation**: Input validated with zod at HTTP boundary; never re-validate inside domain functions
-- **Tests**: Colocated with source (`*.test.ts`); use `src/test-helpers/` for shared mocks
-
-### Concepts Already Implemented
-- `UserRepository` — full CRUD (src/users/repository.ts)
-- `AuthService` — login/logout/session refresh (src/auth/service.ts)
-- `Result<T, E>` type and helpers — (src/core/result.ts)
-- Email validation — zod schema in src/core/schemas.ts
-
-### Partial Implementations / Stubs
-- `OrderService.calculate()` — stub at src/orders/service.ts:42; tests already written in src/orders/service.test.ts
-```
-
-> Only document what you find. Leave sections empty rather than guessing.
+If the survey is **missing or stale**, stop and tell the user (or whoever is orchestrating
+this handoff) to run the Codebase Surveyor first, then resume — do not fall back to
+scanning the codebase yourself. If it's fresh, copy its four sections (Dependencies in Use,
+Existing Patterns, Concepts Already Implemented, Partial Implementations / Stubs)
+**verbatim** into tasks.md's `## Codebase Context` section (between `Project Context` and
+`Shared Types Registry`) — you are relaying a durable artifact, not re-deriving it.
 
 ### 3. Task Breakdown
 
@@ -154,7 +136,7 @@ Save `./.llm/tasks.md` with appropriate format per Section 4. Your task list is 
 
 ## Collaboration
 
-- **Receives from**: Interface Designer (`docs/spec/interfaces/*.md`, software tasks, gated on the Design Reviewer's `CLEAR` verdict), Doc Writer (`docs-feedback.md`, draft docs), Infrastructure Designer (Terraform module contracts, infrastructure tasks), Spec Tester (spec tests, when that path is used instead of Doc Writer DRAFT mode)
+- **Receives from**: Interface Designer (`docs/spec/interfaces/*.md`, software tasks, gated on the Design Reviewer's `CLEAR` verdict), Doc Writer (`docs-feedback.md`, draft docs), Infrastructure Designer (Terraform module contracts, infrastructure tasks), Spec Tester (spec tests, when that path is used instead of Doc Writer DRAFT mode), Codebase Surveyor (`.llm/codebase-survey.md`, both project types)
 - **Works with**: none
 - **Hands off to**: Spec Reviewer (`.llm/tasks.md`, software tasks); Conductor (`.llm/tasks.md`, infrastructure tasks — no Spec Reviewer gate on this path); Issue Tracker (published GitHub issues, optional)
 
