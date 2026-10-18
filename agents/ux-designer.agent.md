@@ -157,7 +157,7 @@ Does not depend on Interface Designer — component contracts are inputs to that
 
 ## Collaboration
 
-- **Receives from**: Software Architect (`architecture.md`, `constraints.md`)
+- **Receives from**: Software Architect (`architecture.md`, `constraints.md`); Design Reviewer (`BLOCKED` findings routed back for the owning section)
 - **Works with**: Interface Designer (component contracts must stay consistent with type definitions)
 - **Hands off to**: Interface Designer (`docs/spec/ux/*.md` — flows, screens, component contracts, `ux-assertions.md`)
 

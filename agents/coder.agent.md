@@ -279,7 +279,7 @@ All standards in `.tech-decisions.yml` (framework, tooling, code quality limits,
 
 ## Collaboration
 
-- **Receives from**: Conductor (test suite, Standards block, catalog slice)
+- **Receives from**: Conductor (test suite, Standards block, catalog slice); optionally, Issue Tracker (published issue, when tasks are tracked as GitHub Issues)
 - **Works with**: none
 - **Hands off to**: Conductor (implementation), which dispatches Refactor next
 

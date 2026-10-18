@@ -47,10 +47,10 @@ This project follows a generalized form of **crash-only software**: any resource
 
 | Module Class | Tiers Required |
 |---|---|
-| Safety-critical (STO, brake authority, Safety MCU FSM) | 1 + 2 + 3 |
-| Protocol parsers (CAN FD frames, firmware update payloads) | 1 + 2 + 3 |
-| Domain business logic (GateKeeper, SwitchYard authority) | 1 + 2 + 3 |
-| API boundary / authentication (queue_keeper HMAC, JWT validation) | 1 + 2 + 3 |
+| Safety-critical (e.g. an emergency-stop interlock or a safety-rated state machine) | 1 + 2 + 3 |
+| Protocol parsers (e.g. a wire-format decoder or firmware-update payload parser) | 1 + 2 + 3 |
+| Domain business logic (e.g. an order-matching engine or an access-control authority) | 1 + 2 + 3 |
+| API boundary / authentication (e.g. request signature/HMAC validation, JWT validation) | 1 + 2 + 3 |
 | Infrastructure adapters (repositories, stores) | 1 + 2 + Contract tests |
 | External-resource lifecycle (auth refresh, connection reestablishment, config/cert reload) | 1 + 2 + Recovery Path Convergence tests, mandatory regardless of module class |
 | Utility / non-critical | 1 + 2 |
@@ -118,7 +118,7 @@ Use `proptest` to verify invariants across generated input ranges. Property test
 
 #### State Machine Property Tests
 
-For FSM-heavy modules (Safety MCU, GateKeeper transitions), verify that no sequence of valid inputs can lead to an invalid state
+For FSM-heavy modules (e.g. a safety interlock controller or an order-lifecycle state machine), verify that no sequence of valid inputs can lead to an invalid state
 
 ### 8. **Write Contract Tests for Interface Abstractions**
 

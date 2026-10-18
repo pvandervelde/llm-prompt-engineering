@@ -158,7 +158,7 @@ When the spec is complete, produce a summary listing: spec files created with on
 
 ## Collaboration
 
-- **Receives from**: Requirements Analyst (`docs/spec/requirements.md`, seeded `docs/spec/assumptions.md`)
+- **Receives from**: Requirements Analyst (`docs/spec/requirements.md`, seeded `docs/spec/assumptions.md`); Design Reviewer (`BLOCKED` findings routed back for the owning section)
 - **Works with**: UX Designer (shared ownership of Frontend-facing scope)
 - **Hands off to**: Interface Designer (`docs/spec/architecture.md`, `responsibilities.md`, `vocabulary.md`, `constraints.md`), UX Designer (`docs/spec/architecture.md`, `constraints.md` — when the task touches Frontend)
 

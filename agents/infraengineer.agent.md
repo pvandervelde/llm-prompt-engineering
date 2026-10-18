@@ -140,7 +140,7 @@ If all tasks completed, provide summary to user and note infrastructure is ready
 
 ## Collaboration
 
-- **Receives from**: Conductor (task, Standards block)
+- **Receives from**: Conductor (task, Standards block); optionally, Issue Tracker (published issue, when tasks are tracked as GitHub Issues)
 - **Works with**: none
 - **Hands off to**: Conductor (implementation), which dispatches Security Reviewer next
 

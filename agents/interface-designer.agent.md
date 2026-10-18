@@ -124,7 +124,7 @@ After feedback: update specific interface documents, regenerate affected stubs, 
 
 ## Collaboration
 
-- **Receives from**: Software Architect (`architecture.md`), UX Designer (`docs/spec/ux/*.md`, when the task touches Frontend)
+- **Receives from**: Software Architect (`architecture.md`), UX Designer (`docs/spec/ux/*.md`, when the task touches Frontend); Design Reviewer (`BLOCKED` findings routed back for the owning section)
 - **Works with**: none beyond its receives/hands-off edges
 - **Hands off to**: Design Reviewer (`docs/spec/interfaces/*.md`) for the pre-code gate; on `CLEAR`, Doc Writer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode), Task Planner (`docs/spec/interfaces/*.md`, `assertions.md`), Spec Tester (`docs/spec/interfaces/*.md`, `assertions.md`)
 
