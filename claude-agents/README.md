@@ -9,6 +9,14 @@ The Conductor is the only agent that may invoke another agent directly (via the 
 tool) — the same agent drives both pipelines below. Every edge below is a logical artifact
 handoff, not a literal subagent call made by the producing agent itself.
 
+This diagram shows *who hands off what to whom* — it deliberately omits gates, pauses, and
+parallel-stage joins, since those are the engine's concern, not an agent-to-agent
+relationship. For the phase-execution shape the workflow engine actually enforces
+(including `PAUSE`/skip behavior), see
+[workflow/README.md's Phase Flow diagram](../workflow/README.md#phase-flow). For how the
+Conductor actually drives a task through the CLI step by step, see
+[tools/workflow/README.md's Task Lifecycle diagram](../tools/workflow/README.md#task-lifecycle).
+
 ```mermaid
 flowchart TD
     subgraph Software Pipeline

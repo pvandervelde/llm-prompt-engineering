@@ -10,6 +10,105 @@ can be resumed with the other.
 All commands print one JSON object to stdout. Errors print `{"error": "..."}` and exit
 non-zero.
 
+## How It Fits Together
+
+See also [claude-agents/README.md](../../claude-agents/README.md) for the agent roster
+and handoff graph, and [workflow/README.md](../../workflow/README.md) for the phase graph
+`pipelines.yml` encodes — this diagram is one level lower: the files and processes that
+make the engine itself run.
+
+```mermaid
+flowchart LR
+    subgraph Inputs
+        PY["workflow/pipelines.yml<br/>(phase graph, gates, dispatch names)"]
+        TD[".tech-decisions.yml<br/>(toolchains, mutation_targets,<br/>criticality, classify, risk_paths)"]
+        AS["docs/spec/assertions.md<br/>(YAML blocks, #59)"]
+        TK[".llm/tasks.md<br/>(YAML blocks, #60)"]
+    end
+
+    subgraph Engine["Workflow Engine (either, same contract)"]
+        SH["workflow.sh<br/>+ lib/*.sh"]
+        PS["workflow.ps1<br/>+ lib/*.ps1"]
+    end
+
+    WS[(".llm/workflow-state.md<br/>or .llm/infra-workflow-state.md")]
+
+    PY --> SH
+    PY --> PS
+    TD --> SH
+    TD --> PS
+    AS -.->|context| SH
+    AS -.->|context| PS
+    TK -.->|"tasks next"| SH
+    TK -.->|"tasks next"| PS
+
+    SH <--> WS
+    PS <--> WS
+
+    Cond["Conductor<br/>(claude-agents/conductor.md,<br/>agents/conductor.agent.md)"]
+    Sub["Subagents<br/>(Tester, Coder, QA Engineer, ...)"]
+
+    Cond -->|"init / next / gate /<br/>tier / complete / ..."| SH
+    Cond -->|"same CLI calls"| PS
+    Cond -->|"dispatch, with pre-extracted context"| Sub
+    Sub -->|"verdict + findings"| Cond
+```
+
+A task started with one engine can be resumed with the other mid-pipeline — both read and
+write the identical state-file format, and neither cares which one wrote what's already
+there. Nothing here talks to GitHub or any other external system directly: `onPass:
+open-pr` is a value the engine returns, not an action it performs — the Conductor is the
+one that opens the PR.
+
+## Task Lifecycle
+
+One task, start to finish, from the Conductor's point of view:
+
+```mermaid
+sequenceDiagram
+    participant H as Human
+    participant C as Conductor
+    participant W as workflow CLI
+    participant S as State file
+    participant A as Subagent
+
+    H->>C: "implement task #42"
+    C->>W: init --task 42 --pipeline software
+    W->>S: write skeleton, resolve branch
+    W-->>C: "{phase, agent, branch, stateFile}"
+    C->>S: write Standards / Toolchain / Context (once, skipped on resume)
+    C->>W: tier --files-changed N [--path ...] [--untested-module ...]
+    W->>S: write Tier, Tier Reason
+    W-->>C: "{tier, reason, overridden, rejectedOverride}"
+
+    loop until status is complete
+        C->>W: next
+        W->>S: read Current Phase, Phases Done, Tier
+        W-->>C: "{phases: [{phase, agent}, ...]}"
+        par for each phase returned (more than one only in a parallel stage)
+            C->>A: dispatch with pre-extracted context
+            A-->>C: verdict + findings
+            C->>W: gate --phase X --verdict V [--reason ...] [--actual N --target N]
+            W->>S: record result; advance past the phase, or pause
+            W-->>C: "{result: ADVANCE | PAUSE | FAIL, nextPhase, onPass}"
+        end
+        alt result is PAUSE or FAIL
+            C->>H: relay the finding and the blocking reason
+            H->>C: resolve, then resume
+        end
+    end
+
+    C->>W: complete --task 42
+    W->>S: set Status: complete; flip the task's checkbox/status
+    W-->>C: "{status: complete, taskMarked}"
+    C->>H: summary, and the PR link if the last onPass was open-pr
+```
+
+`tier` is optional and can run again later if the task's scope turns out to have grown —
+see `tier`'s own section below for the override rules. Every other call in the loop is
+mandatory: the Conductor never advances `Current Phase` itself, and never dispatches a
+phase `next` didn't just return.
+
 ## Commands
 
 ### `init --task <id> --pipeline <software|infrastructure> [--slug <slug>]`

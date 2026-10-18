@@ -8,6 +8,76 @@ dispatch table that used to live as prose inside `claude-agents/tech-lead.md` an
 `claude-agents/conductor.md`, which reads this schema via the engine rather than encoding
 it itself.
 
+## Phase Flow
+
+For *who hands off which artifact to whom*, see
+[claude-agents/README.md's Agent Pipeline Graph](../claude-agents/README.md) instead —
+this diagram is the engine's phase-execution shape, not the agent roster.
+
+The diagram below is the actual shape `pipelines.yml` encodes today — every solid arrow is
+an `advance: auto` transition (or a satisfied `skipWhen`), every dashed arrow is a
+`pauseWhen` reason routing to the human instead of auto-advancing, and `AUDIT`/`SECURITY`
+fork from `REFACTOR` and join back into `DOCUMENT` because they share a `parallelWith`
+entry — `workflow next` won't return the phase after either until *both* have gated clean.
+
+```mermaid
+flowchart TD
+    subgraph Software Pipeline
+        SRG{{"SPEC_REVIEW_GATE<br/>(Spec Reviewer)"}}
+        RED["RED<br/>(Tester)"]
+        GREEN["GREEN<br/>(Coder)"]
+        REFACTOR["REFACTOR<br/>(Refactor)"]
+        AUDIT["AUDIT<br/>(QA Engineer)"]
+        SECURITY["SECURITY<br/>(Security Reviewer)"]
+        DOCUMENT["DOCUMENT<br/>(Doc Writer)"]
+        VERIFY["VERIFY<br/>(Verifier)"]
+        PR1(["Open PR"])
+
+        SRG -->|"ADVANCE, or skipWhen already holds"| RED
+        SRG -.->|"PAUSE: blocked"| Human
+        RED --> GREEN
+        RED -.->|"PAUSE: spec-gap"| Human
+        GREEN --> REFACTOR
+        REFACTOR --> AUDIT
+        REFACTOR --> SECURITY
+        REFACTOR -.->|"PAUSE: blocked"| Human
+        AUDIT -.->|"PAUSE: safety-critical-survivor,<br/>formal-counterexample"| Human
+        SECURITY -.->|"PAUSE: critical-finding"| Human
+        AUDIT --> DOCUMENT
+        SECURITY --> DOCUMENT
+        DOCUMENT --> VERIFY
+        VERIFY -.->|"PAUSE: fail"| Human
+        VERIFY -->|"ADVANCE (onPass: open-pr)"| PR1
+    end
+
+    subgraph Infrastructure Pipeline
+        IMPLEMENT["IMPLEMENT<br/>(Infrastructure Engineer)"]
+        SECURITY2["SECURITY<br/>(Security Reviewer)"]
+        VERIFY2["VERIFY<br/>(Verifier)"]
+        PR2(["Open PR"])
+
+        IMPLEMENT --> SECURITY2
+        SECURITY2 -.->|"PAUSE: critical-finding"| Human
+        SECURITY2 --> VERIFY2
+        VERIFY2 -.->|"PAUSE: fail"| Human
+        VERIFY2 -->|"ADVANCE (onPass: open-pr)"| PR2
+    end
+
+    Human[["Human<br/>(resolves the blocker; the Conductor then resumes from next)"]]
+```
+
+**Shortcuts not drawn above** (both skip invoking the phase's `agent` entirely, not just
+auto-advancing past it):
+
+- `SPEC_REVIEW_GATE` is skipped — straight to `RED` — when a fresh `CLEAR` spec-review
+  report already exists (`skipWhen`, see below).
+- Under `tier: minimal` (see `workflow tier` in `tools/workflow/README.md`), `AUDIT` and
+  `DOCUMENT` are each marked done without dispatching their agent (`skipOnTier`). This is
+  checked lazily by `next`, not by `gate` — a `gate` call on `REFACTOR` still advances
+  `Current Phase` to `AUDIT` in the state file exactly as drawn; it's the *following*
+  `next` call that notices the tier, marks `AUDIT` done unseen, and returns `SECURITY`
+  (or `VERIFY`, once `DOCUMENT` is skipped the same way) instead.
+
 ## Top-level shape
 
 ```yaml
