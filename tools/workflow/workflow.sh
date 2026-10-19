@@ -167,6 +167,23 @@ cmd_init() {
       ;;
   esac
 
+  # Resuming an already-initialized task: never re-run state_init, which
+  # would unconditionally truncate the file and reset Current Phase, Phases
+  # Done, Tier, Existing Work, and Blocking Issues back to a blank slate --
+  # exactly the state Conductor Step 1 calls `init` to preserve on resume.
+  if [ -f "$state_file" ] && [ "$(state_get_field "$state_file" "Task")" = "$task" ]; then
+    local resume_phase resume_agent
+    resume_phase=$(state_get_field "$state_file" "Current Phase")
+    if [ "$resume_phase" = "DONE" ]; then
+      resume_agent=""
+    else
+      resume_agent=$(pl_phase_scalar "$(pl_phase_block "$block" "$resume_phase")" agent)
+    fi
+    printf '{"phase":"%s","agent":"%s","branch":"%s","stateFile":"%s"}\n' \
+      "$(json_escape "$resume_phase")" "$(json_escape "$resume_agent")" "$(json_escape "$branch")" "$(json_escape "$state_file")"
+    return 0
+  fi
+
   local first_phase first_agent
   first_phase=$(pl_phase_ids "$block" | head -n1)
   [ -n "$first_phase" ] || die "pipeline ${pipeline} has no phases"
@@ -312,9 +329,10 @@ cmd_next_inner() {
       esac
       local id_skip
       id_skip=$(pl_phase_list "$(pl_phase_block "$block" "$id")" skipOnTier)
-      case " $id_skip " in
-        *" $tier "*) state_phases_done_add "$state_file" "$id" ;;
-      esac
+      if pl_list_contains "$id_skip" "$tier"; then
+        state_phases_done_add "$state_file" "$id"
+        state_append_existing_work "$state_file" "${id}: skipped (tier: ${tier}, skipOnTier) -- no agent dispatched, no evidence produced for this phase"
+      fi
     done
   fi
 
@@ -401,13 +419,11 @@ cmd_gate() {
   if [ "$result" = "ADVANCE" ]; then
     for r in "${reasons[@]:-}"; do
       [ -z "$r" ] && continue
-      case " $pausewhen " in
-        *" $r "*)
-          result="PAUSE"
-          blocking_reason="$r"
-          break
-          ;;
-      esac
+      if pl_list_contains "$pausewhen" "$r"; then
+        result="PAUSE"
+        blocking_reason="$r"
+        break
+      fi
     done
   fi
 
@@ -497,6 +513,7 @@ classify_globs() {
     found && /^[A-Za-z]/ { exit }
     found { print }
   ' "$file" | { grep -m1 -E "^  ${domain}:" || true; } | sed -E "s/^  ${domain}: *//")
+  raw=$(printf '%s' "$raw" | sed -E 's/ +#.*$//; s/ +$//')
   raw="${raw#\[}"
   raw="${raw%\]}"
   [ -z "$raw" ] && return 0
@@ -524,6 +541,7 @@ risk_paths_list() {
   [ -f "$file" ] || return 0
   local raw
   raw=$({ grep -m1 -E "^risk_paths:" "$file" || true; } | sed -E "s/^risk_paths: *//")
+  raw=$(printf '%s' "$raw" | sed -E 's/ +#.*$//; s/ +$//')
   raw="${raw#\[}"
   raw="${raw%\]}"
   [ -z "$raw" ] && return 0

@@ -89,7 +89,16 @@ Generate `./.llm/tasks.md` markdown file.
 
 **Task structure:** each parent task gets a fenced YAML block (machine-readable — `workflow
 tasks next` queries this, not the checkbox tree) immediately after its checkbox line, kept
-in sync with the prose below it:
+in sync with the prose below it. **Never put a trailing comment on a field's own line** —
+both engines' parsers grab everything after the colon as the literal value, so a comment
+there becomes part of the value (an empty `deps: []  # ...` is parsed as a non-empty,
+permanently-unsatisfiable dependency list, and the task never comes up as ready). Put any
+explanation on its own line above the block, as below, never inline on the value:
+
+- `deps`: ids of parent tasks this one depends on, e.g. `["0.0"]`; `[]` if none
+- `criticality`: one of the classes in `.tech-decisions.yml`'s `criticality:` block
+- `status`: one of `ready` | `blocked` | `in-progress` | `done`
+- `domain`: one of `frontend` | `backend` | `infrastructure`
 
 ````
 - [ ] 1.0 Title
@@ -97,11 +106,11 @@ in sync with the prose below it:
 ```yaml
 id: "1.0"
 title: "Title"
-deps: []  # ids of parent tasks this one depends on, e.g. ["0.0"]; [] if none
-criticality: domain_logic  # one of the classes in .tech-decisions.yml's criticality: block
-specRefs: ["docs/spec/interfaces/auth-operations.md"]  # [] if none
-status: ready  # ready | blocked | in-progress | done
-domain: backend  # frontend | backend | infrastructure
+deps: []
+criticality: domain_logic
+specRefs: ["docs/spec/interfaces/auth-operations.md"]
+status: ready
+domain: backend
 ```
 
   - Context: spec refs, file locations, dependencies, constraints

@@ -27,9 +27,15 @@ point it's stale and someone needs to run you again.
 ### 1. Determine Surveyed Paths
 
 Default to the project's source roots (`src/`, `lib/`, `infra/modules/`, etc. — whichever
-exist). If the prompt names a narrower scope, survey only that. Record the exact path list
-you used — the staleness check later depends on checking git history for precisely these
-paths, not a different or looser set.
+exist) **plus every package manifest you're about to read in Step 2** (`package.json`,
+`Cargo.toml`, `go.mod`, `requirements.txt`/`pyproject.toml`, etc. — whichever exist,
+individually, not a directory glob). Leaving manifests out of this list is the one mistake
+that silently breaks staleness detection: a commit that only bumps a dependency version
+touches none of the source roots, so the survey would stay "fresh" while Planner keeps
+relaying now-outdated dependency/version information. If the prompt names a narrower
+scope, survey only that, but still include whichever manifests fall under it. Record the
+exact path list you used — the staleness check later depends on checking git history for
+precisely these paths, not a different or looser set.
 
 ### 2. Scan Dependencies
 
@@ -68,7 +74,7 @@ honest result — do not fill one with a guess to avoid leaving it blank.
 ```markdown
 # Codebase Survey
 
-**Surveyed paths:** src/, infra/modules/
+**Surveyed paths:** src/, infra/modules/, package.json, Cargo.toml
 **Surveyed at commit:** <short hash from `git rev-parse --short HEAD`, informational only>
 **Surveyed at timestamp:** <output of `git log -1 --format=%ct -- <surveyed paths>`>
 

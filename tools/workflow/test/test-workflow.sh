@@ -448,6 +448,36 @@ out=$(wf "$SCR12" gate --phase SECURITY --verdict CLEAR)
 assert_eq "69 gate on SECURITY advances to DOCUMENT even under tier:minimal (the skip is lazy)" "DOCUMENT" "$(json_field "$out" nextPhase)"
 out=$(wf "$SCR12" next)
 assert_contains "70 next under tier:minimal returns VERIFY directly (DOCUMENT auto-skipped)" "$out" '"phase":"VERIFY"'
+assert_contains "70b a skipOnTier skip leaves an audit-trail entry Verifier can recognize as exempt" "$(cat "$SCR12/.llm/workflow-state.md")" "AUDIT: skipped (tier: minimal, skipOnTier)"
+
+echo
+echo "Tier 7 - code-review fixes (multi-reason pauseWhen, init resume, skip audit trail)"
+
+SCR13="$(mktemp -d)"; new_scratch "$SCR13"
+wf "$SCR13" init --task p1 --pipeline software >/dev/null
+wf "$SCR13" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR13" gate --phase RED --verdict done >/dev/null
+wf "$SCR13" gate --phase GREEN --verdict done >/dev/null
+wf "$SCR13" gate --phase REFACTOR --verdict CLEAN >/dev/null
+out=$(wf "$SCR13" gate --phase AUDIT --verdict BLOCKED --reason safety-critical-survivor)
+assert_eq "71 AUDIT pauses on the FIRST of its two pauseWhen reasons (safety-critical-survivor)" "PAUSE" "$(json_field "$out" result)"
+
+SCR14="$(mktemp -d)"; new_scratch "$SCR14"
+wf "$SCR14" init --task p2 --pipeline software >/dev/null
+wf "$SCR14" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR14" gate --phase RED --verdict done >/dev/null
+wf "$SCR14" gate --phase GREEN --verdict done >/dev/null
+wf "$SCR14" gate --phase REFACTOR --verdict CLEAN >/dev/null
+out=$(wf "$SCR14" gate --phase AUDIT --verdict BLOCKED --reason formal-counterexample)
+assert_eq "72 AUDIT pauses on the SECOND of its two pauseWhen reasons (formal-counterexample)" "PAUSE" "$(json_field "$out" result)"
+
+SCR15="$(mktemp -d)"; new_scratch "$SCR15"
+wf "$SCR15" init --task p3 --pipeline software >/dev/null
+wf "$SCR15" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR15" gate --phase RED --verdict done >/dev/null
+out=$(wf "$SCR15" init --task p3 --pipeline software)
+assert_eq "73 re-running init on an in-progress task resumes (returns the current phase, not the first)" "GREEN" "$(json_field "$out" phase)"
+assert_contains "74 re-running init does not reset Current Phase in the state file" "$(cat "$SCR15/.llm/workflow-state.md")" "**Current Phase:** GREEN"
 
 echo
 echo "=== Results: $PASS passed, $FAIL failed ==="

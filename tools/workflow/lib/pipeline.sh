@@ -72,6 +72,20 @@ pl_phase_list() {
   printf '%s\n' "$raw" | tr ',' '\n' | sed -E 's/^ +//; s/ +$//'
 }
 
+# True (exit 0) if $2 is an exact element of the newline-separated list $1
+# (as pl_phase_list returns it). Deliberately not `case " $1 " in *" $2 "*)`
+# -- that pattern silently fails to match ANY element of a multi-item list,
+# since embedded newlines (not spaces) separate the items, so neither the
+# leading- nor trailing-space requirement is ever satisfied for an interior
+# element.
+pl_list_contains() {
+  local list="$1" item="$2" line
+  while IFS= read -r line; do
+    [ "$line" = "$item" ] && return 0
+  done <<< "$list"
+  return 1
+}
+
 # Scalar value nested one level under skipWhen: within a phase block.
 pl_phase_skipwhen() {
   local phase_block="$1" key="$2"

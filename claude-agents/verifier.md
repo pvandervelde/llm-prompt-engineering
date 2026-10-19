@@ -81,6 +81,7 @@ All context required for verification is pre-injected above:
 * `## Standards` — quality and commit standards to verify against
 * `## Relevant Assertions` — the behavioral assertions this implementation must satisfy
 * `## Interface Contract` — the type signatures and contracts the implementation must honour
+* `## Security Rules` — implementation-time rules from `docs/spec/security-controls.md`, plus any `## Compliance: ...` rules from `docs/spec/constraints.md` (see #63) that apply to this task's module. Confirm the diff honors every `Rule`/`Check` pair under a `## Compliance: ...` heading here — a violation is **Critical**, same severity as a Security Reviewer finding, not a style note.
 * `## Existing Work` — artefact paths and claimed scores from all preceding phases (test counts, mutation report path, fuzz artefact path, formal verification report path, security findings) — **paths and raw claimed values only, not a pre-digested verdict.** See 2a below: you re-derive the verdict yourself.
 
 Do not read AGENTS.md, .tech-decisions.yml, docs/spec/assertions.md, .llm/tasks.md, or docs/catalog.md.
@@ -91,6 +92,13 @@ Read only if a specific check requires content not present above:
 * `docs/catalog.md` — only for catalog currency check, to compare against the diff
 
 ### 2a. **Re-derive Audit Evidence** — Critical gate
+
+**Exemption:** if `## Existing Work` contains an entry reading `AUDIT: skipped (tier:
+minimal, skipOnTier)`, this task's risk tier exempted AUDIT entirely — the engine marked
+it done without dispatching QA Engineer, so no mutation/fuzz/formal evidence exists for
+this commit by design, not by omission. Skip every bullet below for this task; do not
+treat the missing report as a Critical finding. Any other tier (`standard`, `elevated`,
+or no recorded tier at all) gets the full check with no exemption.
 
 Do not trust the claimed scores in `## Existing Work`. Read the referenced artefact files directly and re-compute:
 

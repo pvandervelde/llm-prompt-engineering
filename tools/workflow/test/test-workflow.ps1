@@ -473,6 +473,41 @@ $r = Invoke-Wf $scr12 @("gate", "--phase", "SECURITY", "--verdict", "CLEAR")
 Assert-Eq "69 gate on SECURITY advances to DOCUMENT even under tier:minimal (the skip is lazy)" "DOCUMENT" (Get-JsonField $r.Output "nextPhase")
 $r = Invoke-Wf $scr12 @("next")
 Assert-Contains "70 next under tier:minimal returns VERIFY directly (DOCUMENT auto-skipped)" $r.Output '"phase":"VERIFY"'
+$stateContent12 = Get-Content (Join-Path $scr12 ".llm/workflow-state.md") -Raw
+Assert-Contains "70b a skipOnTier skip leaves an audit-trail entry Verifier can recognize as exempt" $stateContent12 "AUDIT: skipped (tier: minimal, skipOnTier)"
+
+Write-Host ""
+Write-Host "Tier 7 - code-review fixes (multi-reason pauseWhen, init resume, skip audit trail)"
+
+$scr13 = Join-Path $env:TEMP "wf-ps-t13-$(Get-Random)"
+New-Scratch $scr13
+Invoke-Wf $scr13 @("init", "--task", "p1", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr13 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr13 @("gate", "--phase", "RED", "--verdict", "done") | Out-Null
+Invoke-Wf $scr13 @("gate", "--phase", "GREEN", "--verdict", "done") | Out-Null
+Invoke-Wf $scr13 @("gate", "--phase", "REFACTOR", "--verdict", "CLEAN") | Out-Null
+$r = Invoke-Wf $scr13 @("gate", "--phase", "AUDIT", "--verdict", "BLOCKED", "--reason", "safety-critical-survivor")
+Assert-Eq "71 AUDIT pauses on the FIRST of its two pauseWhen reasons (safety-critical-survivor)" "PAUSE" (Get-JsonField $r.Output "result")
+
+$scr14 = Join-Path $env:TEMP "wf-ps-t14-$(Get-Random)"
+New-Scratch $scr14
+Invoke-Wf $scr14 @("init", "--task", "p2", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr14 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr14 @("gate", "--phase", "RED", "--verdict", "done") | Out-Null
+Invoke-Wf $scr14 @("gate", "--phase", "GREEN", "--verdict", "done") | Out-Null
+Invoke-Wf $scr14 @("gate", "--phase", "REFACTOR", "--verdict", "CLEAN") | Out-Null
+$r = Invoke-Wf $scr14 @("gate", "--phase", "AUDIT", "--verdict", "BLOCKED", "--reason", "formal-counterexample")
+Assert-Eq "72 AUDIT pauses on the SECOND of its two pauseWhen reasons (formal-counterexample)" "PAUSE" (Get-JsonField $r.Output "result")
+
+$scr15 = Join-Path $env:TEMP "wf-ps-t15-$(Get-Random)"
+New-Scratch $scr15
+Invoke-Wf $scr15 @("init", "--task", "p3", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr15 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr15 @("gate", "--phase", "RED", "--verdict", "done") | Out-Null
+$r = Invoke-Wf $scr15 @("init", "--task", "p3", "--pipeline", "software")
+Assert-Eq "73 re-running init on an in-progress task resumes (returns the current phase, not the first)" "GREEN" (Get-JsonField $r.Output "phase")
+$stateContent15 = Get-Content (Join-Path $scr15 ".llm/workflow-state.md") -Raw
+Assert-Contains "74 re-running init does not reset Current Phase in the state file" $stateContent15 "**Current Phase:** GREEN"
 
 Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="

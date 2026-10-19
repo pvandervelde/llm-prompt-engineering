@@ -1,7 +1,7 @@
 ---
 description: Read-only pre-code adversarial gate over the design bundle. Checks architecture.md, responsibilities.md, assertions.md, vocabulary.md, constraints.md, and the Interface Designer's output for broken cross-references, boundary violations, unmeasurable targets, orphaned assertions, undefined vocabulary, and hidden dependencies. Invoked between Interface Designer and Doc Writer/Task Planner — before any test or code exists.
 name: "Design Reviewer"
-tools: [read, search]
+tools: [read, search, edit]
 model: Claude Sonnet 5 (copilot)
 tier: templated
 maxTurns: 30
@@ -26,7 +26,8 @@ boundary decision caught here costs a re-read of `docs/spec/`. The same decision
 the Verifier, after Interface Designer, Doc Writer, Task Planner, Tester, and Coder have
 all built on top of it, costs a re-plan and a re-implementation.
 
-You do **not** write or edit anything. You do not fix what you find — you report it.
+The only file you ever write is your own report (Step 8) — never a spec file, never code.
+You do not fix what you find — you report it.
 
 ---
 
@@ -137,7 +138,11 @@ and no resolvable threshold is **Critical** — nothing downstream can gate on i
 
 ### 8. Generate Verdict
 
-Write `.llm/spec-review/<ISO-date>-<branch-or-task-slug>.md`:
+Write `.llm/design-review/<ISO-date>-<branch-or-task-slug>.md` — a directory of its own,
+separate from `.llm/spec-review/` (that one belongs to the Spec Reviewer's later gate; the
+workflow engine's `skipWhen` freshness check for `SPEC_REVIEW_GATE` reads the most recent
+file in that directory, and a Design Review report landing there by mistake would get
+picked up as if it were a Spec Reviewer verdict):
 
 ```markdown
 # Design Review — [task/branch name]

@@ -203,6 +203,18 @@ function Invoke-Init {
         }
     }
 
+    # Resuming an already-initialized task: never re-run Initialize-StateFile,
+    # which would unconditionally truncate the file and reset Current Phase,
+    # Phases Done, Tier, Existing Work, and Blocking Issues back to a blank
+    # slate -- exactly the state Conductor Step 1 calls `init` to preserve on
+    # resume.
+    if ((Test-Path $stateFile) -and (Get-StateField -Path $stateFile -Field "Task") -eq $task) {
+        $resumePhase = Get-StateField -Path $stateFile -Field "Current Phase"
+        $resumeAgent = if ($resumePhase -eq "DONE") { "" } else { (Get-Phase -PipelineBlock $block -PhaseId $resumePhase).agent }
+        [PSCustomObject]@{ phase = $resumePhase; agent = $resumeAgent; branch = $branch; stateFile = $stateFile } | ConvertTo-Json -Compress
+        return
+    }
+
     $phaseIds = @(Get-PhaseIds -PipelineBlock $block)
     if ($phaseIds.Count -eq 0) { Fail "pipeline $pipeline has no phases" }
     $firstPhase = $phaseIds[0]
@@ -281,6 +293,7 @@ function Get-NextPayload {
             $idSkip = @(Get-PhaseList -Phase $idPhase -Field "skipOnTier")
             if ($idSkip -contains $tier) {
                 Add-StatePhaseDone -Path $StateFile -PhaseId $id
+                Add-StateExistingWork -Path $StateFile -Line "${id}: skipped (tier: ${tier}, skipOnTier) -- no agent dispatched, no evidence produced for this phase"
             }
         }
     }
@@ -469,8 +482,8 @@ function Get-ClassifyGlobs {
         if ($line -match '^classify:') { $inBlock = $true; continue }
         if ($inBlock -and $line -match '^[A-Za-z]') { break }
         if ($inBlock -and $line -match "^\s\s${Domain}:\s*(.*)") {
-            $raw = $Matches[1].Trim()
-            $raw = $raw.TrimStart('[').TrimEnd(']')
+            $raw = $Matches[1] -replace '\s+#.*$', ''
+            $raw = $raw.Trim().TrimStart('[').TrimEnd(']')
             if (-not $raw) { return @() }
             return @($raw -split ',' | ForEach-Object { $_.Trim().Trim('"') })
         }
@@ -494,7 +507,8 @@ function Get-RiskPaths {
     if (-not (Test-Path $Path)) { return @() }
     $line = Get-Content $Path | Where-Object { $_ -match '^risk_paths:' } | Select-Object -First 1
     if (-not $line) { return @() }
-    $raw = ($line -replace '^risk_paths:\s*', '').Trim().TrimStart('[').TrimEnd(']')
+    $raw = ($line -replace '^risk_paths:\s*', '') -replace '\s+#.*$', ''
+    $raw = $raw.Trim().TrimStart('[').TrimEnd(']')
     if (-not $raw) { return @() }
     return @($raw -split ',' | ForEach-Object { $_.Trim().Trim('"') } | Where-Object { $_ -ne '' })
 }

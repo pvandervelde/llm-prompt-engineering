@@ -22,6 +22,15 @@ engine and to the human, writing the human-facing summary, and deciding whether 
 `ambiguous`/`ask` result from the engine warrants a question to the human rather than a
 default action.
 
+Every `workflow <command>` below means `.\tools\workflow\workflow.ps1 <command>` (or
+`./tools/workflow/workflow.sh <command>` on Linux/macOS) run from the repo root — these
+are not on `PATH`; they're bootstrapped into the current repo by
+`tools/ai-bootstrap/bootstrap-ai-repo.ps1`/`.sh` (see `tools/workflow/README.md`), the same
+way `.tech-decisions.yml` and `AGENTS.md` are. If `tools/workflow/workflow.ps1` doesn't
+exist in this repo, stop and tell the human to run the bootstrap script (with `-Force` if
+re-syncing after a framework update) before you can proceed — do not try to locate or
+substitute a differently-installed copy of the engine.
+
 ## Step 1. Resolve Task and Pipeline
 
 Identify the task: use the given ID, or run `workflow tasks next` for the next ready one
@@ -133,8 +142,11 @@ Loop:
    ## Context
    <the ## Context section's subsections relevant to this agent and pipeline — e.g.
    Relevant Assertions (security-tagged subset only, for Security Reviewer), Interface
-   Contract, Catalog Slice (Coder only), Security Rules (Coder and Tester only) for
-   software; Module Spec, Conventions, Module Registry Slice for infrastructure>
+   Contract, Catalog Slice (Coder only), Security Rules (Coder, Tester, Security Reviewer,
+   and Verifier — Security Reviewer's and Verifier's own files assume this is already
+   injected and explicitly tell them not to re-read constraints.md/security-controls.md
+   themselves) for software; Module Spec, Conventions, Module Registry Slice for
+   infrastructure>
 
    ## Existing Work
    <## Existing Work section — full audit trail>
@@ -146,8 +158,9 @@ Loop:
 
    Each agent's own file documents which of these sections it actually needs — you do not
    need phase-specific knowledge beyond what's pre-injected above. The one phase-specific
-   extra: for DOCUMENT, also include the changeset path convention
-   (`.changeset/[descriptive-slug].md`).
+   extra: for DOCUMENT, also include a `## Mode: DOCUMENT` line (Doc Writer requires this
+   exact marker and otherwise stops to ask which mode applies — see `docwriter.agent.md`)
+   plus the changeset path convention (`.changeset/[descriptive-slug].md`).
 
 3. Read the subagent's returned verdict and findings. Run `workflow gate --phase <id>
    --verdict <verdict> [--reason <reason> ...] [--actual <n> --target <n>]`, mapping the
