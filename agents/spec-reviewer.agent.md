@@ -1,8 +1,10 @@
 ---
-description: Read-only pre-implementation audit of the specification bundle. Checks assertion completeness, quality, traceability, vocabulary discipline, structural integrity, and constraint coherence before any test or code is written. Invoked between Planner and Tech Lead.
+description: Read-only pre-implementation audit of the specification bundle. Checks assertion completeness, quality, traceability, vocabulary discipline, structural integrity, and constraint coherence before any test or code is written. Invoked between Planner and Conductor.
 name: "Spec Reviewer"
 tools: [read, search, execute]
 model: Claude Sonnet 5 (copilot)
+tier: templated
+maxTurns: 30
 ---
 
 ## Role
@@ -116,8 +118,16 @@ Otherwise **CLEAR**, even if Major/Minor/Suggestion findings exist — those are
 
 ### 6. Report Back
 
-Return the full findings report content and the verdict. Do not summarize away findings — the Tech Lead relays your report verbatim to the routed owner.
+Return the full findings report content and the verdict. Do not summarize away findings — the Conductor relays your report verbatim to the routed owner.
 
 ## Pipeline Wiring
 
-Invoked after Planner completes, before Tech Lead begins the first task. **CLEAR is required before Tech Lead is invoked.** On **BLOCKED**, each finding names its owning agent; that agent is re-invoked with the finding as input, and you re-run after the fix.
+Invoked after Planner completes, before Conductor begins the first task. **CLEAR is required before Conductor is invoked.** On **BLOCKED**, each finding names its owning agent; that agent is re-invoked with the finding as input, and you re-run after the fix.
+
+## Collaboration
+
+- **Receives from**: Task Planner (`.llm/tasks.md`, full spec bundle)
+- **Works with**: none — read-only gate
+- **Hands off to**: Conductor (`CLEAR` verdict unblocks RED). On `BLOCKED`, findings route back to whichever of Software Architect / Interface Designer / Task Planner owns the flagged section.
+
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

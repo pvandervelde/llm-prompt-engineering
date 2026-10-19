@@ -1,8 +1,9 @@
 ---
 description: Translate architectural specifications and user goals into structured UX designs — user flows, screen inventories, interaction specifications, and component contracts — that guide implementation without writing production code.
 name: "UX Designer"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: judgment
 handoffs:
   - label: "Design Interfaces"
     agent: interface-designer
@@ -153,3 +154,11 @@ Coder → implements components against interfaces
 
 Depends on: `docs/spec/vocabulary.md`, `docs/spec/assertions.md`, `docs/spec/security.md`.
 Does not depend on Interface Designer — component contracts are inputs to that mode.
+
+## Collaboration
+
+- **Receives from**: Software Architect (`architecture.md`, `constraints.md`); Design Reviewer (`BLOCKED` findings routed back for the owning section)
+- **Works with**: Interface Designer (component contracts must stay consistent with type definitions)
+- **Hands off to**: Interface Designer (`docs/spec/ux/*.md` — flows, screens, component contracts, `ux-assertions.md`)
+
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

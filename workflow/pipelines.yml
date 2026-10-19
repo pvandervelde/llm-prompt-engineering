@@ -1,0 +1,102 @@
+# Pipeline definitions for the workflow engine (tools/workflow/).
+#
+# This file is the single source of truth for phase order, gate conditions, and
+# subagent dispatch names for both pipelines, read by claude-agents/conductor.md
+# (formerly encoded as prose in tech-lead.md and infra-lead.md). See
+# workflow/README.md for the full schema reference.
+#
+# Scope note: this covers only the TDD execution pipelines the Conductor actually
+# orchestrates (RED..VERIFY / IMPLEMENT..VERIFY). The upstream spec-authoring chain
+# (Architect -> Interface Designer -> Design Reviewer -> Doc Writer(DRAFT)/Task
+# Planner) has no single orchestrating agent today and is out of scope until one
+# takes it over (tracked separately).
+
+pipelines:
+  software:
+    stateFile: .llm/workflow-state.md
+    branchPrefix: task/
+
+    # Resolved in order; the first matching row wins. Mirrors tech-lead.md Step 2b.
+    branchRules:
+      - match: "task/{slug}"
+        sameTask: true
+        action: use
+      - match: "task/{slug}"
+        sameTask: false
+        action: ask
+        reason: wrong-task-branch
+      - match: ["main", "master", "develop", "release/*"]
+        action: create
+        branch: "task/{slug}"
+      - match: "*"
+        action: ask
+        reason: ambiguous-branch
+
+    phases:
+      - id: SPEC_REVIEW_GATE
+        agent: "Spec Reviewer"
+        advance: conditional
+        # Skip invoking the agent (auto-advance) only when a fresh, CLEAR report
+        # already exists; otherwise invoke it and gate on its verdict.
+        skipWhen:
+          reportVerdict: CLEAR
+          reportNewerThan: docs/spec/
+        pauseWhen: [blocked]
+
+      - id: RED
+        agent: "Tester"
+        advance: auto
+        pauseWhen: [spec-gap]
+
+      - id: GREEN
+        agent: "Coder"
+        advance: auto
+
+      - id: REFACTOR
+        agent: "Refactor"
+        advance: auto
+        pauseWhen: [blocked]
+
+      - id: AUDIT
+        agent: "QA Engineer"
+        parallelWith: [SECURITY]
+        advance: auto
+        pauseWhen: [safety-critical-survivor, formal-counterexample]
+        skipOnTier: [minimal]
+
+      - id: SECURITY
+        agent: "Security Reviewer"
+        parallelWith: [AUDIT]
+        advance: auto
+        pauseWhen: [critical-finding]
+
+      - id: DOCUMENT
+        agent: "Doc Writer"
+        advance: auto
+        skipOnTier: [minimal]
+
+      - id: VERIFY
+        agent: "Verifier"
+        advance: auto
+        pauseWhen: [fail]
+        onPass: open-pr
+
+  infrastructure:
+    stateFile: .llm/infra-workflow-state.md
+    branchPrefix: infra/task/
+
+    phases:
+      - id: IMPLEMENT
+        agent: "Infrastructure Engineer"
+        advance: auto
+
+      - id: SECURITY
+        agent: "Security Reviewer"
+        advance: auto
+        pauseWhen: [critical-finding]
+
+      - id: VERIFY
+        agent: "Verifier"
+        advance: auto
+        pauseWhen: [fail]
+        onPass: open-pr

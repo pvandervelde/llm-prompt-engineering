@@ -87,7 +87,34 @@ The bootstrap scripts automate the following setup steps:
 - Documents tech stack choices
 - Tracks decision rationale
 
-### 4. Task Tracking Setup (Optional)
+`.tech-decisions.yml` also carries several blocks read by the workflow engine
+(`tools/workflow/`, see [tools/workflow/README.md](../workflow/README.md)) rather than by
+a human or CI directly:
+
+| Block | Read by | Purpose |
+|---|---|---|
+| `toolchains` | Conductor (`## Toolchain` context block) | Resolves abstract capabilities (test, mutation, fuzz, formal, ...) to concrete commands for the detected stack |
+| `mutation_targets` | QA Engineer | Per-mutation-engine minimum score, keyed by the same criticality classes as `criticality` below — not comparable across engines, hence one block per engine |
+| `criticality` | `workflow gate` (AUDIT phase), QA Engineer | Glob-maps module paths to a criticality class (`safety_critical`, `parser`, `domain_logic`, `api_boundary`, `adapter`); first match wins, unmapped paths default to `domain_logic` |
+| `classify` | `workflow classify` | Glob-maps task-referenced paths to `frontend`/`backend`/`infrastructure`, replacing the hand-written domain-detection prose `tech-lead.md` and `planner.md` used to carry |
+| `risk_paths` | `workflow tier` | Any path matching this list forces the task's risk tier to `elevated` — a hard rule a human cannot override down, unlike the other blocks above |
+
+All five ship with the generic defaults (or, for `criticality`/`classify`/`risk_paths`,
+empty/example globs) shown in the generated file's comments — customize the glob lists for
+your own repo's directory layout; an empty or missing mapping is a valid, safe default
+(`ambiguous`/`domain_logic`/no forced elevation), not an error.
+
+### 4. Workflow Engine
+
+- Copies `tools/workflow/workflow.sh`/`.ps1` + `lib/` and `workflow/pipelines.yml` into
+  the target repo — the engine resolves both relative to *that* repo's own git root (see
+  `tools/workflow/README.md`), so they have to actually live there, not just globally
+- Skipped (per file, with a notice) if the destination already exists, same as
+  `.tech-decisions.yml` — pass `--force`/`-Force` to re-sync after a framework update
+- `conductor.md`/`conductor.agent.md` depend on this step; without it, `workflow <command>`
+  has nothing to invoke in the bootstrapped repo
+
+### 5. Task Tracking Setup (Optional)
 
 - Creates `.llm/tasks.md` template
 - AI modes auto-detect and parse this format

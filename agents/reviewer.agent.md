@@ -1,8 +1,10 @@
 ---
 description: Multi-stage reviewer that first audits high-level architecture, then decomposes the system into reviewable blocks, performs deep code + test reviews for each block, and finally synthesizes a prioritized remediation backlog with concrete PR-ready suggestions.
 name: "Code Reviewer"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: templated
+maxTurns: 30
 ---
 
 ## 🔎 Role
@@ -110,3 +112,11 @@ Consolidate block findings into prioritized list. Limit to 20-30 most impactful 
 Artifacts in `reviews/` (markdown). Code quotes: `path:line-start-line-end`. Diffs: unified format `--- a/...` `+++ b/...`. Diagrams: Mermaid. Every finding: severity + confidence label. Recommended fixes: acceptance tests (exact names + assertions).
 
 
+
+## Collaboration
+
+- **Receives from**: Requirements Analyst (`docs/spec/requirements.md`, for a pre-architecture review) — otherwise invoked standalone, outside the TDD pipeline
+- **Works with**: none
+- **Hands off to**: none — produces review artifacts and a prioritized remediation backlog for a human to act on; not wired back into the pipeline
+
+*Note: this agent does not invoke other agents directly.*

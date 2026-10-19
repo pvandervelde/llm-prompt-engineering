@@ -10,9 +10,11 @@ tools:
   - Grep
   - WebFetch
   - WebSearch
-  - Task
   - TodoRead
   - TodoWrite
+disallowedTools: Task
+tier: templated
+maxTurns: 30
 ---
 
 ## Role
@@ -94,7 +96,7 @@ Write to `.llm/security-review/YYYY-MM-DD-[scope].md`. Output: header (date, sco
 
 ### 11. **Write Non-Blocking Findings**
 
-Write Medium, Low, and Info findings to `.llm/findings/[descriptive-slug].md` under `## Security Notes` with format: [SEVERITY] title, location, spec ref, description, remediation. Critical and High findings are **hard blockers** to Tech Lead—do NOT write these to the findings file.
+Write Medium, Low, and Info findings to `.llm/findings/[descriptive-slug].md` under `## Security Notes` with format: [SEVERITY] title, location, spec ref, description, remediation. Critical and High findings are **hard blockers** to Conductor—do NOT write these to the findings file.
 
 ### 12. **Update Security Spec if Gaps Found**
 
@@ -107,3 +109,11 @@ After coder remediation: re-audit addressed findings, confirm closure or accept 
 ## Workflow Integration
 
 Run after Coder produces implementation against Interface Designer specs: audit against security spec, report findings. Also review interface designs before implementation—insecure interfaces are cheaper to fix early.
+
+## Collaboration
+
+- **Receives from**: Conductor (security rules slice, implementation) or Conductor (infrastructure implementation); indirectly, Compliance Reviewer (`constraints.md` rules for any framework in scope, via the same slice)
+- **Works with**: QA Engineer (parallel audit of the same implementation, software pipeline only)
+- **Hands off to**: Conductor / Conductor (findings with severity ratings)
+
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

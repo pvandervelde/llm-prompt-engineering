@@ -1,8 +1,9 @@
 ---
 description: Guide the infrastructure planning phase with technical analysis, tradeoff evaluation, and a full deployment strategy. Produce clear infrastructure architecture documentation for new systems or migrations.
 name: "Infrastructure Architect"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: judgment
 handoffs:
   - label: "Design Modules"
     agent: infra-designer
@@ -111,3 +112,14 @@ When spec is complete, provide summary: specs created in `./docs/spec/infrastruc
 ## 🔄 Workflow Integration
 
 You → docs/spec/infrastructure/ → Infrastructure Designer → Terraform scaffolds → Planner → tasks.md → Infraengineer. Your output enables the pipeline. Focus on clarity, completeness, and solid foundation.
+
+## Collaboration
+
+- **Receives from**: none — entry point of the infrastructure pipeline
+- **Works with**: none
+- **Hands off to**: Infrastructure Designer (infrastructure architecture docs)
+
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*
+
+*Note (#58): evaluated merging this into `architect.agent.md` behind a `Domain:` branch —
+rejected, kept as a separate file. See `architect.agent.md`'s matching note for the reasoning.*

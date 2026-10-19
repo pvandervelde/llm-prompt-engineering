@@ -17,6 +17,12 @@ fi
 # script itself happens to live.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+# Two levels up from tools/ai-bootstrap/ -- this framework's own repo root,
+# used only to locate sibling source files (tools/workflow/,
+# workflow/pipelines.yml) to copy FROM. Never used as the destination: every
+# write below still goes through $ROOT, resolved via git from the current
+# working directory per the rule above.
+FRAMEWORK_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Color output
 RED='\033[0;31m'
@@ -63,7 +69,7 @@ fi
 # ============================================================================
 # Step 1: Create AI Memory Structure
 # ============================================================================
-print_step "[1/6] Creating AI memory structure..."
+print_step "[1/7] Creating AI memory structure..."
 
 MEMORY_SCRIPT="$SCRIPT_DIR/create-llm-memory.sh"
 if [ -f "$MEMORY_SCRIPT" ]; then
@@ -87,7 +93,7 @@ fi
 # ============================================================================
 # Step 2: Create Git Hooks
 # ============================================================================
-print_step "[2/6] Creating git hooks..."
+print_step "[2/7] Creating git hooks..."
 
 HOOKS_DIR="$ROOT/.githooks"
 mkdir -p "$HOOKS_DIR"
@@ -333,7 +339,7 @@ print_success "Git configured to use .githooks/"
 # ============================================================================
 # Step 3: Detect Tech Stack
 # ============================================================================
-print_step "[3/6] Detecting tech stack..."
+print_step "[3/7] Detecting tech stack..."
 
 LANGUAGES=()
 
@@ -377,7 +383,7 @@ print_success "Tech stack detection complete"
 # ============================================================================
 # Step 4: Create .tech-decisions.yml
 # ============================================================================
-print_step "[4/6] Creating .tech-decisions.yml..."
+print_step "[4/7] Creating .tech-decisions.yml..."
 
 TECH_FILE="$ROOT/.tech-decisions.yml"
 if [ -f "$TECH_FILE" ] && [ $FORCE -eq 0 ]; then
@@ -406,7 +412,7 @@ else
 languages: [$LANGS_STR]
 
 # Toolchain resolution layer. Agents describe what they need in abstract
-# capability terms (test, mutation, fuzz, formal, ...); the Tech Lead resolves
+# capability terms (test, mutation, fuzz, formal, ...); the Conductor resolves
 # this block to concrete commands for the active stack and injects them into
 # every subagent prompt as a \`## Toolchain\` block. Mutation scores are NOT
 # comparable across engines - see mutation_targets below.
@@ -499,6 +505,33 @@ mutation_targets:
     api_boundary:    75
     adapter:         65
 
+# Maps module paths to the criticality classes used by mutation_targets above
+# and by the QA Engineer agent's Criticality Tiers table. Glob-matched against
+# the paths touched by a task; first match wins. Customize for your project -
+# an empty or missing mapping means every module defaults to domain_logic.
+criticality:
+  safety_critical: []  # e.g. ["src/safety/**", "src/control/**"]
+  parser: []            # e.g. ["src/protocol/**"]
+  domain_logic: []      # e.g. ["src/domain/**"]
+  api_boundary: []      # e.g. ["src/api/**"]
+  adapter: []           # e.g. ["src/infra/**"]
+
+# Maps task-referenced paths to a domain for \`workflow classify\` (replaces
+# the hand-written Frontend/Backend/Infrastructure prose tables in
+# tech-lead.md Step 2 and planner.md's old Project Type Detection section).
+# A path matching zero or more-than-one domain's globs is "ambiguous" --
+# classify asks the human once in that case, same as the prose it replaces.
+classify:
+  frontend: ["docs/spec/components/**", "docs/spec/ui/**", "src/components/**", "src/ui/**"]
+  backend: ["docs/spec/interfaces/**", "src/**"]
+  infrastructure: ["docs/spec/infrastructure/**", "docs/spec/modules/**", "infra/**"]
+
+# A diff touching any of these paths is always \`elevated\` -- never
+# \`minimal\` or \`standard\`, regardless of diff size or test coverage, and
+# a human cannot override it down. Used by \`workflow tier\`.
+# e.g. risk_paths: ["src/auth/**", "src/safety/**", "**/secrets/**"]
+risk_paths: []
+
 # Database (customize for your project)
 database:
   choice: null  # e.g., postgresql, mongodb, sqlite
@@ -571,9 +604,69 @@ EOF
 fi
 
 # ============================================================================
-# Step 5: Setup Beads (Optional Task Tracking)
+# Step 5: Distribute Workflow Engine
 # ============================================================================
-print_step "[5/6] Setting up Beads task tracking (optional)..."
+print_step "[5/7] Installing the workflow engine (tools/workflow/, workflow/pipelines.yml)..."
+
+# The engine resolves workflow/pipelines.yml and every path it writes
+# relative to the TARGET repo's own git root (never relative to its own
+# script path -- see tools/workflow/README.md), so both the engine scripts
+# and the schema they read must actually live inside the target repo. They
+# are copied from THIS framework's own checkout (via $FRAMEWORK_ROOT, a
+# sibling-file lookup -- not the target-repo-resolution rule above) rather
+# than installed globally, for the same reason .tech-decisions.yml and
+# AGENTS.md are seeded per-repo instead of shared: a repo may reasonably
+# customize workflow/pipelines.yml (an extra gate, a renamed phase) once
+# bootstrapped, same as it customizes .tech-decisions.yml.
+
+# copy_workflow_file <relative-path> [executable]
+# $2 = "x" makes the destination executable (shell scripts only). Refuses a
+# symlinked source (security -- see install.sh's reject_symlink for the
+# full rationale: a symlink planted in tools/workflow/ could otherwise be
+# used to copy arbitrary content this user can read into the target repo).
+copy_workflow_file() {
+    local rel="$1" mode="${2:-}"
+    local src="$FRAMEWORK_ROOT/$rel" dst="$ROOT/$rel"
+
+    if [ -L "$src" ]; then
+        print_error "Refusing to follow symlink (security): $src"
+        return 0
+    fi
+    [ -f "$src" ] || return 0
+
+    if [ -f "$dst" ] && [ $FORCE -eq 0 ]; then
+        print_warning "$rel already exists (use --force to overwrite)"
+        return 0
+    fi
+
+    mkdir -p "$(dirname "$dst")"
+    cp "$src" "$dst"
+    if [ "$mode" = "x" ]; then
+        chmod +x "$dst"
+    fi
+    print_success "Copied $rel"
+}
+
+copy_workflow_file "tools/workflow/workflow.sh" x
+copy_workflow_file "tools/workflow/workflow.ps1"
+copy_workflow_file "tools/workflow/migrate-assertions.sh" x
+copy_workflow_file "tools/workflow/migrate-assertions.ps1"
+
+if [ -L "$FRAMEWORK_ROOT/tools/workflow/lib" ]; then
+    print_error "Refusing to follow symlink (security): $FRAMEWORK_ROOT/tools/workflow/lib"
+elif [ -d "$FRAMEWORK_ROOT/tools/workflow/lib" ]; then
+    for lib_file in "$FRAMEWORK_ROOT"/tools/workflow/lib/*; do
+        [ -f "$lib_file" ] || [ -L "$lib_file" ] || continue
+        copy_workflow_file "tools/workflow/lib/$(basename "$lib_file")"
+    done
+fi
+
+copy_workflow_file "workflow/pipelines.yml"
+
+# ============================================================================
+# Step 6: Setup Beads (Optional Task Tracking)
+# ============================================================================
+print_step "[6/7] Setting up Beads task tracking (optional)..."
 
 if command -v bd >/dev/null 2>&1; then
     print_info "Beads already installed"
@@ -690,9 +783,9 @@ else
 fi
 
 # ============================================================================
-# Step 6: Initialize Fallback Task Structure
+# Step 7: Initialize Fallback Task Structure
 # ============================================================================
-print_step "[6/6] Initializing fallback task structure (.llm/tasks.md)..."
+print_step "[7/7] Initializing fallback task structure (.llm/tasks.md)..."
 
 LLM_DIR="$ROOT/.llm"
 if [ ! -d "$LLM_DIR" ]; then

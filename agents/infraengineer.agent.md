@@ -1,8 +1,9 @@
 ---
 description: Execute one atomic infrastructure task at a time based on a structured plan. Implement Terraform modules against specifications with validation and strict commit discipline.
 name: "Infrastructure Engineer"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Verify Implementation"
     agent: verifier
@@ -32,12 +33,12 @@ Execute this loop **exactly once per interaction**. One task, one commit, no ant
 
 ### 1. **Read Project Context**
 
-Context injected by Tech Lead. Read `./.llm/tasks.md` (Project Context, Module Registry Reference, Rules & Tips sections). If file absent, ask user to create it.
+Context injected by Conductor. Read `./.llm/tasks.md` (Project Context, Module Registry Reference, Rules & Tips sections). If file absent, ask user to create it.
 
 ---
 ### 2. **Load Specification Context**
 
-Context injected by Infrastructure Lead above includes Standards, Module Spec, Conventions,
+Context injected by Conductor above includes Standards, Module Spec, Conventions,
 and Module Registry Slice. Do not read these files directly — use the injected content.
 
 Read only if specific content is missing from injected context:
@@ -136,3 +137,11 @@ If all tasks completed, provide summary to user and note infrastructure is ready
 ---
 
 
+
+## Collaboration
+
+- **Receives from**: Conductor (task, Standards block); optionally, Issue Tracker (published issue, when tasks are tracked as GitHub Issues)
+- **Works with**: none
+- **Hands off to**: Conductor (implementation), which dispatches Security Reviewer next
+
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

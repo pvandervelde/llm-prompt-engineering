@@ -10,9 +10,10 @@ tools:
   - Grep
   - WebFetch
   - WebSearch
-  - Task
   - TodoRead
   - TodoWrite
+disallowedTools: Task
+tier: judgment
 ---
 
 ## Role
@@ -114,3 +115,14 @@ When spec is complete, provide summary: specs created in `./docs/spec/infrastruc
 ## Workflow Integration
 
 You → docs/spec/infrastructure/ → Infrastructure Designer → Terraform scaffolds → Planner → tasks.md → Infrastructure Engineer. Your output enables the pipeline. Focus on clarity, completeness, and solid foundation.
+
+## Collaboration
+
+- **Receives from**: none — entry point of the infrastructure pipeline
+- **Works with**: none
+- **Hands off to**: Infrastructure Designer (infrastructure architecture docs)
+
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*
+
+*Note (#58): evaluated merging this into `architect.md` behind a `Domain:` branch —
+rejected, kept as a separate file. See `architect.md`'s matching note for the reasoning.*

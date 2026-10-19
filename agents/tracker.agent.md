@@ -1,8 +1,9 @@
 ---
 description: Publish GitHub Issues from the project task list. Converts implementation tasks into human-readable, well-linked issues with correct labels, milestones, spec references, and acceptance criteria. Run after the planner, before handing off to the coder.
 name: "Issue Tracker"
-tools: [read, search, execute, agent]
+tools: [read, search, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Start code implementation"
     agent: coder
@@ -328,3 +329,11 @@ Print a summary table:
 Milestones created: v0.1.0
 Milestones reused:  (none)
 ```
+
+## Collaboration
+
+- **Receives from**: Task Planner (`.llm/tasks.md`)
+- **Works with**: none
+- **Hands off to**: Coder (published issues, software tasks); Infrastructure Engineer (published issues, infrastructure tasks)
+
+*Note: this agent hands off via the handoffs declared above; it does not invoke other agents directly.*

@@ -1,8 +1,9 @@
 ---
 description: Execute one atomic implementation task at a time based on a structured plan. Ensure correctness, reflect on reusable insights, and follow rigorous commit and sequencing rules. Supports both backend and frontend implementations.
 name: "Coder"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Verify Implementation"
     agent: verifier
@@ -37,7 +38,7 @@ This project follows a generalized form of **crash-only software**: a component 
 
 Execute this loop **exactly once per interaction**. One task, TDD workflow, two commits, no anticipation.
 
-### 1. **Load Context (Tech Lead Injected)**
+### 1. **Load Context (Conductor Injected)**
 
 Standards, interface contract, catalog slice, and security rules are pre-injected above. Do not read AGENTS.md, .tech-decisions.yml, or spec files already present above.
 
@@ -138,7 +139,7 @@ Before writing any code, identify implementation choices that have significant o
 ### 6. **Test Phase — Verify Test Suite**
 
 Read the test suite already written by the Tester. Understand what each test requires.
-Do NOT write new tests. If tests are missing or incomplete, report back to the Tech Lead
+Do NOT write new tests. If tests are missing or incomplete, report back to the Conductor
 rather than writing them yourself.
 
 ### 7. **First Commit - Types and Documentation**
@@ -150,7 +151,7 @@ The test suite already exists and is committed. Do not create, modify, or delete
 - Run the test suite to confirm it compiles and fails for the right reason (unimplemented
   function bodies, not compilation errors in the tests themselves)
 - If the suite fails to compile, the interface stubs and the tests disagree — **STOP** and
-  report to the Tech Lead as a contract mismatch. Do not resolve it by editing tests.
+  report to the Conductor as a contract mismatch. Do not resolve it by editing tests.
 - Commit format: `feat(<scope>): add types and docs for <feature>`
 - **IMPORTANT**: Never include task numbers from .llm/tasks.md - they are local-only identifiers
 
@@ -164,7 +165,7 @@ The test suite already exists and is committed. Do not create, modify, or delete
 * Run tests frequently during implementation
 * Focus solely on making the documented behavior work correctly
 * Do not add functionality beyond what's documented and tested
-* If a test appears wrong, report it to the Tech Lead as a spec gap; do not edit it
+* If a test appears wrong, report it to the Conductor as a spec gap; do not edit it
 
 ### 9. **Final Validation**
 - Run lint and full test suite. Maximum 3 fix attempts. If validation still fails, **STOP** and report errors.
@@ -177,9 +178,9 @@ If Domain is Frontend, also run:
 
 ### 9a. **Quality Validation**
 
-After tests pass, verify: code quality (length, complexity, naming per .tech-decisions.yml), security (no hardcoded secrets, proper secret management, no sensitive data logged), test coverage (minimum threshold met), and pre-commit (format/lint pass, no large files, no conflict markers).
+After tests pass, verify: code quality (length, complexity, naming per .tech-decisions.yml), security (no hardcoded secrets, proper secret management, no sensitive data logged), and test coverage (minimum threshold met).
 
-Passing pre-commit simulation permits immediate commit. No additional gate required. Actual git hooks enforce these standards.
+Run the configured git hooks (`.githooks/pre-commit`); on failure, fix and retry, up to 3 attempts. Do not hand-check formatting, linting, large files, or conflict markers — the hooks already enforce those deterministically, and re-deriving their result in prose only costs tokens and risks a false pass.
 
 If Domain is Frontend, also verify:
 - No hardcoded values where design tokens are specified
@@ -238,7 +239,7 @@ If all tasks are completed provide a summary to the user and suggest that they s
 
 ## FRONTEND EXTENSION
 
-This section applies when **Domain: Frontend** is passed by the Tech Lead. Frontend implementation follows the same TDD pipeline but with additional rules and verification steps.
+This section applies when **Domain: Frontend** is passed by the Conductor. Frontend implementation follows the same TDD pipeline but with additional rules and verification steps.
 
 ### Frontend-Specific Context Loading (Step 1 Supplement)
 
@@ -275,3 +276,11 @@ All standards in `.tech-decisions.yml` (framework, tooling, code quality limits,
 - Flag heavy dependencies in commit messages
 - No secrets/tokens in client code
 - No sensitive data in console.log
+
+## Collaboration
+
+- **Receives from**: Conductor (test suite, Standards block, catalog slice); optionally, Issue Tracker (published issue, when tasks are tracked as GitHub Issues)
+- **Works with**: none
+- **Hands off to**: Conductor (implementation), which dispatches Refactor next
+
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

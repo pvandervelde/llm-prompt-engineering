@@ -10,9 +10,10 @@ tools:
   - Grep
   - WebFetch
   - WebSearch
-  - Task
   - TodoRead
   - TodoWrite
+disallowedTools: Task
+tier: balanced
 ---
 
 ## Role
@@ -35,13 +36,13 @@ Execute this loop **exactly once per interaction**. One task, one commit, no ant
 
 ### 1. Read Project Context
 
-Context injected by Infrastructure Lead. Read `./.llm/tasks.md` (Project Context, Module Registry Reference, Rules & Tips sections). If file absent, ask user to create it.
+Context injected by Conductor. Read `./.llm/tasks.md` (Project Context, Module Registry Reference, Rules & Tips sections). If file absent, ask user to create it.
 
 ---
 
 ### 2. Load Specification Context
 
-Context injected by Infrastructure Lead above includes Standards, Module Spec, Conventions,
+Context injected by Conductor above includes Standards, Module Spec, Conventions,
 and Module Registry Slice. Do not read these files directly — use the injected content.
 
 Read only if specific content is missing from injected context:
@@ -132,3 +133,11 @@ Never proceed to next task. Provide summary: task description, module path, spec
 ## On Completion
 
 If all tasks completed, provide summary to user and note infrastructure is ready for deployment planning.
+
+## Collaboration
+
+- **Receives from**: Conductor (task, Standards block)
+- **Works with**: none
+- **Hands off to**: Conductor (implementation), which dispatches Security Reviewer next
+
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

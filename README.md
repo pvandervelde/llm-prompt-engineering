@@ -30,6 +30,21 @@ configurations for all of them.
 - Conversation templates for maintaining context across AI sessions
 - Custom AI modes for specialized tasks (like architecture planning)
 
+### Multi-Agent Development Pipeline
+
+- A full roster of specialized Claude Code (`claude-agents/`) and GitHub Copilot
+  (`agents/`) agents covering both a software TDD pipeline (Architect → Interface
+  Designer → Design Reviewer → Planner → Tester → Coder → Refactor → QA Engineer /
+  Security Reviewer → Doc Writer → Verifier) and an infrastructure pipeline
+  (Infrastructure Architect → Designer → Engineer → Security Reviewer → Verifier)
+- A deterministic CLI engine (`tools/workflow/`, PowerShell and Bash) that drives phase
+  sequencing, branch resolution, and gate thresholds from a declarative
+  `workflow/pipelines.yml` — not prose an agent has to re-derive on every run
+- Risk-tiered gating (`workflow tier`): skips the heaviest review phases on small, safe
+  changes and makes elevated-risk changes impossible to downgrade past review
+- One orchestrator agent, the **Conductor**, drives the whole pipeline end to end — see
+  [claude-agents/README.md](./claude-agents/README.md) for the full agent graph
+
 ## How It Works
 
 The main idea is simple: define your coding rules once in YAML files, then generate the specific formats each tool needs.
@@ -89,6 +104,32 @@ Separately, `tools/ai-bootstrap/bootstrap-ai-repo.*` configures *whatever repo y
 currently standing in* for AI-assisted development (`AGENTS.md`, git hooks,
 `.tech-decisions.yml`, etc.) — a different job from installing this framework's own agent
 definitions above. See [tools/ai-bootstrap/README.md](./tools/ai-bootstrap/README.md).
+
+## Drive a Task Through the Agent Pipeline
+
+Once the two steps above are done — agent definitions installed globally, target repo
+bootstrapped — invoke the **Conductor** agent (Claude Code) or its Copilot equivalent and
+give it a task. It does the rest: resolves the branch, works out which pipeline applies
+(software or infrastructure), and drives every phase (test → implement → refactor →
+audit/security → document → verify) by calling the workflow engine for every decision a
+human would otherwise have to make by reading prose:
+
+```bash
+# The Conductor calls this directly — you normally never run it by hand.
+# Shown here to make the contract explicit:
+./tools/workflow/workflow.sh init --task 123 --pipeline software
+./tools/workflow/workflow.sh next
+./tools/workflow/workflow.sh gate --phase RED --verdict done
+```
+
+(`workflow.ps1` on Windows is a drop-in equivalent — same commands, same JSON output.)
+
+Each phase dispatches a specialized subagent (Tester, Coder, Security Reviewer, ...) with
+exactly the context it needs, pre-extracted from your spec and `.tech-decisions.yml`. See:
+
+- [claude-agents/README.md](./claude-agents/README.md) — the full agent roster and pipeline graph
+- [workflow/README.md](./workflow/README.md) — the pipeline schema (`pipelines.yml`) the engine reads
+- [tools/workflow/README.md](./tools/workflow/README.md) — the `workflow` CLI's full command reference
 
 ## Quick Start
 
@@ -158,6 +199,9 @@ The script generates appropriately formatted files for each tool:
 ## Project Structure
 
 ```text
+├── claude-agents/          # Claude Code agent definitions (full TDD + infra pipeline)
+├── agents/                 # GitHub Copilot agent definitions (*.agent.md mirrors)
+├── workflow/               # pipelines.yml - the workflow engine's pipeline schema
 ├── .rules-source/          # YAML source files for LLM rules
 ├── modes/                  # Custom AI assistant modes
 │   ├── architect.md        # Software architecture specialist mode
@@ -171,8 +215,10 @@ The script generates appropriately formatted files for each tool:
 ├── specs/                 # Technical specifications
 │   └── llm-rules-source-of-truth-spec.md # Architecture documentation
 ├── tools/                 # Automation scripts
-│   └── generate-llm-rules.ps1          # Main generation script
-├── workflows/             # Workflow templates
+│   ├── generate-llm-rules.ps1          # Main generation script
+│   ├── ai-bootstrap/                   # Global installer + per-repo bootstrap scripts
+│   └── workflow/                       # The workflow CLI engine (workflow.sh / .ps1)
+├── workflows/             # Workflow *templates* for target repos (unrelated to workflow/ above)
 │   └── copilot/          # Copilot-specific workflow templates
 └── output/               # Generated LLM configuration files
     ├── .github/          # Legacy Copilot instructions (backward compatibility)
@@ -189,6 +235,13 @@ The script generates appropriately formatted files for each tool:
 
 - [Examples and Usage Guide](./EXAMPLES.md) - Detailed usage examples and patterns
 - [Contributing Guidelines](./CONTRIBUTING.md) - How to add new rules, modes, and prompts
+
+### Agent Pipeline
+
+- [claude-agents/README.md](./claude-agents/README.md) - Full agent roster and pipeline graph (software + infrastructure)
+- [workflow/README.md](./workflow/README.md) - Pipeline schema (`pipelines.yml`) reference
+- [tools/workflow/README.md](./tools/workflow/README.md) - `workflow` CLI command reference
+- [tools/ai-bootstrap/README.md](./tools/ai-bootstrap/README.md) - Global install + per-repo bootstrap scripts, including the `.tech-decisions.yml` blocks the engine reads
 
 ### Technical Details
 

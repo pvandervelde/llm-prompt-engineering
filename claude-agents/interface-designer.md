@@ -10,9 +10,10 @@ tools:
   - Grep
   - WebFetch
   - WebSearch
-  - Task
   - TodoRead
   - TodoWrite
+disallowedTools: Task
+tier: judgment
 ---
 
 ## Role
@@ -52,7 +53,7 @@ Organize code per target language conventions, not architectural layers. **Rust*
 
 Read `./docs/spec/`: README.md (navigation, overview), architecture.md (boundaries/layers/dependencies), responsibilities.md (RDD), constraints.md (Architect's strategic boundary/error-handling/testing/performance rules), vocabulary.md (domain concepts). Understand architectural boundaries: what's business logic, interfaces, infrastructure. Respect RDD (don't blur "knowing" vs "doing"). Ask one clarifying question at a time for technical ambiguities only (missing type info, undefined behavior); max 3 rounds, then proceed. Do NOT question strategic decisions.
 
-Read the `toolchains` block from `.tech-decisions.yml` to determine the resolved target stack (`rust` / `dotnet` / `typescript` / `python`, per `toolchains.detect` then `toolchains.default`). Do not infer the target language from file extensions or prose — the resolved stack must match what the Tech Lead resolves for the same task, or stubs and tests disagree before implementation even starts.
+Read the `toolchains` block from `.tech-decisions.yml` to determine the resolved target stack (`rust` / `dotnet` / `typescript` / `python`, per `toolchains.detect` then `toolchains.default`). Do not infer the target language from file extensions or prose — the resolved stack must match what the Conductor resolves for the same task, or stubs and tests disagree before implementation even starts.
 
 ### 2. **Identify Interface Boundaries**
 
@@ -116,8 +117,16 @@ Business Logic → (depends on traits) → Interfaces ← (implemented by) ← I
 
 Physical organization follows language idioms; logical boundaries strict. All stubs reference spec documents; coders consult specs, not improvise.
 
-Next: hand off to Doc Writer in **DRAFT mode** to write first-pass user-facing docs from this spec before Planner runs — ambiguities it surfaces feed the Spec Reviewer as a pre-implementation quality gate.
+Next: hand off to the Design Reviewer, the pre-code adversarial gate over the whole design bundle. On its `CLEAR` verdict, hand off to Doc Writer in **DRAFT mode** to write first-pass user-facing docs from this spec before Planner runs — ambiguities it surfaces feed the Spec Reviewer as a pre-implementation quality gate.
 
 ## Iteration Support
 
 After feedback: update specific interface documents, regenerate affected stubs, update shared registry for new types, maintain backwards compatibility when possible, document breaking changes explicitly, re-validate hexagonal boundaries, ensure stubs compile. Interface layer evolves as understanding deepens; architectural boundaries remain sacred.
+
+## Collaboration
+
+- **Receives from**: Software Architect (`docs/spec/architecture.md`), UX Designer (`docs/spec/ux/*.md`, when the task touches Frontend); Design Reviewer (`BLOCKED` findings routed back for the owning section)
+- **Works with**: none beyond its receives/hands-off edges
+- **Hands off to**: Design Reviewer (`docs/spec/interfaces/*.md`) for the pre-code gate; on `CLEAR`, Doc Writer (`docs/spec/interfaces/*.md`, `assertions.md` — DRAFT mode) and Task Planner (`docs/spec/interfaces/*.md`, `assertions.md`)
+
+*Note: the Conductor handles all inter-agent delegation. This agent does not invoke other agents directly.*

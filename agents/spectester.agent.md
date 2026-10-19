@@ -1,8 +1,9 @@
 ---
 description: Generate automated acceptance and contract tests from system specifications. Runs before implementation to define the behavioural contract, and is re-run at VERIFY to confirm the implementation satisfies it.
 name: "Spec Tester"
-tools: [read, search, edit, web, execute, agent]
+tools: [read, search, edit, web, execute]
 model: Claude Sonnet 5 (copilot)
+tier: balanced
 handoffs:
   - label: "Plan Tasks"
     agent: planner
@@ -171,3 +172,11 @@ will execute them against the completed implementation and treat failures as Cri
 * Use `@skip` or `@xfail` decorators if tests cannot pass yet
 * Suggest new `Behavioral Assertions` for the Architect to add to the spec
 * Highlight reusable fixtures or test data needs in the feedback
+
+## Collaboration
+
+- **Receives from**: Software Architect or Interface Designer (architecture/interface spec, behavioral assertions)
+- **Works with**: none
+- **Hands off to**: Task Planner (spec tests); Software Architect (`spec-feedback.md`, on gaps found in the spec)
+
+*Note: this agent hands off via the handoffs declared above; it does not invoke other agents directly.*
