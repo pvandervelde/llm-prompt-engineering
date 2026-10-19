@@ -104,7 +104,17 @@ empty/example globs) shown in the generated file's comments — customize the gl
 your own repo's directory layout; an empty or missing mapping is a valid, safe default
 (`ambiguous`/`domain_logic`/no forced elevation), not an error.
 
-### 4. Task Tracking Setup (Optional)
+### 4. Workflow Engine
+
+- Copies `tools/workflow/workflow.sh`/`.ps1` + `lib/` and `workflow/pipelines.yml` into
+  the target repo — the engine resolves both relative to *that* repo's own git root (see
+  `tools/workflow/README.md`), so they have to actually live there, not just globally
+- Skipped (per file, with a notice) if the destination already exists, same as
+  `.tech-decisions.yml` — pass `--force`/`-Force` to re-sync after a framework update
+- `conductor.md`/`conductor.agent.md` depend on this step; without it, `workflow <command>`
+  has nothing to invoke in the bootstrapped repo
+
+### 5. Task Tracking Setup (Optional)
 
 - Creates `.llm/tasks.md` template
 - AI modes auto-detect and parse this format

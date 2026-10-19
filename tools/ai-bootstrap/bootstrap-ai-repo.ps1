@@ -24,6 +24,12 @@ $ErrorActionPreference = "Stop"
 # so the repo root must come from git, never from where this script itself
 # happens to live.
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+# Two levels up from tools/ai-bootstrap/ -- this framework's own repo root,
+# used only to locate sibling source files (tools/workflow/,
+# workflow/pipelines.yml) to copy FROM. Never used as the destination:
+# every write below still goes through $root, resolved via git from the
+# current working directory per the rule above.
+$frameworkRoot = (Resolve-Path (Join-Path $scriptDir "../..")).Path
 $root = $null
 try
 {
@@ -79,7 +85,7 @@ if (-not $root)
 # ============================================================================
 # Step 1: Create AI Memory Structure
 # ============================================================================
-Write-Step "[1/6] Creating AI memory structure..."
+Write-Step "[1/7] Creating AI memory structure..."
 
 $memoryScript = Join-Path $scriptDir "create-llm-memory.ps1"
 if (Test-Path $memoryScript)
@@ -188,7 +194,7 @@ When in doubt, look at existing code in the repository as examples of these patt
 # ============================================================================
 # Step 2: Create Git Hooks
 # ============================================================================
-Write-Step "[2/6] Creating git hooks..."
+Write-Step "[2/7] Creating git hooks..."
 
 $hooksDir = Join-Path $root ".githooks"
 
@@ -457,7 +463,7 @@ catch
 # ============================================================================
 # Step 3: Detect Tech Stack
 # ============================================================================
-Write-Step "[3/6] Detecting tech stack..."
+Write-Step "[3/7] Detecting tech stack..."
 
 $languages = @()
 $frameworks = @()
@@ -513,7 +519,7 @@ Write-Success "Tech stack detection complete"
 # ============================================================================
 # Step 4: Create .tech-decisions.yml
 # ============================================================================
-Write-Step "[4/6] Creating .tech-decisions.yml..."
+Write-Step "[4/7] Creating .tech-decisions.yml..."
 
 $toolchainDefault = if ($languages -contains "rust") { "rust" }
     elseif ($languages -contains "csharp") { "dotnet" }
@@ -647,7 +653,8 @@ classify:
 # A diff touching any of these paths is always `elevated` -- never
 # `minimal` or `standard`, regardless of diff size or test coverage, and
 # a human cannot override it down. Used by `workflow tier`.
-risk_paths: []  # e.g. ["src/auth/**", "src/safety/**", "**/secrets/**"]
+# e.g. risk_paths: ["src/auth/**", "src/safety/**", "**/secrets/**"]
+risk_paths: []
 
 # Database (customize for your project)
 database:
@@ -762,9 +769,80 @@ else
 }
 
 # ============================================================================
-# Step 5: Setup Beads (Optional Task Tracking)
+# Step 5: Distribute Workflow Engine
 # ============================================================================
-Write-Step "[5/6] Setting up Beads task tracking (optional)..."
+Write-Step "[5/7] Installing the workflow engine (tools/workflow/, workflow/pipelines.yml)..."
+
+# The engine resolves workflow/pipelines.yml and every path it writes
+# relative to the TARGET repo's own git root (never relative to its own
+# script path -- see tools/workflow/README.md), so both the engine scripts
+# and the schema they read must actually live inside the target repo. They
+# are copied from THIS framework's own checkout (via $frameworkRoot, a
+# sibling-file lookup -- not the target-repo-resolution rule above) rather
+# than installed globally, for the same reason .tech-decisions.yml and
+# AGENTS.md are seeded per-repo instead of shared: a repo may reasonably
+# customize workflow/pipelines.yml (an extra gate, a renamed phase) once
+# bootstrapped, same as it customizes .tech-decisions.yml.
+
+# Copy-WorkflowFile <relative-path>
+# Refuses a symlinked source (security -- see install.ps1's symlink
+# rejection for the full rationale: a symlink planted in tools/workflow/
+# could otherwise be used to copy arbitrary content this user can read
+# into the target repo).
+function Copy-WorkflowFile
+{
+    param([string]$RelativePath)
+    $src = Join-Path $frameworkRoot $RelativePath
+    $dst = Join-Path $root $RelativePath
+
+    $srcItem = Get-Item -Path $src -ErrorAction SilentlyContinue
+    if ($srcItem -and ($srcItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint))
+    {
+        Write-Error "Refusing to follow symlink (security): $src"
+        return
+    }
+    if (-not (Test-Path $src -PathType Leaf)) { return }
+
+    if ((Test-Path $dst) -and -not $Force)
+    {
+        Write-Warning "$RelativePath already exists (use -Force to overwrite)"
+        return
+    }
+
+    $dstDir = Split-Path -Parent $dst
+    if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }
+    Copy-Item -Path $src -Destination $dst -Force
+    if ($RelativePath -like "*.sh" -and -not $IsWindows -and (Get-Command chmod -ErrorAction SilentlyContinue))
+    {
+        & chmod +x $dst
+    }
+    Write-Success "Copied $RelativePath"
+}
+
+Copy-WorkflowFile "tools/workflow/workflow.sh"
+Copy-WorkflowFile "tools/workflow/workflow.ps1"
+Copy-WorkflowFile "tools/workflow/migrate-assertions.sh"
+Copy-WorkflowFile "tools/workflow/migrate-assertions.ps1"
+
+$libSrcDir = Join-Path $frameworkRoot "tools/workflow/lib"
+$libSrcItem = Get-Item -Path $libSrcDir -ErrorAction SilentlyContinue
+if ($libSrcItem -and ($libSrcItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint))
+{
+    Write-Error "Refusing to follow symlink (security): $libSrcDir"
+}
+elseif (Test-Path $libSrcDir)
+{
+    Get-ChildItem -Path $libSrcDir -File | ForEach-Object {
+        Copy-WorkflowFile "tools/workflow/lib/$($_.Name)"
+    }
+}
+
+Copy-WorkflowFile "workflow/pipelines.yml"
+
+# ============================================================================
+# Step 6: Setup Beads (Optional Task Tracking)
+# ============================================================================
+Write-Step "[6/7] Setting up Beads task tracking (optional)..."
 
 $beadsInstalled = $false
 try
@@ -918,9 +996,9 @@ else
 }
 
 # ============================================================================
-# Step 6: Initialize Fallback Task Structure
+# Step 7: Initialize Fallback Task Structure
 # ============================================================================
-Write-Step "[6/6] Initializing fallback task structure (.llm/tasks.md)..."
+Write-Step "[7/7] Initializing fallback task structure (.llm/tasks.md)..."
 
 $llmDir = Join-Path $root ".llm"
 if (-not (Test-Path $llmDir))
