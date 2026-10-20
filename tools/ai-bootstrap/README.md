@@ -130,7 +130,9 @@ the repo already has, not a file this script writes for you.
 ### Task Tracking (.llm/tasks.md)
 
 1. **Planner agent** creates/updates `.llm/tasks.md`
-2. **Coder agent** reads and executes the first unchecked task, dispatched by the Conductor
+2. **Conductor** resolves the next ready task via `workflow tasks next` — the next task
+   whose dependencies are satisfied in `.llm/tasks.md`'s dependency graph, not simply the
+   first unchecked checkbox — and dispatches the **Coder agent** to execute it
 
 **Markdown Format Example:**
 
