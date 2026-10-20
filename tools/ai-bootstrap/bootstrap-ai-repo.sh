@@ -10,8 +10,9 @@ if [[ "$1" == "--force" ]]; then
     FORCE=1
 fi
 
-# Get script directory (for locating sibling tool files, e.g. create-llm-memory.sh)
-# and repo root. This script may be installed globally (e.g. a user's Claude
+# Get script directory (for locating sibling framework files to copy FROM, e.g.
+# tools/workflow/lib, workflow/pipelines.yml) and repo root. This script may be
+# installed globally (e.g. a user's Claude
 # agent tools directory) and invoked against any repo as the current working
 # directory, so the repo root must come from git, never from where this
 # script itself happens to live.
@@ -71,24 +72,12 @@ fi
 # ============================================================================
 print_step "[1/7] Creating AI memory structure..."
 
-MEMORY_SCRIPT="$SCRIPT_DIR/create-llm-memory.sh"
-if [ -f "$MEMORY_SCRIPT" ]; then
-    if [ $FORCE -eq 1 ]; then
-        "$MEMORY_SCRIPT" --force
-    else
-        "$MEMORY_SCRIPT"
-    fi
-    print_success "AI memory structure created"
-else
-    print_warning "create-llm-memory.sh not found, creating minimal structure..."
+# Create minimal structure
+mkdir -p "$ROOT/docs/adr"
+mkdir -p "$ROOT/docs/standards"
+mkdir -p "$ROOT/.githooks"
 
-    # Create minimal structure
-    mkdir -p "$ROOT/docs/adr"
-    mkdir -p "$ROOT/docs/standards"
-    mkdir -p "$ROOT/.githooks"
-
-    print_success "Minimal directory structure created"
-fi
+print_success "Minimal directory structure created"
 
 # ============================================================================
 # Step 2: Create Git Hooks
@@ -779,7 +768,7 @@ else
     print_info "  • Git-versioned (no external services needed)"
     print_info "  • Multi-agent coordination safe"
     echo ""
-    print_info "In the meantime, AI modes will use ./.llm/tasks.md for task tracking."
+    print_info "In the meantime, agents will use ./.llm/tasks.md for task tracking."
 fi
 
 # ============================================================================
@@ -859,5 +848,5 @@ echo -e "  ${NC}3. Commit the framework:${NC}"
 print_info "     git add ."
 print_info "     git commit -m 'Add AI-assisted development framework'"
 echo ""
-echo -e "${CYAN}For help: See ai-assisted-development-framework.md${NC}"
+echo -e "${CYAN}For help: See tools/ai-bootstrap/README.md${NC}"
 echo ""
