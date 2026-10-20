@@ -18,8 +18,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# $scriptDir locates sibling tool files (e.g. create-llm-memory.ps1). This
-# script may be installed globally (e.g. a user's Claude agent tools
+# $scriptDir locates sibling framework files to copy FROM (e.g. tools/workflow/lib,
+# workflow/pipelines.yml). This script may be installed globally (e.g. a user's Claude agent tools
 # directory) and invoked against any repo as the current working directory,
 # so the repo root must come from git, never from where this script itself
 # happens to live.
@@ -87,23 +87,8 @@ if (-not $root)
 # ============================================================================
 Write-Step "[1/7] Creating AI memory structure..."
 
-$memoryScript = Join-Path $scriptDir "create-llm-memory.ps1"
-if (Test-Path $memoryScript)
-{
-    $args = @()
-    if ($Force)
-    {
-        $args += "-Force"
-    }
-    & $memoryScript @args
-    Write-Success "AI memory structure created"
-}
-else
-{
-    Write-Warning "create-llm-memory.ps1 not found, creating minimal structure..."
-
-    # Create minimal structure
-    $dirs = @(
+# Create minimal structure
+$dirs = @(
         "$root/docs",
         "$root/docs/adr",
         "$root/docs/standards",
@@ -188,8 +173,7 @@ When in doubt, look at existing code in the repository as examples of these patt
         Write-Success "Created AGENTS.md"
     }
 
-    Write-Success "Minimal directory structure created"
-}
+Write-Success "Minimal directory structure created"
 
 # ============================================================================
 # Step 2: Create Git Hooks
@@ -992,7 +976,7 @@ else
     Write-Info "  • Git-versioned (no external services needed)"
     Write-Info "  • Multi-agent coordination safe"
     Write-Info ""
-    Write-Info "In the meantime, AI modes will use ./.llm/tasks.md for task tracking."
+    Write-Info "In the meantime, agents will use ./.llm/tasks.md for task tracking."
 }
 
 # ============================================================================
@@ -1081,5 +1065,5 @@ Write-Host ""
 Write-Host "  4. Test the hooks:" -ForegroundColor White
 Write-Info "     Make a small change and commit to see hooks in action"
 Write-Host ""
-Write-Host "For help: See ai-assisted-development-framework.md" -ForegroundColor Cyan
+Write-Host "For help: See tools/ai-bootstrap/README.md" -ForegroundColor Cyan
 Write-Host ""

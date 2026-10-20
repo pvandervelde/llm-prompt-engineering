@@ -6,27 +6,44 @@ Thank you for your interest in contributing to this project! This guide will hel
 
 1. Fork the repository
 2. Clone your fork locally
-3. Install PowerShell and the required modules:
-
-   ```powershell
-   Install-Module powershell-yaml
-   ```
 
 ## Project Structure
 
-- **`modes/`**: Custom AI assistant modes for different development tasks
-- **`prompts/`**: Reusable prompt templates for common LLM interactions
-- **`specs/`**: Technical specifications and design documents
-- **`tools/`**: Automation scripts for generating LLM configuration files
-- **`output/`**: Generated files (do not edit directly)
+- **`claude-agents/`**: Claude Code agent definitions (full TDD + infrastructure pipeline)
+- **`agents/`**: GitHub Copilot agent definitions (`*.agent.md` mirrors of `claude-agents/`)
+- **`workflow/`**: `pipelines.yml` — the declarative pipeline schema the workflow engine reads
+- **`tools/workflow/`**: The `workflow` CLI engine (PowerShell and Bash) that drives phase sequencing and gating
+- **`tools/ai-bootstrap/`**: Global installer (`install.sh`/`.ps1`) and per-repo bootstrap scripts (`bootstrap-ai-repo.*`)
+- **`prompts/`**: Reusable prompt templates for repository analysis and group review
+- **`catalog/`**: Codebase catalog generator (symbol index for agents)
 
 ## Making Changes
 
-### Adding New Modes
+### Adding or Changing an Agent
 
-1. Create a new markdown file in the `modes/` directory
-2. Follow the existing format with YAML frontmatter for metadata
-3. Include clear descriptions of the mode's purpose and capabilities
+1. Claude Code agents live in `claude-agents/*.md`; their Copilot mirrors live in
+   `agents/*.agent.md`. Keep both in sync when an agent's responsibilities or pipeline
+   position change.
+2. Update [claude-agents/README.md](./claude-agents/README.md) if you add a new agent or
+   change the pipeline graph.
+
+### Modifying the Workflow Engine
+
+1. `tools/workflow/workflow.sh` and `workflow.ps1` must stay behaviorally identical —
+   same commands, same JSON output.
+2. Run the test harness under `tools/workflow/test/` before submitting.
+3. Update `workflow/pipelines.yml` and [workflow/README.md](./workflow/README.md) if you
+   change phase sequencing or gate thresholds.
+
+### Modifying Bootstrap / Installer Scripts
+
+1. Any script under `tools/ai-bootstrap/` may be installed globally and then invoked
+   against an arbitrary target repo — **always resolve the repo root via
+   `git rev-parse --show-toplevel` from the current working directory**, never relative to
+   the script's own path. See [AGENTS.md](./AGENTS.md) for the full rationale.
+2. Keep the `.sh` and `.ps1` variants behaviorally equivalent.
+3. Test changes end-to-end against a scratch repo, not just by reading the generated
+   output — see `tools/ai-bootstrap/test/` for the existing harness pattern.
 
 ### Adding New Prompts
 
@@ -34,24 +51,15 @@ Thank you for your interest in contributing to this project! This guide will hel
 2. Use descriptive filenames that indicate the prompt's purpose
 3. Include examples where helpful
 
-### Modifying Tools
-
-1. Test your changes locally before submitting
-2. Ensure PowerShell scripts are cross-platform compatible
-3. Update documentation if you change script parameters or behavior
-
 ## Testing
 
 Before submitting changes:
 
-1. Run the rule generation tool to ensure it works:
-
-   ```powershell
-   .\tools\generate-llm-rules.ps1
-   ```
-
-2. Verify generated files are properly formatted
-3. Test any new modes or prompts with your preferred LLM tools
+1. If you touched `tools/workflow/` or `tools/ai-bootstrap/`, run their test suites
+   (`tools/workflow/test/`, `tools/ai-bootstrap/test/`)
+2. Verify any new or changed agent file still mirrors correctly between `agents/` and
+   `claude-agents/`
+3. Test any new prompts with your preferred LLM tool
 
 ## Submitting Changes
 
@@ -66,8 +74,7 @@ Before submitting changes:
 
 If you have questions about contributing, please:
 
-- Check the specifications in `specs/` for technical details
-- Review existing files for examples
+- Review existing agent, workflow, and prompt files for examples
 - Open an issue for discussion
 
-We appreciate your contributions to making LLM prompt engineering more accessible and standardized!
+We appreciate your contributions!

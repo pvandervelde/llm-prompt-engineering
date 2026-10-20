@@ -117,7 +117,7 @@ your own repo's directory layout; an empty or missing mapping is a valid, safe d
 ### 5. Task Tracking Setup (Optional)
 
 - Creates `.llm/tasks.md` template
-- AI modes auto-detect and parse this format
+- Agents (Planner, Coder, Conductor, ...) read and parse this format directly
 - Tasks are stored as Markdown checklist items
 
 This script does not generate CI configuration. A repo is not assumed to be
@@ -129,11 +129,10 @@ the repo already has, not a file this script writes for you.
 
 ### Task Tracking (.llm/tasks.md)
 
-1. **Planner Mode** creates/updates `.llm/tasks.md`
-2. **Coder Mode** reads and executes first unchecked task
-3. **Helper Scripts** convert to JSON via the task-export tool provided by
-   the agent framework (installed alongside the agent definitions, not part
-   of this repo's workspace)
+1. **Planner agent** creates/updates `.llm/tasks.md`
+2. **Conductor** resolves the next ready task via `workflow tasks next` — the next task
+   whose dependencies are satisfied in `.llm/tasks.md`'s dependency graph, not simply the
+   first unchecked checkbox — and dispatches the **Coder agent** to execute it
 
 **Markdown Format Example:**
 
@@ -155,7 +154,7 @@ the repo already has, not a file this script writes for you.
 
 ### Reading Tasks
 
-AI modes follow this process:
+Agents follow this process:
 
 1. **Check for `.llm/tasks.md`**
    - If exists → parse Markdown format
@@ -167,9 +166,6 @@ AI modes follow this process:
 - **install.sh** - Bash global installer (agent/skill definitions -> `~/.claude`, `~/.copilot`)
 - **bootstrap-ai-repo.ps1** - PowerShell bootstrap script (Windows) — configures a target repo
 - **bootstrap-ai-repo.sh** - Bash bootstrap script (Linux/macOS) — configures a target repo
-- **overview.md** - Comprehensive documentation of the framework
-- **quick-reference.md** - Quick lookup for common tasks
-- **ai-assisted-development-framework.md** - Detailed framework guide
 - **README.md** - This file
 
 ## Next Steps After Bootstrap
@@ -230,7 +226,6 @@ AI modes follow this process:
 
 1. Check `.llm/tasks.md` exists: `ls .llm/tasks.md`
 2. Verify format is correct (checklist items with `- [ ]`)
-3. Check the agent framework's task-export tool is installed and on PATH
 
 ### Git Hooks Not Running
 
@@ -247,19 +242,14 @@ chmod +x .githooks/pre-push
 ./.githooks/pre-commit
 ```
 
-## Integration with AI Modes
+## Integration with the Agent Pipeline
 
-The bootstrap enables AI modes to:
+The bootstrap enables the agent pipeline to:
 
-1. **Planner Mode**: Create `.llm/tasks.md`
-2. **Coder Mode**: Read and execute next task
-3. **Infraengineer Mode**: Execute infrastructure tasks
-4. **Read-Task Prompt**: Parse `.llm/tasks.md`
-5. **Reviewer Mode**: Check tasks against implementation
+1. **Planner agent**: Create `.llm/tasks.md`
+2. **Coder agent**: Read and execute the next task
+3. **Infrastructure Engineer agent**: Execute infrastructure tasks
+4. **Verifier agent**: Check tasks against the implementation
 
-## References
-
-- Full framework documentation: [overview.md](./overview.md)
-- Quick reference: [quick-reference.md](./quick-reference.md)
-- Framework details: [ai-assisted-development-framework.md](./ai-assisted-development-framework.md)
-- Task sources spec: [../../docs/spec/task-sources.md](../../docs/spec/task-sources.md)
+See [claude-agents/README.md](../../claude-agents/README.md) for the full agent roster and
+pipeline graph.
