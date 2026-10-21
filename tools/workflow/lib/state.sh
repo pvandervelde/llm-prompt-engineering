@@ -107,6 +107,45 @@ state_append_existing_work() {
   ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 }
 
+# Prints the recorded "<mode> (<source>)" string for one phase under
+# "## Isolation", or empty if that phase's isolation mode hasn't been resolved
+# yet for this task.
+state_isolation_get() {
+  local file="$1" phase_id="$2"
+  [ -f "$file" ] || return 0
+  awk -v phase="$phase_id" '
+    $0 == "## Isolation" { inb=1; next }
+    inb && /^## / { exit }
+    inb && $0 ~ "^" phase ": " { sub("^" phase ": ", ""); print; exit }
+  ' "$file"
+}
+
+# Upserts one "<phase>: <mode> (<source>)" line under "## Isolation" --
+# replacing that phase's existing line if present, replacing a lone
+# "[None yet]" placeholder on first use, or appending otherwise. Unlike
+# state_append_existing_work/state_append_blocking_issue (pure append), each
+# phase gets at most one line here, so an existing line for the same phase is
+# updated in place rather than duplicated (e.g. a task-level override
+# recorded after next already cached the repo-default mode).
+state_isolation_set() {
+  local file="$1" phase_id="$2" mode="$3" source="$4"
+  local newline="${phase_id}: ${mode} (${source})"
+  awk -v phase="$phase_id" -v newline="$newline" '
+    BEGIN { inb = 0; replaced = 0; section_seen = 0 }
+    $0 == "## Isolation" { print; inb = 1; section_seen = 1; next }
+    inb && /^## / {
+      if (!replaced) { print newline; replaced = 1 }
+      inb = 0
+      print
+      next
+    }
+    inb && $0 == "[None yet]" { next }
+    inb && $0 ~ "^" phase ": " { print newline; replaced = 1; next }
+    { print }
+    END { if (section_seen && !replaced) print newline }
+  ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+}
+
 # Writes the initial skeleton for a new task. Fails (returns 1) rather than
 # overwriting if a state file already exists for a *different* task -- the
 # caller must resolve that before calling init.
@@ -139,5 +178,8 @@ engine doesn't know pipeline-specific section shapes; see tools/workflow/README.
 
 ## Blocking Issues
 [None]
+
+## Isolation
+[None yet]
 EOF
 }

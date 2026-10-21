@@ -116,6 +116,7 @@ does not manage branch resolution for it — add the block if that changes.
 | `skipWhen` | (only with `advance: conditional`) conditions under which the engine auto-advances *without* invoking `agent` at all |
 | `skipOnTier` | list of risk tiers (see #61, `workflow tier`) for which this phase is auto-marked done without invoking `agent` — unconditional, unlike `skipWhen`; checked by `next` before every phase it would otherwise return |
 | `onPass` | side effect to run when this phase's gate passes with no blocking reasons; currently only `open-pr` is defined |
+| `isolation` | `container` or `direct` — this phase's shipped isolation baseline; absent defaults to `direct`. See [workflow/isolation.md](./isolation.md) for the full design and `.tech-decisions.yml`'s `isolation.overrides` for how a repo can opt a phase out. |
 
 ### `pauseWhen` reason strings
 

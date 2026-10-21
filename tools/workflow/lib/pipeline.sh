@@ -93,3 +93,15 @@ pl_phase_skipwhen() {
     | { grep -m1 -E "^          ${key}:" || true; } \
     | sed -E "s/^          ${key}: *//"
 }
+
+# This phase's shipped isolation baseline ("container" or "direct") from
+# pipelines.yml, defaulting to "direct" when the key is absent -- see
+# workflow/isolation.md. Repo-level overrides (.tech-decisions.yml's
+# isolation.overrides) and task-level overrides are resolved by the caller,
+# not here; this is only the pipelines.yml-shipped default.
+pl_phase_isolation() {
+  local phase_block="$1"
+  local v
+  v=$(pl_phase_scalar "$phase_block" isolation)
+  echo "${v:-direct}"
+}

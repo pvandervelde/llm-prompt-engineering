@@ -309,8 +309,9 @@ function Get-NextPayload {
     $pending = @()
     foreach ($id in (@($currentPhase) + $parallel)) {
         if ($doneList -contains $id) { continue }
-        $agent = (Get-Phase -PipelineBlock $Block -PhaseId $id).agent
-        $pending += [PSCustomObject]@{ phase = $id; agent = $agent }
+        $idPhase = Get-Phase -PipelineBlock $Block -PhaseId $id
+        $isolationMode = Resolve-AndCacheIsolation -StateFile $StateFile -Root $Root -Phase $idPhase -PhaseId $id
+        $pending += [PSCustomObject]@{ phase = $id; agent = $idPhase.agent; isolation = $isolationMode }
     }
 
     return [PSCustomObject]@{ phases = $pending; contextRefs = @($StateFile) }
@@ -513,6 +514,69 @@ function Get-RiskPaths {
     return @($raw -split ',' | ForEach-Object { $_.Trim().Trim('"') } | Where-Object { $_ -ne '' })
 }
 
+# This phase's shipped isolation baseline ("container" or "direct") from
+# pipelines.yml's real-YAML-parsed $Phase.isolation, defaulting to "direct"
+# when the key is absent -- see workflow/isolation.md.
+function Get-PhaseIsolationDefault {
+    param($Phase)
+    if ($Phase.isolation) { return $Phase.isolation }
+    return "direct"
+}
+
+# Reads one override value under .tech-decisions.yml's top-level
+# isolation: -> overrides: -> <phase>: (hand-rolled regex extraction, same
+# convention as Get-RiskPaths/Get-ClassifyGlobs above -- .tech-decisions.yml
+# is not parsed via ConvertFrom-Yaml in this engine). Missing file, block,
+# or phase -> "" (caller falls back to the pipelines.yml default).
+function Get-TechIsolationOverride {
+    param([string]$Path, [string]$PhaseId)
+    if (-not (Test-Path $Path)) { return "" }
+    $lines = Get-Content $Path
+    $inIsolation = $false
+    $inOverrides = $false
+    foreach ($line in $lines) {
+        if ($line -match '^isolation:') { $inIsolation = $true; continue }
+        if ($inIsolation -and $line -match '^[A-Za-z]') { break }
+        if ($inIsolation -and $line -match '^\s\soverrides:') { $inOverrides = $true; continue }
+        if ($inIsolation -and $inOverrides -and $line -match '^\s\s[A-Za-z]') { $inOverrides = $false }
+        if ($inIsolation -and $inOverrides -and $line -match "^\s{4}$([regex]::Escape($PhaseId)):\s*(.*)") {
+            return $Matches[1].Trim()
+        }
+    }
+    return ""
+}
+
+# Resolves the repo-level isolation baseline for one phase: pipelines.yml's
+# shipped default, after .tech-decisions.yml's isolation.overrides (either
+# direction -- see workflow/isolation.md section 5.2). Returns
+# @{ Mode = <mode>; Source = "repo override"|"repo default" }, always
+# freshly computed -- never reads the state file's cache.
+function Resolve-IsolationBaseline {
+    param($Phase, [string]$TechFile, [string]$PhaseId)
+    $pipelineDefault = Get-PhaseIsolationDefault -Phase $Phase
+    $override = Get-TechIsolationOverride -Path $TechFile -PhaseId $PhaseId
+    if ($override) {
+        return @{ Mode = $override; Source = "repo override" }
+    }
+    return @{ Mode = $pipelineDefault; Source = "repo default" }
+}
+
+# Resolves and returns the EFFECTIVE isolation mode for one phase as Invoke-Next
+# sees it: the state file's cached record if one already exists (a prior
+# repo-default resolution, or a task override), otherwise the repo baseline
+# freshly computed and recorded now. Never recomputes once cached.
+function Resolve-AndCacheIsolation {
+    param([string]$StateFile, [string]$Root, $Phase, [string]$PhaseId)
+    $cached = Get-StateIsolation -Path $StateFile -PhaseId $PhaseId
+    if ($cached) {
+        return ($cached -split ' ')[0]
+    }
+    $techFile = Join-Path $Root ".tech-decisions.yml"
+    $baseline = Resolve-IsolationBaseline -Phase $Phase -TechFile $techFile -PhaseId $PhaseId
+    Set-StateIsolation -Path $StateFile -PhaseId $PhaseId -Mode $baseline.Mode -Source $baseline.Source
+    return $baseline.Mode
+}
+
 function Invoke-Tier {
     param([string[]]$ArgList)
     $filesChanged = ""; $override = ""; $pipeline = ""
@@ -573,6 +637,53 @@ function Invoke-Tier {
     }
 
     [PSCustomObject]@{ tier = $final; reason = $reason; overridden = $overridden; rejectedOverride = $rejectedOverride } | ConvertTo-Json -Compress
+}
+
+function Invoke-Isolation {
+    param([string[]]$ArgList)
+    $phaseId = ""; $override = ""; $pipeline = ""
+    for ($i = 0; $i -lt $ArgList.Count; $i += 2) {
+        switch ($ArgList[$i]) {
+            "--phase" { $phaseId = $ArgList[$i + 1] }
+            "--override" { $override = $ArgList[$i + 1] }
+            "--pipeline" { $pipeline = $ArgList[$i + 1] }
+            default { Fail "isolation: unknown argument $($ArgList[$i])" }
+        }
+    }
+    if (-not $phaseId) { Fail "isolation: --phase is required" }
+    if (-not $override) { Fail "isolation: --override is required" }
+    if ($override -notin @("container", "direct")) { Fail "isolation: --override must be 'container' or 'direct'" }
+
+    $root = Get-RepoRoot
+    $data = Get-PipelinesData -Root $root
+    $resolved = if ($pipeline) { Resolve-NamedPipeline -Data $data -Root $root -Pipeline $pipeline } else { Resolve-ActivePipeline -Data $data -Root $root }
+    if (-not (Test-Path $resolved.StateFile)) { Fail "no state file for $($resolved.Name); run 'init' first" }
+    $stateFile = $resolved.StateFile
+
+    $phase = Get-Phase -PipelineBlock $resolved.Block -PhaseId $phaseId
+    if (-not $phase) { Fail "unknown phase: $phaseId" }
+
+    # Always resolved fresh against the repo baseline -- never against
+    # whatever Invoke-Next may have already cached in the state file -- so
+    # this command's refusal rule can't be bypassed by whatever happens to
+    # be cached from an earlier `next` call.
+    $techFile = Join-Path $root ".tech-decisions.yml"
+    $baseline = Resolve-IsolationBaseline -Phase $phase -TechFile $techFile -PhaseId $phaseId
+
+    $final = $baseline.Mode
+    $overridden = $false
+    $rejectedOverride = $null
+    if ($override -eq $baseline.Mode) {
+        # requesting what's already in effect -- no-op
+    } elseif ($override -eq "container" -and $baseline.Mode -eq "direct") {
+        $final = "container"
+        $overridden = $true
+        Set-StateIsolation -Path $stateFile -PhaseId $phaseId -Mode "container" -Source "task override, strengthened from $($baseline.Source): direct"
+    } else {
+        $rejectedOverride = "cannot downgrade $phaseId below repo policy (container)"
+    }
+
+    [PSCustomObject]@{ phase = $phaseId; isolation = $final; overridden = $overridden; rejectedOverride = $rejectedOverride } | ConvertTo-Json -Compress
 }
 
 function Invoke-Classify {
@@ -811,5 +922,6 @@ switch ($Command) {
         Invoke-TasksNext
     }
     "tier" { Invoke-Tier -ArgList $Rest }
+    "isolation" { Invoke-Isolation -ArgList $Rest }
     default { Fail "unknown command: $Command" }
 }

@@ -131,6 +131,64 @@ function Clear-StateBlockingIssues {
     Set-Content -Path $Path -Value $result
 }
 
+# Returns the recorded "<mode> (<source>)" string for one phase under
+# "## Isolation", or "" if that phase's isolation mode hasn't been resolved
+# yet for this task.
+function Get-StateIsolation {
+    param([string]$Path, [string]$PhaseId)
+    if (-not (Test-Path $Path)) { return "" }
+    $lines = Get-Content $Path
+    $inSection = $false
+    foreach ($line in $lines) {
+        if ($line -eq "## Isolation") { $inSection = $true; continue }
+        if ($inSection -and $line -like "## *") { break }
+        if ($inSection -and $line -match "^$([regex]::Escape($PhaseId)): (.*)$") {
+            return $Matches[1]
+        }
+    }
+    return ""
+}
+
+# Upserts one "<phase>: <mode> (<source>)" line under "## Isolation" --
+# replacing that phase's existing line if present, replacing a lone
+# "[None yet]" placeholder on first use, or appending otherwise. Mirrors
+# state_isolation_set in lib/state.sh function-for-function.
+function Set-StateIsolation {
+    param([string]$Path, [string]$PhaseId, [string]$Mode, [string]$Source)
+    $newLine = "${PhaseId}: ${Mode} (${Source})"
+    $lines = Get-Content $Path
+    $result = New-Object System.Collections.Generic.List[string]
+    $inSection = $false
+    $replaced = $false
+    $sectionSeen = $false
+    $pattern = "^$([regex]::Escape($PhaseId)): "
+    foreach ($line in $lines) {
+        if ($line -eq "## Isolation") {
+            $result.Add($line)
+            $inSection = $true
+            $sectionSeen = $true
+            continue
+        }
+        if ($inSection -and $line -like "## *") {
+            if (-not $replaced) { $result.Add($newLine); $replaced = $true }
+            $inSection = $false
+            $result.Add($line)
+            continue
+        }
+        if ($inSection -and $line -eq "[None yet]") { continue }
+        if ($inSection -and $line -match $pattern) {
+            $result.Add($newLine)
+            $replaced = $true
+            continue
+        }
+        $result.Add($line)
+    }
+    if ($sectionSeen -and -not $replaced) {
+        $result.Add($newLine)
+    }
+    Set-Content -Path $Path -Value $result
+}
+
 function Initialize-StateFile {
     param([string]$Path, [string]$Task, [string]$Pipeline, [string]$Branch, [string]$FirstPhase)
     $dir = Split-Path -Parent $Path
@@ -161,6 +219,9 @@ engine doesn't know pipeline-specific section shapes; see tools/workflow/README.
 
 ## Blocking Issues
 [None]
+
+## Isolation
+[None yet]
 "@
     Set-Content -Path $Path -Value $content
 }

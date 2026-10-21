@@ -510,6 +510,89 @@ $stateContent15 = Get-Content (Join-Path $scr15 ".llm/workflow-state.md") -Raw
 Assert-Contains "74 re-running init does not reset Current Phase in the state file" $stateContent15 "**Current Phase:** GREEN"
 
 Write-Host ""
+Write-Host "Tier 8 - isolation"
+
+$scr16 = Join-Path $env:TEMP "wf-ps-t16-$(Get-Random)"
+New-Scratch $scr16
+Invoke-Wf $scr16 @("init", "--task", "iso1", "--pipeline", "software") | Out-Null
+$r = Invoke-Wf $scr16 @("next")
+Assert-Contains "75 next reports isolation:direct for SPEC_REVIEW_GATE (no isolation key -> default)" $r.Output '"phase":"SPEC_REVIEW_GATE","agent":"Spec Reviewer","isolation":"direct"'
+$stateContent16 = Get-Content (Join-Path $scr16 ".llm/workflow-state.md") -Raw
+Assert-Contains "76 next's isolation resolution is cached in the state file" $stateContent16 "SPEC_REVIEW_GATE: direct (repo default)"
+
+Invoke-Wf $scr16 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+$r = Invoke-Wf $scr16 @("next")
+Assert-Contains "77 next reports isolation:container for RED (pipelines.yml default)" $r.Output '"phase":"RED","agent":"Tester","isolation":"container"'
+
+$scr17 = Join-Path $env:TEMP "wf-ps-t17-$(Get-Random)"
+New-Scratch $scr17
+@'
+isolation:
+  overrides:
+    RED: direct
+'@ | Set-Content (Join-Path $scr17 ".tech-decisions.yml")
+Invoke-Wf $scr17 @("init", "--task", "iso2", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr17 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+$r = Invoke-Wf $scr17 @("next")
+Assert-Contains "78 a repo-level .tech-decisions.yml override flips a phase's default" $r.Output '"phase":"RED","agent":"Tester","isolation":"direct"'
+$stateContent17 = Get-Content (Join-Path $scr17 ".llm/workflow-state.md") -Raw
+Assert-Contains "78b the override's source is recorded, not just its mode" $stateContent17 "RED: direct (repo override)"
+
+# Caching: once next has resolved+recorded a phase's mode, a LATER
+# .tech-decisions.yml edit must not retroactively change it.
+$scr18 = Join-Path $env:TEMP "wf-ps-t18-$(Get-Random)"
+New-Scratch $scr18
+Invoke-Wf $scr18 @("init", "--task", "iso3", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr18 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr18 @("next") | Out-Null
+@'
+isolation:
+  overrides:
+    RED: direct
+'@ | Set-Content (Join-Path $scr18 ".tech-decisions.yml")
+$r = Invoke-Wf $scr18 @("next")
+Assert-Contains "79 a cached isolation mode survives a later .tech-decisions.yml edit (not re-resolved)" $r.Output '"phase":"RED","agent":"Tester","isolation":"container"'
+
+# workflow isolation --override: strengthening is allowed.
+$scr19 = Join-Path $env:TEMP "wf-ps-t19-$(Get-Random)"
+New-Scratch $scr19
+Invoke-Wf $scr19 @("init", "--task", "iso4", "--pipeline", "software") | Out-Null
+$r = Invoke-Wf $scr19 @("isolation", "--phase", "SECURITY", "--override", "container")
+Assert-Eq "80 isolation --override strengthens a direct-by-default phase" "container" (Get-JsonField $r.Output "isolation")
+Assert-Eq "81 a successful strengthening override reports overridden=true" "true" (Get-JsonField $r.Output "overridden")
+$stateContent19 = Get-Content (Join-Path $scr19 ".llm/workflow-state.md") -Raw
+Assert-Contains "82 a strengthening override is recorded in the state file" $stateContent19 "SECURITY: container (task override"
+
+# workflow isolation --override: weakening is refused outright.
+$r = Invoke-Wf $scr19 @("isolation", "--phase", "RED", "--override", "direct")
+Assert-Eq "83 isolation --override refuses to weaken a container-by-default phase" "container" (Get-JsonField $r.Output "isolation")
+Assert-Eq "84 a refused override reports overridden=false" "false" (Get-JsonField $r.Output "overridden")
+Assert-Contains "85 a refused override explains the refusal" $r.Output "cannot downgrade RED below repo policy"
+$stateContent19b = Get-Content (Join-Path $scr19 ".llm/workflow-state.md") -Raw
+if ($stateContent19b.Contains("RED: ")) {
+    Fail "86 a refused override must not be written to the state file" "found a RED: line after refusal"
+} else {
+    Pass "86 a refused override must not be written to the state file"
+}
+
+# workflow isolation --override: requesting the mode already in effect is a no-op.
+$r = Invoke-Wf $scr19 @("isolation", "--phase", "RED", "--override", "container")
+Assert-Eq "87 requesting the already-effective mode is a no-op (not an error)" "false" (Get-JsonField $r.Output "overridden")
+Assert-Eq "88 a no-op override still reports the correct isolation" "container" (Get-JsonField $r.Output "isolation")
+
+$r = Invoke-Wf $scr19 @("isolation", "--phase", "RED", "--override", "bogus")
+Assert-Eq "89 an invalid --override value is rejected" "1" $r.ExitCode
+
+$scr20 = Join-Path $env:TEMP "wf-ps-t20-$(Get-Random)"
+New-Scratch $scr20
+Invoke-Wf $scr20 @("init", "--task", "iso5", "--pipeline", "infrastructure") | Out-Null
+$r = Invoke-Wf $scr20 @("next", "--pipeline", "infrastructure")
+Assert-Contains "90 infra pipeline: IMPLEMENT defaults to isolation:container" $r.Output '"phase":"IMPLEMENT","agent":"Infrastructure Engineer","isolation":"container"'
+Invoke-Wf $scr20 @("gate", "--phase", "IMPLEMENT", "--verdict", "done", "--pipeline", "infrastructure") | Out-Null
+$r = Invoke-Wf $scr20 @("next", "--pipeline", "infrastructure")
+Assert-Contains "91 infra pipeline: SECURITY defaults to isolation:direct" $r.Output '"phase":"SECURITY","agent":"Security Reviewer","isolation":"direct"'
+
+Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="
 if ($script:FailCount -gt 0) {
     Write-Host "Failed scenarios:"

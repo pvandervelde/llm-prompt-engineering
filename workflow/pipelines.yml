@@ -47,15 +47,18 @@ pipelines:
         agent: "Tester"
         advance: auto
         pauseWhen: [spec-gap]
+        isolation: container
 
       - id: GREEN
         agent: "Coder"
         advance: auto
+        isolation: container
 
       - id: REFACTOR
         agent: "Refactor"
         advance: auto
         pauseWhen: [blocked]
+        isolation: container
 
       - id: AUDIT
         agent: "QA Engineer"
@@ -63,6 +66,7 @@ pipelines:
         advance: auto
         pauseWhen: [safety-critical-survivor, formal-counterexample]
         skipOnTier: [minimal]
+        isolation: container
 
       - id: SECURITY
         agent: "Security Reviewer"
@@ -89,6 +93,7 @@ pipelines:
       - id: IMPLEMENT
         agent: "Infrastructure Engineer"
         advance: auto
+        isolation: container
 
       - id: SECURITY
         agent: "Security Reviewer"

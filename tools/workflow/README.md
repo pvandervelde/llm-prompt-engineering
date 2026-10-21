@@ -136,8 +136,17 @@ Returns the phase(s) to run next. Normally one; two when the current stage has p
 phases (e.g. `AUDIT` + `SECURITY`) and not all of them have gated clean yet:
 
 ```json
-{"phases": [{"phase": "RED", "agent": "Tester"}], "contextRefs": ["<stateFile path>"]}
+{"phases": [{"phase": "RED", "agent": "Tester", "isolation": "container"}], "contextRefs": ["<stateFile path>"]}
 ```
+
+Each phase entry's `isolation` field is the *resolved* mode for this task — `pipelines.yml`'s
+baseline, after `.tech-decisions.yml`'s `isolation.overrides` (see `workflow/isolation.md`) —
+computed once per phase and cached in the state file's `## Isolation` section the first time
+`next` returns that phase, so a resumed task reuses the same recorded mode rather than
+re-resolving it (a later `.tech-decisions.yml` edit does not retroactively change a phase
+already recorded for this task). The Conductor branches on this field: `direct` dispatches via
+`Task` as always; `container` is not yet wired to an execution path (see `workflow/isolation.md`
+§13 — the container lifecycle itself is a follow-up).
 
 A `SPEC_REVIEW_GATE`-style conditional phase is skipped automatically (and `next` returns
 the phase after it) when its `skipWhen` condition in `pipelines.yml` already holds — see
@@ -165,6 +174,30 @@ Applies the deterministic gate logic and returns one of `ADVANCE | PAUSE | FAIL`
   group's `## Blocking Issues` entries are cleared and `Status` returns to `in-progress`.
 - `onPass` surfaces a declared side effect (currently only `open-pr`) for the conductor to
   perform — the engine itself never touches GitHub.
+
+### `isolation --phase <id> --override <container|direct> [--pipeline <name>]`
+
+Lets a task opt one phase into stronger isolation than this repo's resolved baseline for it
+— never weaker. See `workflow/isolation.md` for the full rationale.
+
+```json
+{"phase": "REFACTOR", "isolation": "container", "overridden": true, "rejectedOverride": null}
+```
+
+- Resolves the repo baseline for `<id>` fresh on every call — `pipelines.yml`'s default,
+  after `.tech-decisions.yml`'s `isolation.overrides` — ignoring whatever may already be
+  cached in the state file for this task.
+- Requesting `container` where the baseline is `direct`: **allowed**. Recorded in the state
+  file's `## Isolation` section with source `task override`; `isolation` in the response is
+  `container`, `overridden` is `true`.
+- Requesting `direct` where the baseline is `container`: **refused**, same posture as
+  `workflow tier --override`'s refusal to move below an `elevated` floor. `isolation` in the
+  response stays at the baseline (`container`), `overridden` is `false`, and
+  `rejectedOverride` carries the refusal reason. Nothing is written to the state file — the
+  only way to actually lower a phase below its repo baseline is editing
+  `.tech-decisions.yml`'s `isolation.overrides` itself, a committed, reviewable change.
+- Requesting the mode already in effect (e.g. `container` where the baseline is already
+  `container`): a no-op — `overridden` is `false`, `rejectedOverride` is `null`.
 
 ### `complete --task <id> [--pipeline <name>]`
 
@@ -278,8 +311,11 @@ weighted composite) and records it on the active pipeline's state file for every
 
 Both engines read/write a fixed machine-managed header (`**Task:**`, `**Pipeline:**`,
 `**Branch:**`, `**Current Phase:**`, `**Phases Done:**`, `**Status:**`, plus `**Tier:**` /
-`**Tier Reason:**` once `tier` has been run — see above) plus `## Existing Work` and
-`## Blocking Issues` sections they append to. Everything else in the
+`**Tier Reason:**` once `tier` has been run — see above) plus `## Existing Work`,
+`## Blocking Issues`, and `## Isolation` sections they append to. `## Isolation` holds one
+`<PHASE>: <mode> (<source>)` line per phase whose isolation mode has been resolved so far for
+this task (written lazily by `next` the first time it returns that phase, or by `isolation
+--override`; a phase never dispatched yet has no line) — see `workflow/isolation.md`. Everything else in the
 file — `## Standards`, `## Toolchain`, `## Context`, etc. — is written by the Conductor,
 never by this engine; `init` writes those sections as empty placeholders and leaves them
 alone afterward. `## Context`'s internal shape is deliberately not the engine's concern —

@@ -353,9 +353,12 @@ cmd_next_inner() {
     case " $done_list " in
       *" $id "*) continue ;;
     esac
-    agent=$(pl_phase_scalar "$(pl_phase_block "$block" "$id")" agent)
+    local id_phase_block isolation_mode
+    id_phase_block=$(pl_phase_block "$block" "$id")
+    agent=$(pl_phase_scalar "$id_phase_block" agent)
+    isolation_mode=$(resolve_and_cache_isolation "$state_file" "$root" "$id_phase_block" "$id")
     [ "$first" -eq 1 ] || phases_json+=","
-    phases_json+=$(printf '{"phase":"%s","agent":"%s"}' "$(json_escape "$id")" "$(json_escape "$agent")")
+    phases_json+=$(printf '{"phase":"%s","agent":"%s","isolation":"%s"}' "$(json_escape "$id")" "$(json_escape "$agent")" "$(json_escape "$isolation_mode")")
     first=0
   done
   phases_json+="]"
@@ -548,6 +551,66 @@ risk_paths_list() {
   printf '%s\n' "$raw" | tr ',' '\n' | sed -E 's/^ +//; s/ +$//' | sed -E 's/^"(.*)"$/\1/'
 }
 
+# Reads one override value under .tech-decisions.yml's top-level
+# isolation: -> overrides: -> <phase>: (one level deeper than classify:'s
+# domain keys -- see workflow/isolation.md section 5.2). Missing file,
+# block, or phase -> empty (caller falls back to the pipelines.yml default).
+tech_isolation_override() {
+  local file="$1" phase_id="$2"
+  [ -f "$file" ] || return 0
+  local isolation_block overrides_block
+  isolation_block=$(awk '
+    /^isolation:/ { inb=1; next }
+    inb && /^[A-Za-z]/ { exit }
+    inb { print }
+  ' "$file")
+  overrides_block=$(printf '%s\n' "$isolation_block" | awk '
+    /^  overrides:/ { ino=1; next }
+    ino && /^  [A-Za-z]/ { exit }
+    ino { print }
+  ')
+  printf '%s\n' "$overrides_block" | { grep -m1 -E "^    ${phase_id}:" || true; } | sed -E "s/^    ${phase_id}: *//"
+}
+
+# Resolves the repo-level isolation baseline for one phase: pipelines.yml's
+# shipped default, after .tech-decisions.yml's isolation.overrides (which
+# can move a phase either direction -- see workflow/isolation.md section
+# 5.2). Prints "<mode>|<source>" (source is "repo override" or "repo
+# default"), always freshly computed -- never reads the state file's cache.
+resolve_isolation_baseline() {
+  local phase_block="$1" tech_file="$2" phase_id="$3"
+  local pipeline_default override
+  pipeline_default=$(pl_phase_isolation "$phase_block")
+  override=$(tech_isolation_override "$tech_file" "$phase_id")
+  if [ -n "$override" ]; then
+    echo "${override}|repo override"
+  else
+    echo "${pipeline_default}|repo default"
+  fi
+}
+
+# Resolves and returns the EFFECTIVE isolation mode for one phase as next
+# sees it: the state file's cached record if one already exists (a prior
+# repo-default resolution, or a task override), otherwise the repo baseline
+# freshly computed and recorded now (source "repo default"/"repo override").
+# Never recomputes once cached, so a later .tech-decisions.yml edit does not
+# retroactively change a phase already resolved for this task.
+resolve_and_cache_isolation() {
+  local state_file="$1" root="$2" phase_block="$3" phase_id="$4"
+  local cached mode
+  cached=$(state_isolation_get "$state_file" "$phase_id")
+  if [ -n "$cached" ]; then
+    echo "$cached" | awk '{print $1}'
+    return 0
+  fi
+  local baseline mode_source
+  baseline=$(resolve_isolation_baseline "$phase_block" "${root}/.tech-decisions.yml" "$phase_id")
+  mode="${baseline%%|*}"
+  mode_source="${baseline#*|}"
+  state_isolation_set "$state_file" "$phase_id" "$mode" "$mode_source"
+  echo "$mode"
+}
+
 cmd_tier() {
   local files_changed="" override="" pipeline=""
   local paths=() untested=()
@@ -618,6 +681,63 @@ cmd_tier() {
 
   printf '{"tier":"%s","reason":"%s","overridden":%s,"rejectedOverride":%s}\n' \
     "$(json_escape "$final")" "$(json_escape "$reason")" "$overridden" "$rejected"
+}
+
+cmd_isolation() {
+  local phase="" override="" pipeline=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --phase) phase="$2"; shift 2 ;;
+      --override) override="$2"; shift 2 ;;
+      --pipeline) pipeline="$2"; shift 2 ;;
+      *) die "isolation: unknown argument $1" ;;
+    esac
+  done
+  [ -n "$phase" ] || die "isolation: --phase is required"
+  [ -n "$override" ] || die "isolation: --override is required"
+  case "$override" in
+    container|direct) : ;;
+    *) die "isolation: --override must be 'container' or 'direct'" ;;
+  esac
+
+  local root pfile resolved name state_file block phase_block
+  root="$(repo_root)"
+  pfile="$(pipelines_file)"
+  if [ -n "$pipeline" ]; then
+    resolved=$(resolve_named_pipeline "$pipeline")
+  else
+    resolved=$(resolve_active_pipeline)
+  fi
+  name=$(echo "$resolved" | cut -d' ' -f1)
+  state_file=$(echo "$resolved" | cut -d' ' -f2-)
+  [ -f "$state_file" ] || die "no state file for ${name}; run 'init' first"
+
+  block=$(pl_pipeline_block "$pfile" "$name")
+  phase_block=$(pl_phase_block "$block" "$phase")
+  [ -n "$phase_block" ] || die "unknown phase: ${phase}"
+
+  # Always resolved fresh against the repo baseline -- never against
+  # whatever next may have already cached in the state file -- so this
+  # command's refusal rule can't be bypassed by whatever happens to be
+  # cached from an earlier `next` call.
+  local baseline baseline_mode baseline_source
+  baseline=$(resolve_isolation_baseline "$phase_block" "${root}/.tech-decisions.yml" "$phase")
+  baseline_mode="${baseline%%|*}"
+  baseline_source="${baseline#*|}"
+
+  local final="$baseline_mode" overridden="false" rejected="null"
+  if [ "$override" = "$baseline_mode" ]; then
+    : # requesting what's already in effect -- no-op
+  elif [ "$override" = "container" ] && [ "$baseline_mode" = "direct" ]; then
+    final="container"
+    overridden="true"
+    state_isolation_set "$state_file" "$phase" "container" "task override, strengthened from ${baseline_source}: direct"
+  else
+    rejected="\"cannot downgrade ${phase} below repo policy (container)\""
+  fi
+
+  printf '{"phase":"%s","isolation":"%s","overridden":%s,"rejectedOverride":%s}\n' \
+    "$(json_escape "$phase")" "$(json_escape "$final")" "$overridden" "$rejected"
 }
 
 cmd_classify() {
@@ -880,7 +1000,7 @@ cmd_tasks_next() {
 
 main() {
   local cmd="${1:-}"
-  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify|context|tasks|tier> [options]"
+  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify|context|tasks|tier|isolation> [options]"
   shift
   case "$cmd" in
     init) cmd_init "$@" ;;
@@ -891,6 +1011,7 @@ main() {
     tasks) cmd_tasks "$@" ;;
     context) cmd_context "$@" ;;
     tier) cmd_tier "$@" ;;
+    isolation) cmd_isolation "$@" ;;
     *) die "unknown command: ${cmd}" ;;
   esac
 }

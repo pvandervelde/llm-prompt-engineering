@@ -480,6 +480,79 @@ assert_eq "73 re-running init on an in-progress task resumes (returns the curren
 assert_contains "74 re-running init does not reset Current Phase in the state file" "$(cat "$SCR15/.llm/workflow-state.md")" "**Current Phase:** GREEN"
 
 echo
+echo "Tier 8 - isolation"
+
+SCR16="$(mktemp -d)"; new_scratch "$SCR16"
+wf "$SCR16" init --task iso1 --pipeline software >/dev/null
+out=$(wf "$SCR16" next)
+assert_contains "75 next reports isolation:direct for SPEC_REVIEW_GATE (no isolation key -> default)" "$out" '"phase":"SPEC_REVIEW_GATE","agent":"Spec Reviewer","isolation":"direct"'
+assert_contains "76 next's isolation resolution is cached in the state file" "$(cat "$SCR16/.llm/workflow-state.md")" "SPEC_REVIEW_GATE: direct (repo default)"
+
+wf "$SCR16" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+out=$(wf "$SCR16" next)
+assert_contains "77 next reports isolation:container for RED (pipelines.yml default)" "$out" '"phase":"RED","agent":"Tester","isolation":"container"'
+
+SCR17="$(mktemp -d)"; new_scratch "$SCR17"
+cat > "$SCR17/.tech-decisions.yml" <<'TD'
+isolation:
+  overrides:
+    RED: direct
+TD
+wf "$SCR17" init --task iso2 --pipeline software >/dev/null
+wf "$SCR17" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+out=$(wf "$SCR17" next)
+assert_contains "78 a repo-level .tech-decisions.yml override flips a phase's default" "$out" '"phase":"RED","agent":"Tester","isolation":"direct"'
+assert_contains "78b the override's source is recorded, not just its mode" "$(cat "$SCR17/.llm/workflow-state.md")" "RED: direct (repo override)"
+
+# Caching: once next has resolved+recorded a phase's mode, a LATER
+# .tech-decisions.yml edit must not retroactively change it.
+SCR18="$(mktemp -d)"; new_scratch "$SCR18"
+wf "$SCR18" init --task iso3 --pipeline software >/dev/null
+wf "$SCR18" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR18" next >/dev/null
+cat > "$SCR18/.tech-decisions.yml" <<'TD'
+isolation:
+  overrides:
+    RED: direct
+TD
+out=$(wf "$SCR18" next)
+assert_contains "79 a cached isolation mode survives a later .tech-decisions.yml edit (not re-resolved)" "$out" '"phase":"RED","agent":"Tester","isolation":"container"'
+
+# workflow isolation --override: strengthening is allowed.
+SCR19="$(mktemp -d)"; new_scratch "$SCR19"
+wf "$SCR19" init --task iso4 --pipeline software >/dev/null
+out=$(wf "$SCR19" isolation --phase SECURITY --override container)
+assert_eq "80 isolation --override strengthens a direct-by-default phase" "container" "$(json_field "$out" isolation)"
+assert_eq "81 a successful strengthening override reports overridden=true" "true" "$(json_field "$out" overridden)"
+assert_contains "82 a strengthening override is recorded in the state file" "$(cat "$SCR19/.llm/workflow-state.md")" "SECURITY: container (task override"
+
+# workflow isolation --override: weakening is refused outright.
+out=$(wf "$SCR19" isolation --phase RED --override direct)
+assert_eq "83 isolation --override refuses to weaken a container-by-default phase" "container" "$(json_field "$out" isolation)"
+assert_eq "84 a refused override reports overridden=false" "false" "$(json_field "$out" overridden)"
+assert_contains "85 a refused override explains the refusal" "$out" "cannot downgrade RED below repo policy"
+case "$(cat "$SCR19/.llm/workflow-state.md")" in
+  *"RED: "*) fail "86 a refused override must not be written to the state file" "found a RED: line after refusal" ;;
+  *) pass "86 a refused override must not be written to the state file" ;;
+esac
+
+# workflow isolation --override: requesting the mode already in effect is a no-op.
+out=$(wf "$SCR19" isolation --phase RED --override container)
+assert_eq "87 requesting the already-effective mode is a no-op (not an error)" "false" "$(json_field "$out" overridden)"
+assert_eq "88 a no-op override still reports the correct isolation" "container" "$(json_field "$out" isolation)"
+
+out=$(wf "$SCR19" isolation --phase RED --override bogus 2>&1); code=$?
+assert_eq "89 an invalid --override value is rejected" "1" "$code"
+
+SCR20="$(mktemp -d)"; new_scratch "$SCR20"
+wf "$SCR20" init --task iso5 --pipeline infrastructure >/dev/null
+out=$(wf "$SCR20" next --pipeline infrastructure)
+assert_contains "90 infra pipeline: IMPLEMENT defaults to isolation:container" "$out" '"phase":"IMPLEMENT","agent":"Infrastructure Engineer","isolation":"container"'
+wf "$SCR20" gate --phase IMPLEMENT --verdict done --pipeline infrastructure >/dev/null
+out=$(wf "$SCR20" next --pipeline infrastructure)
+assert_contains "91 infra pipeline: SECURITY defaults to isolation:direct" "$out" '"phase":"SECURITY","agent":"Security Reviewer","isolation":"direct"'
+
+echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed scenarios:"

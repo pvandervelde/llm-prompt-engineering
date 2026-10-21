@@ -521,6 +521,24 @@ classify:
 # e.g. risk_paths: ["src/auth/**", "src/safety/**", "**/secrets/**"]
 risk_paths: []
 
+# Per-task sandboxing for the phases that execute this repo's own toolchain
+# (RED/GREEN/REFACTOR/AUDIT, infra IMPLEMENT -- see workflow/isolation.md,
+# shipped as \`container\` by default for those phases in pipelines.yml).
+# \`mechanism\` picks the container runtime (podman preferred, falls back to
+# docker if omitted). \`overrides\` opts individual phases OUT of the
+# container-by-default policy for this repo -- a single task cannot opt
+# below what this file says (see \`workflow isolation --override\`'s
+# asymmetric refusal); only an edit here can. \`network.allow\` extends the
+# toolchain-derived egress allowlist (e.g. a private registry mirror).
+isolation:
+  mechanism: podman  # podman (preferred) or docker; auto-detected if omitted
+  overrides: {}       # add phase lines indented under this key to override,
+                        # e.g. replace {} with:
+                        #   overrides:
+                        #     RED: direct
+  network:
+    allow: []          # extra egress allowlist entries beyond toolchain defaults
+
 # Database (customize for your project)
 database:
   choice: null  # e.g., postgresql, mongodb, sqlite
