@@ -7,18 +7,21 @@ duplicated here).
 `.tech-decisions.yml`) described in [workflow/README.md](./README.md) with a
 per-phase isolation boundary. Read that file first — this one assumes its schema
 and CLI contract as a starting point and only describes the delta.
-**Implementation status (2026-10-22):** §4, §5, §7, §8, §9, §10's narrowing-to-
+**Implementation status (2026-10-23):** §4, §5, §7, §8, §9, §10's narrowing-to-
 touched-paths, and §11's resolved baseline are implemented — `pipelines.yml`'s
 `isolation` key, `.tech-decisions.yml`'s `isolation` block, `workflow next`'s
 extended response, and the new `workflow isolation --override` command all exist
 and are tested. **§3's container lifecycle (`workflow run-isolated` itself) is
-not implemented** — spawning the sandbox, materializing input/output files,
-enforcing the mount/network/git policy at runtime, and devcontainer resolution
-(§12) are deferred, primarily because §9's network-allowlist enforcement needs a
-real mechanism decision (a forward-proxy sidecar vs. iptables/DNS filtering) that
-this spec doesn't settle. Until that lands, a phase resolving to `container` has
-nowhere to actually run — `next` reports the resolved mode correctly, but nothing
-yet acts on it.
+designed but not implemented.** The mechanism decisions that were blocking it are
+now resolved — §9's network enforcement (an SNI-filtered proxy sidecar, not
+iptables/DNS filtering), the lifecycle tool (raw Podman/Docker CLI, not the Dev
+Containers CLI), the sandboxed subagent's own LLM-API credential handling (§7),
+resource quotas (§6, pulled forward from a deferred non-goal), and liveness/hung
+detection (§3.4, a gap found after Phase 1 shipped — nothing upstream of this
+asked how a hung or stuck in-container agent gets noticed). What's left is
+building it: until `run-isolated` exists, a phase resolving to `container` has
+nowhere to actually run — `next` reports the resolved mode correctly, but
+nothing yet acts on it.
 
 ## 1. Goals and threat model
 
@@ -53,9 +56,6 @@ don't substitute for it.
 
 ## 2. Non-goals (explicitly deferred, not forgotten)
 
-- **Resource quotas** (CPU/memory/disk/wall-clock limits). A reliability/cost
-  concern, not a security one — worth having, tracked as follow-up, not required
-  for the boundary this spec establishes.
 - **Dotfile/secret-path exclusion within the repo itself** (e.g. hiding `.env`,
   `.git/config` from read access even inside the task's own worktree). A future
   tightening of §10's filesystem policy, not required for a first version.
@@ -86,6 +86,19 @@ phases that need it: the thing deciding to spawn the subagent and tearing it dow
 afterward is the engine's own script, not the Conductor reasoning about whether to
 call `Task`.
 
+**Resolved (2026-10-23): the engine drives Podman/Docker directly — `podman run`/
+`docker run` invoked from `workflow.sh`/`.ps1` — not the Dev Containers CLI.** The
+Dev Containers CLI (`devcontainer up`/`exec`) would parse `devcontainer.json` for
+us, but it's a Node.js tool on top of the container runtime (a second new
+dependency beyond what §11 already accepted), and its defaults — SSH-agent
+forwarding, a read-write workspace mount — are built for a trusted interactive
+session. We'd spend as much effort disabling its defaults as writing the `podman
+run`/`docker run` invocation ourselves, and a raw invocation gives one consistent
+code path for both "repo has a `devcontainer.json`" and "derive an image from
+`.tech-decisions.yml`'s toolchain" (§12) instead of branching into two different
+tools. We still *read* `devcontainer.json`'s `image`/`build`/`features` fields —
+just not via that CLI.
+
 ### 3.2 Sequence for a `container` phase
 
 ```mermaid
@@ -93,6 +106,7 @@ sequenceDiagram
     participant C as Conductor
     participant W as workflow CLI
     participant Img as Image resolver
+    participant P as Proxy sidecar (SNI-filtered)
     participant B as Container (Podman/Docker)
     participant S as State file
 
@@ -103,15 +117,27 @@ sequenceDiagram
     W->>W: write input files (task spec, Standards/Context sections,<br/>diff) to .llm/isolation/{slug}/RED/input/
     W->>Img: resolve image (repo's .devcontainer/devcontainer.json,<br/>else toolchain-derived base image)
     Img-->>W: image reference
-    W->>B: spawn, with mount/network/git policy applied (§7-10)
-    B->>B: run the phase's agent as a non-interactive<br/>CLI invocation against the input files
-    B->>B: commits land directly in the bind-mounted<br/>real worktree (§8) - no patch reconstruction
-    B-->>W: writes verdict + findings to<br/>.llm/isolation/{slug}/RED/output/
-    W->>B: tear down
-    W-->>C: {verdict, findings, outputRefs}
-    C->>W: gate --phase RED --verdict ...
-    W->>S: record result - advance or pause
-    W-->>C: {result: ADVANCE | PAUSE | FAIL, ...}
+    W->>P: spawn, SNI allowlist from the resolved toolchain + repo config (§9)
+    W->>B: spawn, network routed ONLY to P, mount/git policy applied (§7,8,10)
+    B->>B: run the phase's agent as a non-interactive CLI invocation,<br/>streaming events to run.jsonl (§3.4)
+    B->>P: egress (toolchain registry, LLM API) - allowed only if SNI-allowlisted
+    loop until exit, or a timeout fires (§3.4)
+        W->>B: poll: process exited? run.jsonl's last event newer than the liveness deadline?
+    end
+    alt liveness or wall-clock timeout fired
+        W->>B: kill + tear down (P torn down too)
+        W-->>C: {status: "hung", log: ".../run.jsonl"}
+        note over C: stops here - never calls gate (§3.4)
+    else exited normally
+        B->>B: commits land directly in the bind-mounted<br/>real worktree (§8) - no patch reconstruction
+        B-->>W: writes verdict + findings to<br/>.llm/isolation/{slug}/RED/output/
+        W->>P: tear down
+        W->>B: tear down
+        W-->>C: {status: "done", verdict, findings, outputRefs}
+        C->>W: gate --phase RED --verdict ...
+        W->>S: record result - advance or pause
+        W-->>C: {result: ADVANCE | PAUSE | FAIL, ...}
+    end
 ```
 
 `direct` phases skip all of this and keep today's sequence exactly
@@ -128,6 +154,60 @@ the patch approach costs real complexity (reconstructing commit granularity and
 messages) for a security gain the credential-stripping and network-denial layers
 (§7, §9) already provide without it — `git push` is blocked whether or not the
 container ever touched the real worktree directly.
+
+### 3.4 Liveness, timeouts, and the `hung` status
+
+**Resolved (2026-10-23).** Found after Phase 1 shipped: nothing upstream of this
+spec addresses how the orchestrator or a human tells a working-but-slow
+in-container agent apart from one that's hung — and since dispatch is headless,
+there's no human to answer even if the agent somehow reached a state where it
+would otherwise ask one.
+
+**Mechanism:** the container's entrypoint runs the phase's agent through Claude
+Code's non-interactive streaming output mode and pipes that event stream to a log
+file on a bind-mounted, host-visible path (`.llm/isolation/{slug}/{phase}/run.jsonl`
+— outside the otherwise-isolated container filesystem specifically so a human can
+`tail -f` it directly, and so `run-isolated`'s own poll loop can read it without
+exec-ing into the container). Liveness is judged by **the timestamp of the last
+event in that stream**, not wall-clock ticks and not CPU/network activity —
+watching the real event stream is the only signal that actually distinguishes
+"new work is happening" from "the process is merely still running," which a
+process-alive check or a resource-usage heuristic cannot: a stuck loop can look
+100% alive and busy while producing nothing, and a model call waiting on network
+latency can look idle while working fine.
+
+**Two independent timeout tiers**, both enforced by `run-isolated`'s own poll
+loop (§3.2's `loop...end` block) — not handed back to the Conductor mid-wait:
+
+- **Liveness timeout** (short): no new event in `run.jsonl` for N minutes → the
+  phase is `hung`. Catches a genuinely stuck agent fast, rather than waiting out
+  the full ceiling below for something that will never resolve on its own.
+- **Wall-clock ceiling** (long): the absolute cap on this phase's elapsed time,
+  regardless of liveness. Pairs with the CPU/memory/`pids-limit` quotas in §6 —
+  one bounds elapsed time, the other bounds resource burn per unit time.
+
+Either firing kills the container (and its proxy sidecar) and reports
+`{"status": "hung", "log": ".../run.jsonl"}`.
+
+**Contract with the Conductor:** `hung` does not fit the existing `pauseWhen`
+vocabulary (`spec-gap`, `blocked`, `safety-critical-survivor`,
+`formal-counterexample`, `critical-finding`, `fail`) — those all presume the
+agent *responded* and failed its gate; `hung` means it never did. `run-isolated`
+therefore surfaces `hung` as a `status`, distinct from a gate `verdict`, **before**
+the Conductor would otherwise call `gate` — the same shape `init`'s `ask` action
+already uses (stop immediately, surface the log path, wait for the human) rather
+than something routed through `pauseWhen`. `hung` is never phase-configurable; it
+always halts, the same way a Kani counterexample or a Critical security finding
+always halts today regardless of what a phase's own `pauseWhen` list says.
+
+**The corner case this is really guarding against** (the agent reaching a state
+where it would ask a question, with no human to answer) is handled upstream of
+detection, not by it: the container's `claude` invocation must be configured so no
+tool that could block on interactive input is reachable in headless mode at all —
+needs verifying against the actual CLI's headless/permission flags during
+implementation (§13). If something still stalls despite that, the liveness
+timeout is the backstop that notices and reports it as `hung` rather than an
+indefinite wait.
 
 ## 4. Phase isolation defaults
 
@@ -248,12 +328,36 @@ workflow run-isolated --phase <id> [--pipeline <name>]
 
 Only valid when the resolved isolation mode for `<id>` is `container`. Performs the
 full sequence in §3.2: materializes input files, resolves the image, spawns the
-container with the policy from §7–§10 applied, waits for the subagent's output
-files, tears down, and returns:
+proxy sidecar and container with the policy from §7–§10 applied, runs its own
+poll loop against §3.4's two timeout tiers, tears everything down, and returns
+one of two shapes.
+
+**Normal completion:**
 
 ```json
-{"verdict": "CLEAR", "findings": [...], "outputRefs": [".llm/isolation/42-foo/RED/output/"]}
+{"status": "done", "verdict": "CLEAR", "findings": [...], "outputRefs": [".llm/isolation/42-foo/RED/output/"]}
 ```
+
+**Hung (§3.4) — liveness or wall-clock timeout fired:**
+
+```json
+{"status": "hung", "log": ".llm/isolation/42-foo/RED/run.jsonl"}
+```
+
+**Resource quotas (§3.4's wall-clock ceiling counterpart), pulled forward from a
+deferred non-goal now that this command is actually being built** — applied via
+Podman/Docker's native flags, not a separate mechanism:
+
+| Limit | Flag | Purpose |
+| --- | --- | --- |
+| Memory | `--memory` | Bound worst-case cost; a runaway process is killed by the runtime, not left to exhaust the host |
+| CPU | `--cpus` | Same, for CPU burn |
+| Process count | `--pids-limit` | Caps fork-bomb-shaped runaway behavior |
+| Wall-clock | enforced by `run-isolated`'s own poll loop, not a container flag | §3.4's hard ceiling |
+
+Defaults and per-toolchain overrides for the first three live alongside the
+liveness/wall-clock timeout durations — exact config surface (a new
+`.tech-decisions.yml` block vs. hardcoded sane defaults) is still open, see §13.
 
 On a missing runtime (§11) or a policy violation detected during the run (e.g. the
 subagent's git wrapper rejected a denied command), returns a non-zero exit and a
@@ -268,6 +372,17 @@ state, any cloud-provider credential files (`~/.aws`, `~/.azure`, provider env v
 for the infrastructure pipeline). This is independent of and redundant with the
 network policy (§9) and git policy (§8) — removing credentials means even a
 reachable, allowlisted host has nothing to authenticate with.
+
+**Resolved (2026-10-23) — the one deliberate exception.** The containerized
+agent needs *some* credential to make its own LLM calls at all; "no credentials"
+can't literally apply to it. Scoped as tightly as the auth mechanism allows
+(a short-lived/scoped token where the mechanism supports one, not a long-lived
+key blanket-copied from the host), and routed through §9's SNI-filtered proxy
+like every other egress — meaning the sandbox's network can reach *only* the
+LLM API domain plus the toolchain registries. Even if this one credential were
+exfiltrated via some other channel, the sandbox it came from still can't use the
+network to send it anywhere outside that allowlist — it's only usable for what
+it's already authorized to do from inside.
 
 ## 8. Git policy
 
@@ -296,6 +411,24 @@ inside the container unless this list is actively enforced.
 
 **Default-deny, with a toolchain-derived allowlist, repo-adjustable.**
 
+**Resolved (2026-10-23) — enforcement mechanism: an SNI-filtered forward-proxy
+sidecar, not iptables/DNS filtering.** The container is given no direct route to
+the internet at all — its only reachable network peer is a per-run proxy sidecar
+(§3.2). The proxy inspects each outbound TLS connection's ClientHello **SNI
+field** and allows or drops the connection by hostname **without decrypting it**.
+Nothing is MITM'd, so no CA certificate needs injecting into whatever trust
+store `cargo`/`npm`/`pip` already uses — they see a normal, unintercepted TLS
+connection to the real host. This was chosen over DNS-resolution-plus-dynamic-
+`iptables`/`ipset` rules because the proxy approach is itself just another
+container, with the same behavior on Docker Desktop (confirmed available in this
+environment) and native Linux Podman alike — the iptables/ipset alternative
+means manipulating kernel netfilter state inside whatever network namespace the
+runtime happens to give you (Docker Desktop's WSL2 VM, or Podman rootless
+`slirp4netns`/`pasta`), which is real surgery that's easy to get subtly,
+silently wrong per-platform. Concrete proxy software (Squid or Envoy in
+SNI-passthrough mode, vs. a minimal custom implementation) is still open — see
+§13.
+
 Default allowlist entries come from the resolved toolchain (reusing
 `.tech-decisions.yml`'s existing `toolchains` resolution, computed today for
 `workflow context`/`workflow tier`):
@@ -306,6 +439,9 @@ Default allowlist entries come from the resolved toolchain (reusing
 | Node | `registry.npmjs.org` |
 | Python | `pypi.org`, `files.pythonhosted.org` |
 | *(others added as toolchains are added to `.tech-decisions.yml`)* | |
+
+Plus, unconditionally, the LLM API domain the containerized agent itself needs
+(§7's credential exception) — not toolchain-derived, always present.
 
 A repo extends this via `.tech-decisions.yml`'s `isolation.network.allow` (§5.2) —
 e.g. a private registry mirror. Being on the allowlist never implies git push
@@ -360,14 +496,18 @@ sandbox by granting access back in.
 
 ## 13. Open items
 
-- Resource quotas (§2) — follow-up, not blocking.
 - Dotfile/secret-path exclusion within the repo (§2, §10) — follow-up tightening.
-- Whether to build §3.2's container lifecycle on the raw Podman/Docker CLI
-  directly, or on top of the Dev Containers CLI (`devcontainer up`/`exec`), which
-  already knows how to read a `devcontainer.json` and would subsume part of §12 —
-  worth a short spike before implementation starts, not a decision this spec needs
-  to force.
 - Exact file layout under `.llm/isolation/{slug}/{phase}/{input,output}/` — named
   here for concreteness in §3.2 and §6, but the literal filenames within
   `input`/`output` (one file per context section vs. one combined file, etc.)
   haven't been specified yet.
+- Concrete proxy software for §9's SNI-filtered sidecar (Squid or Envoy in
+  SNI-passthrough mode, vs. a minimal custom implementation) — the mechanism
+  is decided, the specific tool isn't; worth a short spike before
+  implementation starts.
+- Verifying the container's `claude` invocation can actually be configured so no
+  tool that blocks on interactive input is reachable in headless mode (§3.4) —
+  needs checking against the CLI's real headless/permission flags, not assumed.
+- Config surface and default values for §3.4's liveness/wall-clock timeouts and
+  §6's CPU/memory/`pids-limit` quotas — a new `.tech-decisions.yml` block vs.
+  hardcoded sane defaults, and what those defaults actually are, isn't decided.
