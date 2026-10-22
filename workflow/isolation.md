@@ -17,11 +17,13 @@ now resolved — §9's network enforcement (an SNI-filtered proxy sidecar, not
 iptables/DNS filtering), the lifecycle tool (raw Podman/Docker CLI, not the Dev
 Containers CLI), the sandboxed subagent's own LLM-API credential handling (§7),
 resource quotas (§6, pulled forward from a deferred non-goal), and liveness/hung
-detection (§3.4, a gap found after Phase 1 shipped — nothing upstream of this
-asked how a hung or stuck in-container agent gets noticed). What's left is
-building it: until `run-isolated` exists, a phase resolving to `container` has
-nowhere to actually run — `next` reports the resolved mode correctly, but
-nothing yet acts on it.
+detection (§3.4, a gap found after Phase 1 shipped). §3.4's own open question —
+whether the container's `claude` invocation can be configured so no tool can
+block on interactive input — is now independently verified against Claude Code's
+actual documentation, not assumed; the exact entrypoint invocation is written
+into §3.4. What's left is building it: until `run-isolated` exists, a phase
+resolving to `container` has nowhere to actually run — `next` reports the
+resolved mode correctly, but nothing yet acts on it.
 
 ## 1. Goals and threat model
 
@@ -164,17 +166,30 @@ there's no human to answer even if the agent somehow reached a state where it
 would otherwise ask one.
 
 **Mechanism:** the container's entrypoint runs the phase's agent through Claude
-Code's non-interactive streaming output mode and pipes that event stream to a log
-file on a bind-mounted, host-visible path (`.llm/isolation/{slug}/{phase}/run.jsonl`
-— outside the otherwise-isolated container filesystem specifically so a human can
+Code's non-interactive streaming output mode (`--output-format stream-json
+--verbose --include-partial-messages`) and pipes that event stream to a log file
+on a bind-mounted, host-visible path (`.llm/isolation/{slug}/{phase}/run.jsonl` —
+outside the otherwise-isolated container filesystem specifically so a human can
 `tail -f` it directly, and so `run-isolated`'s own poll loop can read it without
-exec-ing into the container). Liveness is judged by **the timestamp of the last
-event in that stream**, not wall-clock ticks and not CPU/network activity —
+exec-ing into the container). Liveness is judged by **when the log file last
+received a new line**, not wall-clock ticks and not CPU/network activity —
 watching the real event stream is the only signal that actually distinguishes
 "new work is happening" from "the process is merely still running," which a
 process-alive check or a resource-usage heuristic cannot: a stuck loop can look
 100% alive and busy while producing nothing, and a model call waiting on network
-latency can look idle while working fine.
+latency can look idle while working fine. (Confirmed directly against
+`headless.md`: individual stream events don't carry a documented wall-clock
+timestamp field, so watching the log's own write activity is necessary, not just
+one of several equally good options.)
+
+Claude Code's own `-p` mode has a separate, narrower built-in idle-wait cap worth
+noting but not relying on here: by default it stops waiting on still-running
+*background* work (background Bash commands, subagents, Monitor watches) after
+10 minutes of continuous idle waiting once the model's own turn has ended
+(`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`). That's a different thing from what
+this section detects — a foreground tool-call loop that never reaches a turn
+boundary at all isn't "idle background work," so this native cap doesn't
+substitute for the liveness/wall-clock tiers below.
 
 **Two independent timeout tiers**, both enforced by `run-isolated`'s own poll
 loop (§3.2's `loop...end` block) — not handed back to the Conductor mid-wait:
@@ -202,12 +217,50 @@ always halts today regardless of what a phase's own `pauseWhen` list says.
 
 **The corner case this is really guarding against** (the agent reaching a state
 where it would ask a question, with no human to answer) is handled upstream of
-detection, not by it: the container's `claude` invocation must be configured so no
-tool that could block on interactive input is reachable in headless mode at all —
-needs verifying against the actual CLI's headless/permission flags during
-implementation (§13). If something still stalls despite that, the liveness
-timeout is the backstop that notices and reports it as `hung` rather than an
-indefinite wait.
+detection, not by it — **resolved and verified (2026-10-23) directly against
+`headless.md`, not assumed:** passing `--permission-prompts none` doesn't just
+deny a call to `AskUserQuestion` if the agent tries it — Claude Code **removes
+that tool from the model's available tool list entirely** when the flag is set,
+so it can't be called at all, and any MCP elicitation request with no answering
+hook is cancelled rather than left pending. Print mode's default behavior (even
+without that flag) is already deny-rather-than-wait whenever there's no host to
+answer a prompt. There is no code path in headless mode that waits indefinitely
+on a question — confirmed, not merely configured defensively. If something still
+stalls despite that (a genuine infinite loop in tool calls, not a blocked
+prompt), the liveness timeout is the backstop that notices and reports it as
+`hung`.
+
+**Two further flags, found during this verification, worth adding to the
+container entrypoint for reasons that map directly onto §1's threat model
+rather than onto liveness specifically:**
+
+- **`--restricted`** — built for close to this exact scenario ("an evaluation
+  harness drives `claude` on a shared machine"). It loads **only managed
+  settings and `--settings`**, never a repo's own `.claude/settings.json` —
+  closing off the specific vector §1 already names ("adversarial content in the
+  target repo... a planted file... could attempt to manipulate a subagent").
+  It also confines the built-in file tools to the working directory, refuses
+  `bypassPermissions` outright, and strips command-execution tools and
+  `WebFetch` unless named explicitly in `--tools` — which GREEN/RED/REFACTOR/
+  AUDIT need, so the entrypoint passes `--tools "Bash,Read,Edit"` (or
+  whatever the phase actually requires) to restore them deliberately rather
+  than inheriting them by default.
+- **`--bare`** — skips auto-discovery of the target repo's own hooks, MCP
+  servers, and `CLAUDE.md`. Same rationale: repo content this project doesn't
+  control shouldn't get to run with the agent's privileges just by existing in
+  the checkout.
+
+Combined with §6's resource quotas and the permission flags above, the full
+verified entrypoint invocation:
+
+```bash
+claude -p "<prompt>" \
+  --bare --restricted \
+  --permission-mode dontAsk --permission-prompts none \
+  --tools "Bash,Read,Edit" --allowedTools "<task-specific allowlist>" \
+  --output-format stream-json --verbose --include-partial-messages \
+  --max-budget-usd <N>
+```
 
 ## 4. Phase isolation defaults
 
@@ -505,9 +558,6 @@ sandbox by granting access back in.
   SNI-passthrough mode, vs. a minimal custom implementation) — the mechanism
   is decided, the specific tool isn't; worth a short spike before
   implementation starts.
-- Verifying the container's `claude` invocation can actually be configured so no
-  tool that blocks on interactive input is reachable in headless mode (§3.4) —
-  needs checking against the CLI's real headless/permission flags, not assumed.
 - Config surface and default values for §3.4's liveness/wall-clock timeouts and
   §6's CPU/memory/`pids-limit` quotas — a new `.tech-decisions.yml` block vs.
   hardcoded sane defaults, and what those defaults actually are, isn't decided.
