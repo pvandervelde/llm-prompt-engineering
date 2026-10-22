@@ -874,6 +874,101 @@ isolation_resolve_image() {
   echo "image:${image}"
 }
 
+# Translates isolation_resolve_image's tagged result into a plain image
+# reference ready for isolation_spawn_container. The "build:" case (a
+# devcontainer.json with only a build block, no plain image) isn't wired
+# up yet -- building an image from an arbitrary Dockerfile is a separate,
+# untested concern deferred to a follow-up, not silently mishandled here.
+isolation_plain_image_ref() {
+  case "$1" in
+    image:*) echo "${1#image:}" ;;
+    build:*) echo "isolation: building from a devcontainer.json Dockerfile is not yet implemented (${1})" >&2; return 1 ;;
+    *) echo "isolation: unrecognized image spec '${1}'" >&2; return 1 ;;
+  esac
+}
+
+# Picks podman (preferred) or docker, whichever is installed -- see
+# workflow/isolation.md sections 6 and 11. Errors loudly if neither is,
+# never silently falling back to direct (non-isolated) execution.
+isolation_container_runtime() {
+  if command -v podman >/dev/null 2>&1; then
+    echo "podman"
+  elif command -v docker >/dev/null 2>&1; then
+    echo "docker"
+  else
+    echo "isolation: neither podman nor docker is installed on this host (workflow/isolation.md section 11)" >&2
+    return 1
+  fi
+}
+
+# Spawns the container for one containerized phase: bind-mounts the real
+# task worktree at /workspace and the git wrapper (section 8) ahead of the
+# real git on PATH, applies section 6's hardcoded v1 resource quotas, and
+# runs the given shell command string inside via `sh -c` (not argv
+# passthrough -- a single command string lets a future caller freely pipe
+# to a log file, same as the real entrypoint in section 3.4 will need to).
+# Prints the container's combined stdout/stderr and returns its exit code.
+#
+# Credential stripping (section 7) is satisfied by construction, not by an
+# explicit filter: no host environment variable or extra mount is
+# forwarded beyond what's listed below, so there is nothing to strip in
+# the first place. A future change that adds another `-e`/`--mount` flag
+# here must keep that property, not assume it.
+#
+# Not yet implemented here, deferred not assumed away:
+#   - section 10's "narrow further to declared touched-paths read-write,
+#     rest read-only" refinement -- the whole worktree is mounted
+#     read-write for now, within the confinement ceiling (no host path
+#     other than the worktree and the wrapper script is ever mounted,
+#     which is the non-negotiable part and is fully enforced here).
+#   - section 9's network policy (the proxy sidecar) -- this container
+#     currently gets the runtime's default network, unrestricted.
+#
+# GIT_WRAPPER_REAL_BIN is hardcoded to /usr/bin/git -- the standard install
+# location across virtually every mainstream Linux distro's git package,
+# confirmed for this piece's own test image. A future image that installs
+# git somewhere unusual would need this to become configurable; noted as
+# a known limitation, not yet hit in practice.
+#
+# MSYS_NO_PATHCONV=1 works around Git Bash on Windows rewriting
+# /workspace-style destination paths into Windows paths before they reach
+# docker.exe -- confirmed necessary empirically (2026-10-24, this piece's
+# own development). Harmless on native Linux, which has no MSYS
+# path-conversion layer to begin with.
+#
+# Separately, on the SOURCE side: a root under an MSYS-only mount point
+# (e.g. /tmp, as `mktemp -d` produces) is a real directory but has no
+# drive-letter prefix Docker Desktop's daemon can resolve -- confirmed
+# empirically (2026-10-24) that this fails with "bind source path does
+# not exist" even though the directory genuinely exists. `cygpath -m`
+# normalizes to the Windows-style form Docker understands directly; a
+# no-op where cygpath doesn't exist (native Linux, where $root is already
+# a normal absolute path needing no translation at all).
+isolation_spawn_container() {
+  local root="$1" image="$2" command="$3"
+  local runtime
+  runtime=$(isolation_container_runtime) || return 1
+
+  local git_wrapper="${root}/tools/workflow/isolation/git-wrapper.sh"
+  [ -f "$git_wrapper" ] || { echo "isolation: git-wrapper.sh not found at ${git_wrapper}" >&2; return 1; }
+
+  local mount_root="$root" mount_wrapper="$git_wrapper"
+  if command -v cygpath >/dev/null 2>&1; then
+    mount_root=$(cygpath -m "$root")
+    mount_wrapper=$(cygpath -m "$git_wrapper")
+  fi
+
+  MSYS_NO_PATHCONV=1 "$runtime" run --rm \
+    --memory 4g --cpus 2 --pids-limit 512 \
+    --mount "type=bind,src=${mount_root},dst=/workspace" \
+    --mount "type=bind,src=${mount_wrapper},dst=/usr/local/bin/git,readonly" \
+    -e "GIT_WRAPPER_REAL_BIN=/usr/bin/git" \
+    -w /workspace \
+    --entrypoint sh \
+    "$image" \
+    -c "$command"
+}
+
 # Materializes a containerized phase's input files under
 # .llm/isolation/<slug>/<phase>/input/ -- prompt.md (the same assembled
 # content a direct Task-tool dispatch would otherwise inline, written to a
@@ -1266,4 +1361,12 @@ main() {
   esac
 }
 
-main "$@"
+# Guarded so this file can be sourced (e.g. by
+# tools/workflow/isolation/test/test-container-spawn.sh, to unit-test
+# isolation_spawn_container and friends directly) without main running
+# immediately against the sourcing script's own argv. `bash workflow.sh
+# <cmd>` -- the only way this script is normally invoked -- is unaffected:
+# BASH_SOURCE[0] equals $0 exactly in that case.
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+  main "$@"
+fi

@@ -811,6 +811,53 @@ function Resolve-IsolationImage {
     return "image:$image"
 }
 
+# Translates Resolve-IsolationImage's tagged result into a plain image
+# reference ready for Start-IsolationContainer. The "build:" case isn't
+# wired up yet -- deferred, not silently mishandled. Mirrors
+# isolation_plain_image_ref in workflow.sh function-for-function.
+function Get-IsolationPlainImageRef {
+    param([string]$Spec)
+    if ($Spec.StartsWith("image:")) { return $Spec.Substring(6) }
+    if ($Spec.StartsWith("build:")) { Fail "isolation: building from a devcontainer.json Dockerfile is not yet implemented ($Spec)" }
+    Fail "isolation: unrecognized image spec '$Spec'"
+}
+
+# Picks podman (preferred) or docker, whichever is installed -- see
+# workflow/isolation.md sections 6 and 11. Errors loudly if neither is.
+function Get-IsolationContainerRuntime {
+    if (Get-Command podman -ErrorAction SilentlyContinue) { return "podman" }
+    if (Get-Command docker -ErrorAction SilentlyContinue) { return "docker" }
+    Fail "isolation: neither podman nor docker is installed on this host (workflow/isolation.md section 11)"
+}
+
+# Spawns the container for one containerized phase. Returns its exit
+# code; its stdout/stderr go straight to this process's own (not
+# captured), matching workflow.sh's behavior. Mirrors
+# isolation_spawn_container in workflow.sh function-for-function --
+# including its notes on what's deliberately deferred (section 10's
+# read-only/read-write narrowing, section 9's network policy) and why
+# GIT_WRAPPER_REAL_BIN is hardcoded to /usr/bin/git. No MSYS_NO_PATHCONV
+# equivalent is needed here: that workaround is specific to Git Bash's
+# MSYS path-conversion layer, which PowerShell calling docker.exe directly
+# never goes through.
+function Start-IsolationContainer {
+    param([string]$Root, [string]$Image, [string]$Command)
+    $runtime = Get-IsolationContainerRuntime
+    $gitWrapper = Join-Path $Root "tools/workflow/isolation/git-wrapper.sh"
+    if (-not (Test-Path $gitWrapper)) { Fail "isolation: git-wrapper.sh not found at $gitWrapper" }
+
+    & $runtime run --rm `
+        --memory 4g --cpus 2 --pids-limit 512 `
+        --mount "type=bind,src=$Root,dst=/workspace" `
+        --mount "type=bind,src=$gitWrapper,dst=/usr/local/bin/git,readonly" `
+        -e "GIT_WRAPPER_REAL_BIN=/usr/bin/git" `
+        -w /workspace `
+        --entrypoint sh `
+        $Image `
+        -c $Command
+    return $LASTEXITCODE
+}
+
 # Materializes a containerized phase's input files under
 # .llm/isolation/<slug>/<phase>/input/ -- prompt.md (the same assembled
 # content a direct Task-tool dispatch would otherwise inline, written to a
@@ -1145,5 +1192,12 @@ switch ($Command) {
     "tier" { Invoke-Tier -ArgList $Rest }
     "isolation" { Invoke-Isolation -ArgList $Rest }
     "run-isolated" { Invoke-RunIsolated -ArgList $Rest }
+    # Test-only sentinel: dot-sourcing this file with -Command "__noop__"
+    # (e.g. from test-container-spawn.ps1) defines every function above
+    # without running any real command -- used to unit-test
+    # Start-IsolationContainer and friends directly. Never used by a real
+    # invocation; the public CLI contract (the other cases above) is
+    # unaffected.
+    "__noop__" { }
     default { Fail "unknown command: $Command" }
 }

@@ -1,10 +1,16 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Git command wrapper enforcing workflow/isolation.md section 8's allow/deny
 # policy inside an isolated container. Installed ahead of the real git
 # binary on PATH (e.g. at /usr/local/bin/git) so every `git` invocation made
 # by a containerized phase's agent goes through this first. Runs only inside
 # the (always-Linux) container -- this has no PowerShell counterpart, unlike
 # the host-side workflow.sh/.ps1 engine.
+#
+# POSIX sh, deliberately not bash: confirmed empirically (2026-10-24, see
+# the piece-4 container spawn test) that common minimal images -- e.g.
+# alpine/git -- have no bash at all, only busybox sh. Nothing here needs a
+# bash-specific feature, so this runs under any POSIX shell rather than
+# assuming one more thing is present in whatever image gets resolved.
 #
 # GIT_WRAPPER_REAL_BIN must be set by the container image/entrypoint to the
 # real git binary's absolute path (e.g. /usr/bin/git). This script never
@@ -16,7 +22,7 @@
 # `git -C /elsewhere status`) is denied too, since $1 then isn't a recognized
 # subcommand at all -- correct, not an oversight, for a wrapper whose whole
 # point is confining git to the one mounted worktree.
-set -euo pipefail
+set -eu
 
 if [ -z "${GIT_WRAPPER_REAL_BIN:-}" ]; then
   echo "git-wrapper: GIT_WRAPPER_REAL_BIN is not set -- refusing to guess the real git binary's path" >&2
