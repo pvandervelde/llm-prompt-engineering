@@ -116,19 +116,18 @@ Write-Host "Container spawn (real container, requires docker/podman)"
 $scr = Join-Path $env:TEMP "wf-container-spawn-$(Get-Random)"
 New-Scratch $scr
 
-Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "git status --porcelain" | Out-Null
-Assert-Eq "05 a basic spawn against a real scratch repo succeeds" "0" $LASTEXITCODE
+$r = Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "git status --porcelain"
+Assert-Eq "05 a basic spawn against a real scratch repo succeeds" "0" $r.ExitCode
 
-$output = Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "which git" 2>&1 | Out-String
-Assert-Contains "06 the git wrapper is on PATH ahead of the real binary" $output "/usr/local/bin/git"
+$r = Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "which git"
+Assert-Contains "06 the git wrapper is on PATH ahead of the real binary" $r.Output "/usr/local/bin/git"
 
-$output = Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "git push" 2>&1 | Out-String
-$exitCode = $LASTEXITCODE
-Assert-Eq "07 a denied git command's exit code propagates out" "1" $exitCode
-Assert-Contains "08 the denial message is visible in the spawn's output" $output "not permitted"
+$r = Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "git push"
+Assert-Eq "07 a denied git command's exit code propagates out" "1" $r.ExitCode
+Assert-Contains "08 the denial message is visible in the spawn's output" $r.Output "not permitted"
 
-Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "git log --oneline -1" | Out-Null
-Assert-Eq "09 an allowed read-only command still succeeds" "0" $LASTEXITCODE
+$r = Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "git log --oneline -1"
+Assert-Eq "09 an allowed read-only command still succeeds" "0" $r.ExitCode
 
 $sentinel = "isolation-spawn-test-$(Get-Random)"
 Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "echo '$sentinel' > /workspace/written-from-container.txt" | Out-Null
@@ -139,8 +138,25 @@ if ((Test-Path $writtenPath) -and (Get-Content $writtenPath -Raw).Contains($sent
     Fail2 "10 the workspace mount is really read-write against the scratch repo" "file not found or content mismatch"
 }
 
-Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "cat /etc/hostname 2>&1; ls /root 2>&1 | head -1" | Out-Null
-Assert-Eq "11 a plain-filesystem command inside the container still succeeds (confinement is about host paths, not the container's own rootfs)" "0" $LASTEXITCODE
+$r = Start-IsolationContainer -Root $scr -Image "alpine/git:latest" -Command "cat /etc/hostname 2>&1; ls /root 2>&1 | head -1"
+Assert-Eq "11 a plain-filesystem command inside the container still succeeds (confinement is about host paths, not the container's own rootfs)" "0" $r.ExitCode
+
+Write-Host ""
+Write-Host "Network policy (SNI-filtered proxy sidecar, section 9 -- real network traffic, slower)"
+
+$r = Start-IsolationContainer -Root $scr -Image "curlimages/curl:latest" -Command "curl -sS -m 15 -o /dev/null -w 'HTTP %{http_code}' https://crates.io/" -Toolchain "rust"
+Assert-Eq "12 an allowed SNI (crates.io, via the rust toolchain allowlist) is reachable through the proxy" "0" $r.ExitCode
+Assert-Contains "13 a reached allowed host returns a real HTTP response, not a proxy error page" $r.Output "HTTP"
+
+$r = Start-IsolationContainer -Root $scr -Image "curlimages/curl:latest" -Command "curl -sS -m 15 -o /dev/null -w 'HTTP %{http_code}' https://www.wikipedia.org/" -Toolchain "rust"
+if ($r.ExitCode -ne 0) {
+    Pass "14 a disallowed SNI fails at the TLS layer (terminated after the peek), not with an HTTP response"
+} else {
+    Fail2 "14 a disallowed SNI fails at the TLS layer (terminated after the peek), not with an HTTP response" "curl exited 0: $($r.Output)"
+}
+
+$r = Start-IsolationContainer -Root $scr -Image "curlimages/curl:latest" -Command "curl -sS -m 10 --noproxy '*' -o /dev/null -w 'HTTP %{http_code}' https://crates.io/ 2>&1" -Toolchain "rust"
+Assert-Contains "15 bypassing the proxy entirely still fails outright (no route exists, not just non-compliance)" $r.Output "ould not resolve host"
 
 Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="

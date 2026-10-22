@@ -887,6 +887,120 @@ isolation_plain_image_ref() {
   esac
 }
 
+# Toolchain-derived default network allowlist entries -- exactly
+# workflow/isolation.md section 9's resolved table, no more. An unlisted
+# toolchain (e.g. dotnet, not yet in that table) gets no toolchain-specific
+# entries rather than an invented one.
+isolation_toolchain_network_allow() {
+  case "$1" in
+    rust) printf '%s\n' "crates.io" "static.crates.io" "index.crates.io" ;;
+    typescript|javascript) printf '%s\n' "registry.npmjs.org" ;;
+    python) printf '%s\n' "pypi.org" "files.pythonhosted.org" ;;
+  esac
+}
+
+# Reads .tech-decisions.yml's top-level isolation: -> network: -> allow:
+# inline bracket list (same convention as risk_paths_list/classify_globs).
+# Empty if absent.
+tech_isolation_network_allow() {
+  local file="$1"
+  [ -f "$file" ] || return 0
+  local isolation_block raw
+  isolation_block=$(awk '
+    /^isolation:/ { inb = 1; next }
+    inb && /^[A-Za-z]/ { exit }
+    inb { print }
+  ' "$file")
+  raw=$(printf '%s\n' "$isolation_block" | awk '
+    /^  network:/ { ind = 1; next }
+    ind && /^  [A-Za-z]/ { exit }
+    ind { print }
+  ' | { grep -m1 -E "^    allow:" || true; } | sed -E 's/^    allow: *//; s/ +#.*$//')
+  raw="${raw#\[}"
+  raw="${raw%\]}"
+  [ -z "$raw" ] && return 0
+  printf '%s\n' "$raw" | tr ',' '\n' | sed -E 's/^ +//; s/ +$//; s/^"(.*)"$/\1/' | grep -v '^$'
+}
+
+# Resolves the full SNI allowlist for a containerized phase's network
+# sidecar: the LLM API domain (always present -- section 7's credential
+# exception), the resolved toolchain's defaults (section 9), and the
+# repo's own .tech-decisions.yml additions -- deduplicated, one per line.
+isolation_resolve_network_allowlist() {
+  local root="$1" toolchain="$2"
+  {
+    echo "api.anthropic.com"
+    isolation_toolchain_network_allow "$toolchain"
+    tech_isolation_network_allow "${root}/.tech-decisions.yml"
+  } | sort -u
+}
+
+# Generates a fresh self-signed dummy certificate for the proxy sidecar's
+# ssl-bump http_port flag. Never actually presented to a client -- peek+
+# splice never substitutes a certificate -- but Squid requires one
+# configured to accept the ssl-bump flag at startup regardless.
+#
+# Confirmed empirically (2026-10-23) that MSYS_NO_PATHCONV=1 is needed for
+# openssl's -subj argument on Git Bash/Windows (same class of issue as
+# elsewhere in this feature), AND separately that openssl.exe's own file
+# I/O fails on an absolute MSYS-only path (e.g. under /tmp, as `mktemp -d`
+# produces) the same way Docker's mount resolution does -- cd into the
+# output directory and use bare relative filenames for -keyout/-out,
+# sidestepping the absolute-path problem entirely rather than needing a
+# second cygpath translation here.
+isolation_generate_dummy_cert() {
+  local outfile="$1" dir base
+  dir=$(dirname "$outfile")
+  base=$(basename "$outfile")
+  (
+    cd "$dir" && MSYS_NO_PATHCONV=1 openssl req -x509 -newkey rsa:2048 \
+      -keyout "${base}.key.tmp" -out "${base}.crt.tmp" -days 1 -nodes \
+      -subj "/CN=isolation-dummy"
+  ) >/dev/null 2>&1 || return 1
+  cat "${dir}/${base}.key.tmp" "${dir}/${base}.crt.tmp" > "$outfile"
+  rm -f "${dir}/${base}.key.tmp" "${dir}/${base}.crt.tmp"
+}
+
+# Writes a minimal standalone squid.conf (read from a newline-separated
+# allowlist on stdin) implementing SNI-based peek-and-splice: an allowed
+# SNI is spliced through unmodified; everything else is terminated right
+# after the peek, before any TLS handshake completes. Nothing is ever
+# decrypted either way -- see workflow/isolation.md section 9.
+#
+# Requires a Squid built against OpenSSL, not GnuTLS. Confirmed
+# empirically (2026-10-23) that Ubuntu's packaged Squid lacks the
+# ssl::server_name ACL type entirely -- it's a GnuTLS build, and
+# SSL-Bump/SNI-peek is an OpenSSL-only feature, not a config mistake.
+# Alpine's squid package is OpenSSL-based and is what
+# isolation_spawn_container actually runs. The cert path is fixed to where
+# that function mounts the dummy cert -- not a parameter, since both sides
+# of this contract are owned by the same function pair.
+isolation_write_squid_config() {
+  local outfile="$1"
+  {
+    echo "acl localnet src 10.0.0.0/8"
+    echo "acl localnet src 172.16.0.0/12"
+    echo "acl localnet src 192.168.0.0/16"
+    echo
+    printf 'acl allowed_sni ssl::server_name'
+    while IFS= read -r host; do
+      [ -n "$host" ] && printf ' .%s' "$host"
+    done
+    printf '\n\n'
+    echo "http_access allow localnet"
+    echo "http_access deny all"
+    echo
+    echo "http_port 3129 ssl-bump cert=/etc/squid/certs/dummy.pem generate-host-certificates=off"
+    echo
+    echo "acl step1 at_step SslBump1"
+    echo "ssl_bump peek step1"
+    echo "ssl_bump splice allowed_sni"
+    echo "ssl_bump terminate all"
+    echo
+    echo "coredump_dir /var/cache/squid"
+  } > "$outfile"
+}
+
 # Picks podman (preferred) or docker, whichever is installed -- see
 # workflow/isolation.md sections 6 and 11. Errors loudly if neither is,
 # never silently falling back to direct (non-isolated) execution.
@@ -915,14 +1029,30 @@ isolation_container_runtime() {
 # the first place. A future change that adds another `-e`/`--mount` flag
 # here must keep that property, not assume it.
 #
-# Not yet implemented here, deferred not assumed away:
-#   - section 10's "narrow further to declared touched-paths read-write,
-#     rest read-only" refinement -- the whole worktree is mounted
-#     read-write for now, within the confinement ceiling (no host path
-#     other than the worktree and the wrapper script is ever mounted,
-#     which is the non-negotiable part and is fully enforced here).
-#   - section 9's network policy (the proxy sidecar) -- this container
-#     currently gets the runtime's default network, unrestricted.
+# Network topology (section 9): a fresh --internal Docker network per
+# call holds both the sidecar and the main container -- no route out at
+# all on that network. The squid sidecar is ALSO attached to the default
+# bridge network (normal internet access) so it can actually reach
+# allowed hosts; the main container, being only on the internal network,
+# has no route anywhere except to the sidecar. Confirmed empirically
+# (2026-10-23) with real traffic: an allowed SNI gets peeked then
+# TCP_TUNNEL-spliced to the real IP (real bytes transferred); a
+# disallowed SNI is terminated right after the peek (curl sees a TLS
+# handshake failure, not a slow/silent allow); and a tool that ignores
+# the proxy env vars entirely and tries a direct connection gets a DNS
+# resolution failure outright, because the internal network has no route
+# to resolve or reach anything beyond the sidecar.
+#
+# Teardown (sidecar container, network, temp cert/config dir) always
+# runs after the main container exits, success or failure, so a failed
+# phase doesn't leak a network or a still-running sidecar.
+#
+# Not yet implemented here, deferred not assumed away: section 10's
+# "narrow further to declared touched-paths read-write, rest read-only"
+# refinement -- the whole worktree is mounted read-write for now, within
+# the confinement ceiling (no host path other than the worktree and the
+# wrapper script is ever mounted, which is the non-negotiable part and is
+# fully enforced here).
 #
 # GIT_WRAPPER_REAL_BIN is hardcoded to /usr/bin/git -- the standard install
 # location across virtually every mainstream Linux distro's git package,
@@ -944,8 +1074,11 @@ isolation_container_runtime() {
 # normalizes to the Windows-style form Docker understands directly; a
 # no-op where cygpath doesn't exist (native Linux, where $root is already
 # a normal absolute path needing no translation at all).
+#
+# The sidecar readiness wait is a fixed sleep, not a poll -- a documented
+# v1 simplification (section 13), not a hidden assumption.
 isolation_spawn_container() {
-  local root="$1" image="$2" command="$3"
+  local root="$1" image="$2" command="$3" toolchain="${4:-}"
   local runtime
   runtime=$(isolation_container_runtime) || return 1
 
@@ -958,15 +1091,61 @@ isolation_spawn_container() {
     mount_wrapper=$(cygpath -m "$git_wrapper")
   fi
 
+  local run_id net_name squid_name work_dir cert_file conf_file
+  run_id="iso$$-${RANDOM}"
+  net_name="isolation-net-${run_id}"
+  squid_name="isolation-squid-${run_id}"
+  work_dir=$(mktemp -d)
+  cert_file="${work_dir}/dummy.pem"
+  conf_file="${work_dir}/squid.conf"
+
+  isolation_generate_dummy_cert "$cert_file" || {
+    echo "isolation: failed to generate the sidecar's dummy certificate" >&2
+    rm -rf "$work_dir"
+    return 1
+  }
+  isolation_resolve_network_allowlist "$root" "$toolchain" | isolation_write_squid_config "$conf_file"
+
+  local mount_cert="$cert_file" mount_conf="$conf_file"
+  if command -v cygpath >/dev/null 2>&1; then
+    mount_cert=$(cygpath -m "$cert_file")
+    mount_conf=$(cygpath -m "$conf_file")
+  fi
+
+  "$runtime" network create --internal "$net_name" >/dev/null 2>&1 || {
+    echo "isolation: failed to create the internal network" >&2
+    rm -rf "$work_dir"
+    return 1
+  }
+
+  MSYS_NO_PATHCONV=1 "$runtime" run -d --name "$squid_name" \
+    --network bridge \
+    --mount "type=bind,src=${mount_conf},dst=/etc/squid/squid.conf,readonly" \
+    --mount "type=bind,src=${mount_cert},dst=/etc/squid/certs/dummy.pem,readonly" \
+    alpine:3 sh -c "apk add --no-cache squid >/dev/null 2>&1 && exec squid -N" >/dev/null 2>&1
+  "$runtime" network connect "$net_name" "$squid_name" >/dev/null 2>&1
+  sleep 8
+
   MSYS_NO_PATHCONV=1 "$runtime" run --rm \
+    --network "$net_name" \
     --memory 4g --cpus 2 --pids-limit 512 \
     --mount "type=bind,src=${mount_root},dst=/workspace" \
     --mount "type=bind,src=${mount_wrapper},dst=/usr/local/bin/git,readonly" \
     -e "GIT_WRAPPER_REAL_BIN=/usr/bin/git" \
+    -e "HTTP_PROXY=http://${squid_name}:3129" \
+    -e "HTTPS_PROXY=http://${squid_name}:3129" \
+    -e "NO_PROXY=localhost,127.0.0.1" \
     -w /workspace \
     --entrypoint sh \
     "$image" \
     -c "$command"
+  local exit_code=$?
+
+  "$runtime" rm -f "$squid_name" >/dev/null 2>&1
+  "$runtime" network rm "$net_name" >/dev/null 2>&1
+  rm -rf "$work_dir"
+
+  return "$exit_code"
 }
 
 # Materializes a containerized phase's input files under

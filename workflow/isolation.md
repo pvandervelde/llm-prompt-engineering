@@ -7,23 +7,25 @@ duplicated here).
 `.tech-decisions.yml`) described in [workflow/README.md](./README.md) with a
 per-phase isolation boundary. Read that file first — this one assumes its schema
 and CLI contract as a starting point and only describes the delta.
-**Implementation status (2026-10-23):** §4, §5, §7, §8, §9, §10's narrowing-to-
-touched-paths, and §11's resolved baseline are implemented — `pipelines.yml`'s
-`isolation` key, `.tech-decisions.yml`'s `isolation` block, `workflow next`'s
-extended response, and the new `workflow isolation --override` command all exist
-and are tested. **§3's container lifecycle (`workflow run-isolated` itself) is
-designed but not implemented.** The mechanism decisions that were blocking it are
-now resolved — §9's network enforcement (an SNI-filtered proxy sidecar, not
-iptables/DNS filtering), the lifecycle tool (raw Podman/Docker CLI, not the Dev
-Containers CLI), the sandboxed subagent's own LLM-API credential handling (§7),
-resource quotas (§6, pulled forward from a deferred non-goal), and liveness/hung
-detection (§3.4, a gap found after Phase 1 shipped). §3.4's own open question —
-whether the container's `claude` invocation can be configured so no tool can
-block on interactive input — is now independently verified against Claude Code's
-actual documentation, not assumed; the exact entrypoint invocation is written
-into §3.4. What's left is building it: until `run-isolated` exists, a phase
-resolving to `container` has nowhere to actually run — `next` reports the
-resolved mode correctly, but nothing yet acts on it.
+**Implementation status (2026-10-23):**
+
+- **Phase 1 (schema/CLI/state), done and tested:** `pipelines.yml`'s `isolation`
+  key, `.tech-decisions.yml`'s `isolation` block, `workflow next`'s extended
+  response, and `workflow isolation --override`.
+- **Phase 2 (`workflow run-isolated` itself), done and tested for everything
+  except the real entrypoint:** `isolation_materialize_input` (§6), image
+  resolution (§12), and — as of today — the full container spawn: the git
+  wrapper mounted and enforced (§8), resource quotas (§6), and the SNI-filtered
+  Squid sidecar with the internal-network topology (§9), all verified against
+  real Docker, including real allow/deny network traffic, not just config
+  validation. `cygpath`/`MSYS_NO_PATHCONV` handling makes this work correctly
+  from Git Bash on Windows too, confirmed empirically after hitting it twice.
+- **Still not built:** `cmd_run_isolated`/`Invoke-RunIsolated` don't call the
+  spawn function yet — materialization and spawning exist as separate,
+  independently-tested primitives, not yet wired together end-to-end. Nor is
+  §3.4's liveness polling/streaming entrypoint, the `conductor.md` dispatch
+  branch, §10's read-only/read-write narrowing, or the "build:" devcontainer
+  case (§12) — see §13.
 
 ## 1. Goals and threat model
 
@@ -549,14 +551,34 @@ runtime happens to give you (Docker Desktop's WSL2 VM, or Podman rootless
 `slirp4netns`/`pasta`), which is real surgery that's easy to get subtly,
 silently wrong per-platform.
 
-**Resolved (2026-10-23) — proxy software: Squid, in `ssl_bump splice` (SNI-
-sniffing passthrough) mode, not Envoy and not a custom implementation.** Envoy
-is built for L7 service-mesh routing — more configuration surface than a plain
-allow/deny-by-SNI sidecar needs. A custom implementation means this project
+**Resolved and implemented (2026-10-23) — proxy software: Squid, in `ssl_bump`
+peek-then-splice-or-terminate mode, not Envoy and not a custom implementation.**
+Envoy is built for L7 service-mesh routing — more configuration surface than a
+plain allow/deny-by-SNI sidecar needs. A custom implementation means this project
 writing and trusting its own TLS ClientHello parsing, which is exactly the kind
 of security-adjacent code to reuse an audited tool for rather than author from
-scratch. Squid's `ssl_bump splice` ACLs are a direct, well-documented fit:
-inspect the SNI, splice (pass through unmodified) if allowed, drop otherwise.
+scratch.
+
+**Load-bearing finding, confirmed empirically, not assumed:** SSL-Bump/SNI-peek
+is an **OpenSSL-only Squid feature** — a GnuTLS-linked build (Ubuntu's packaged
+`ubuntu/squid` image, specifically) doesn't have the `ssl::server_name` ACL
+type at all; it's not a config mistake, the feature is absent from the binary.
+Alpine's `squid` package is OpenSSL-linked and works; `isolation_spawn_container`/
+`Start-IsolationContainer` install it fresh (`apk add squid`) on a plain
+`alpine:3` base at sidecar startup rather than depending on a pre-built image
+that might silently be the wrong TLS backend.
+
+Verified against real traffic, not just a clean config load: an allowed SNI
+(`crates.io`) is peeked then spliced — Squid's access log shows `TCP_TUNNEL`
+to the real IP with real bytes transferred; a disallowed SNI (`wikipedia.org`)
+is peeked then terminated before the TLS handshake completes (the client sees
+a handshake failure, never an HTTP response); and a client that ignores the
+proxy env vars entirely and tries connecting directly gets a DNS resolution
+failure outright, because the internal Docker network it's confined to
+(`--internal`, no route out) has nothing to resolve or reach beyond the
+sidecar. The sidecar is attached to both that internal network and the
+default bridge network, so it alone can reach the real internet; the main
+container can reach only the sidecar.
 
 Default allowlist entries come from the resolved toolchain (reusing
 `.tech-decisions.yml`'s existing `toolchains` resolution, computed today for
@@ -626,6 +648,16 @@ sandbox by granting access back in.
 ## 13. Open items
 
 - Dotfile/secret-path exclusion within the repo (§2, §10) — follow-up tightening.
-  The only item remaining here; everything else previously listed (file layout,
-  proxy software, timeout/quota defaults) is resolved as of 2026-10-23 — see
-  §6 and §9.
+- The sidecar readiness wait in `isolation_spawn_container`/
+  `Start-IsolationContainer` is a fixed 8-second sleep after starting Squid,
+  not a poll for the listening port — a documented v1 simplification. Reliable
+  in testing, but a poll (e.g. retrying a `nc`/connect check) would be more
+  robust against a slow `apk add` on a loaded host than a fixed duration.
+- The "build:" image-spec case from §12 (a `devcontainer.json` with only a
+  `build` block, no plain `image`) is refused outright by
+  `isolation_plain_image_ref`/`Get-IsolationPlainImageRef`, not wired up —
+  building an image from an arbitrary Dockerfile is a separate, untested
+  concern.
+- §10's read-only/read-write narrowing to declared touched-paths is still not
+  implemented in `isolation_spawn_container` — the whole worktree is
+  read-write today, within the (fully enforced) confinement ceiling.

@@ -830,32 +830,187 @@ function Get-IsolationContainerRuntime {
     Fail "isolation: neither podman nor docker is installed on this host (workflow/isolation.md section 11)"
 }
 
-# Spawns the container for one containerized phase. Returns its exit
-# code; its stdout/stderr go straight to this process's own (not
-# captured), matching workflow.sh's behavior. Mirrors
-# isolation_spawn_container in workflow.sh function-for-function --
-# including its notes on what's deliberately deferred (section 10's
-# read-only/read-write narrowing, section 9's network policy) and why
-# GIT_WRAPPER_REAL_BIN is hardcoded to /usr/bin/git. No MSYS_NO_PATHCONV
-# equivalent is needed here: that workaround is specific to Git Bash's
-# MSYS path-conversion layer, which PowerShell calling docker.exe directly
-# never goes through.
+# Toolchain-derived default network allowlist entries -- exactly
+# workflow/isolation.md section 9's resolved table, no more. Mirrors
+# isolation_toolchain_network_allow in workflow.sh function-for-function.
+function Get-IsolationToolchainNetworkAllow {
+    param([string]$Toolchain)
+    switch ($Toolchain) {
+        "rust" { return @("crates.io", "static.crates.io", "index.crates.io") }
+        "typescript" { return @("registry.npmjs.org") }
+        "javascript" { return @("registry.npmjs.org") }
+        "python" { return @("pypi.org", "files.pythonhosted.org") }
+        default { return @() }
+    }
+}
+
+# Reads .tech-decisions.yml's top-level isolation: -> network: -> allow:
+# inline bracket list. Mirrors tech_isolation_network_allow in workflow.sh
+# function-for-function.
+function Get-TechIsolationNetworkAllow {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return @() }
+    $lines = Get-Content $Path
+    $inIsolation = $false
+    $inNetwork = $false
+    foreach ($line in $lines) {
+        if (-not $inIsolation) {
+            if ($line -match '^isolation:') { $inIsolation = $true }
+            continue
+        }
+        if ($line -match '^[A-Za-z]') { break }
+        if ($line -match '^  network:') { $inNetwork = $true; continue }
+        if ($inNetwork -and $line -match '^  [A-Za-z]') { $inNetwork = $false }
+        if ($inNetwork -and $line -match '^    allow:\s*(.*)$') {
+            $raw = ($Matches[1] -replace '\s+#.*$', '').Trim().TrimStart('[').TrimEnd(']')
+            if (-not $raw) { return @() }
+            return @($raw -split ',' | ForEach-Object { $_.Trim().Trim('"') } | Where-Object { $_ -ne '' })
+        }
+    }
+    return @()
+}
+
+# Resolves the full SNI allowlist for a containerized phase's network
+# sidecar: the LLM API domain (always present), the resolved toolchain's
+# defaults, and the repo's own .tech-decisions.yml additions --
+# deduplicated. Mirrors isolation_resolve_network_allowlist in workflow.sh
+# function-for-function.
+function Resolve-IsolationNetworkAllowlist {
+    param([string]$Root, [string]$Toolchain)
+    $entries = @("api.anthropic.com")
+    $entries += Get-IsolationToolchainNetworkAllow -Toolchain $Toolchain
+    $entries += Get-TechIsolationNetworkAllow -Path (Join-Path $Root ".tech-decisions.yml")
+    return @($entries | Sort-Object -Unique)
+}
+
+# Generates a fresh self-signed dummy certificate for the proxy sidecar's
+# ssl-bump http_port flag -- never actually presented to a client, but
+# Squid requires one configured to accept the ssl-bump flag at startup
+# regardless. No MSYS path-conversion concern here (see
+# Start-IsolationContainer's note); openssl.exe gets normal Windows paths
+# directly. Mirrors isolation_generate_dummy_cert in workflow.sh.
+function New-IsolationDummyCert {
+    param([string]$OutFile)
+    $dir = Split-Path -Parent $OutFile
+    $base = Split-Path -Leaf $OutFile
+    $keyFile = Join-Path $dir "$base.key.tmp"
+    $crtFile = Join-Path $dir "$base.crt.tmp"
+    & openssl req -x509 -newkey rsa:2048 -keyout $keyFile -out $crtFile -days 1 -nodes -subj "/CN=isolation-dummy" *>$null
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $keyFile) -or -not (Test-Path $crtFile)) { return $false }
+    Get-Content $keyFile, $crtFile -Raw | Set-Content $OutFile
+    Remove-Item $keyFile, $crtFile -Force -ErrorAction SilentlyContinue
+    return $true
+}
+
+# Writes a minimal standalone squid.conf implementing SNI-based
+# peek-and-splice from the given allowlist. Requires a Squid built against
+# OpenSSL, not GnuTLS -- see isolation_write_squid_config in workflow.sh
+# for the empirical finding this encodes. Mirrors that function
+# function-for-function; the cert path is fixed for the same reason.
+function Write-IsolationSquidConfig {
+    param([string]$OutFile, [string[]]$Allowlist)
+    $sniList = ($Allowlist | ForEach-Object { ".$_" }) -join ' '
+    $content = @"
+acl localnet src 10.0.0.0/8
+acl localnet src 172.16.0.0/12
+acl localnet src 192.168.0.0/16
+
+acl allowed_sni ssl::server_name $sniList
+
+http_access allow localnet
+http_access deny all
+
+http_port 3129 ssl-bump cert=/etc/squid/certs/dummy.pem generate-host-certificates=off
+
+acl step1 at_step SslBump1
+ssl_bump peek step1
+ssl_bump splice allowed_sni
+ssl_bump terminate all
+
+coredump_dir /var/cache/squid
+"@
+    Set-Content -Path $OutFile -Value $content
+}
+
+# Spawns the network sidecar (an SNI-filtering Squid proxy, section 9) and
+# the main container together on a fresh internal-only network, tearing
+# both down when the main container exits regardless of its exit code.
+#
+# Returns [PSCustomObject]@{ Output; ExitCode } -- NOT a bare exit code,
+# and deliberately not relying on $LASTEXITCODE after the call. This
+# function's own teardown runs `rm -f`/`network rm` as its last external
+# commands, which would silently overwrite $LASTEXITCODE with the
+# teardown's own exit status by the time a caller could read it -- found
+# the hard way (2026-10-23) when adding this network/sidecar teardown
+# broke every existing caller that checked $LASTEXITCODE post-call.
+# Capturing both the container's output and its exit code inside this
+# function, before any cleanup command can clobber either, is the fix --
+# same contract Invoke-Wf already uses in test-workflow.ps1 for the
+# identical reason.
+#
+# Mirrors isolation_spawn_container in workflow.sh in behavior (not
+# signature, for the reason above) -- including its notes on the
+# confirmed network topology/behavior, section 10's deferred read-only/
+# read-write narrowing, and why GIT_WRAPPER_REAL_BIN is hardcoded. No
+# MSYS_NO_PATHCONV equivalent is needed here: that workaround is specific
+# to Git Bash's MSYS path-conversion layer, which PowerShell calling
+# docker.exe directly never goes through. The sidecar readiness wait is a
+# fixed sleep, not a poll -- a documented v1 simplification (section 13).
 function Start-IsolationContainer {
-    param([string]$Root, [string]$Image, [string]$Command)
+    param([string]$Root, [string]$Image, [string]$Command, [string]$Toolchain = "")
     $runtime = Get-IsolationContainerRuntime
     $gitWrapper = Join-Path $Root "tools/workflow/isolation/git-wrapper.sh"
     if (-not (Test-Path $gitWrapper)) { Fail "isolation: git-wrapper.sh not found at $gitWrapper" }
 
-    & $runtime run --rm `
+    $runId = "iso$PID-$(Get-Random)"
+    $netName = "isolation-net-$runId"
+    $squidName = "isolation-squid-$runId"
+    $workDir = Join-Path $env:TEMP "isolation-sidecar-$runId"
+    New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+    $certFile = Join-Path $workDir "dummy.pem"
+    $confFile = Join-Path $workDir "squid.conf"
+
+    if (-not (New-IsolationDummyCert -OutFile $certFile)) {
+        Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+        return [PSCustomObject]@{ Output = "isolation: failed to generate the sidecar's dummy certificate"; ExitCode = 1 }
+    }
+    $allowlist = Resolve-IsolationNetworkAllowlist -Root $Root -Toolchain $Toolchain
+    Write-IsolationSquidConfig -OutFile $confFile -Allowlist $allowlist
+
+    & $runtime network create --internal $netName *>$null
+    if ($LASTEXITCODE -ne 0) {
+        Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+        return [PSCustomObject]@{ Output = "isolation: failed to create the internal network"; ExitCode = 1 }
+    }
+
+    & $runtime run -d --name $squidName `
+        --network bridge `
+        --mount "type=bind,src=$confFile,dst=/etc/squid/squid.conf,readonly" `
+        --mount "type=bind,src=$certFile,dst=/etc/squid/certs/dummy.pem,readonly" `
+        alpine:3 sh -c "apk add --no-cache squid >/dev/null 2>&1 && exec squid -N" *>$null
+    & $runtime network connect $netName $squidName *>$null
+    Start-Sleep -Seconds 8
+
+    $containerOutput = & $runtime run --rm `
+        --network $netName `
         --memory 4g --cpus 2 --pids-limit 512 `
         --mount "type=bind,src=$Root,dst=/workspace" `
         --mount "type=bind,src=$gitWrapper,dst=/usr/local/bin/git,readonly" `
         -e "GIT_WRAPPER_REAL_BIN=/usr/bin/git" `
+        -e "HTTP_PROXY=http://${squidName}:3129" `
+        -e "HTTPS_PROXY=http://${squidName}:3129" `
+        -e "NO_PROXY=localhost,127.0.0.1" `
         -w /workspace `
         --entrypoint sh `
         $Image `
-        -c $Command
-    return $LASTEXITCODE
+        -c $Command 2>&1
+    $exitCode = $LASTEXITCODE
+
+    & $runtime rm -f $squidName *>$null
+    & $runtime network rm $netName *>$null
+    Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+
+    return [PSCustomObject]@{ Output = ($containerOutput -join "`n"); ExitCode = $exitCode }
 }
 
 # Materializes a containerized phase's input files under

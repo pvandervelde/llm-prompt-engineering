@@ -125,6 +125,26 @@ out=$(isolation_spawn_container "$SCR" "alpine/git:latest" "cat /etc/hostname 2>
 assert_eq "11 a plain-filesystem command inside the container still succeeds (confinement is about host paths, not the container's own rootfs)" "0" "$code"
 
 echo
+echo "Network policy (SNI-filtered proxy sidecar, section 9 -- real network traffic, slower)"
+
+out=$(isolation_spawn_container "$SCR" "curlimages/curl:latest" \
+  "curl -sS -m 15 -o /dev/null -w 'HTTP %{http_code}' https://crates.io/" "rust" 2>&1); code=$?
+assert_eq "12 an allowed SNI (crates.io, via the rust toolchain allowlist) is reachable through the proxy" "0" "$code"
+assert_contains "13 a reached allowed host returns a real HTTP response, not a proxy error page" "$out" "HTTP"
+
+out=$(isolation_spawn_container "$SCR" "curlimages/curl:latest" \
+  "curl -sS -m 15 -o /dev/null -w 'HTTP %{http_code}' https://www.wikipedia.org/" "rust" 2>&1); code=$?
+if [ "$code" -ne 0 ]; then
+  pass "14 a disallowed SNI fails at the TLS layer (terminated after the peek), not with an HTTP response"
+else
+  fail "14 a disallowed SNI fails at the TLS layer (terminated after the peek), not with an HTTP response" "curl exited 0: $out"
+fi
+
+out=$(isolation_spawn_container "$SCR" "curlimages/curl:latest" \
+  "curl -sS -m 10 --noproxy '*' -o /dev/null -w 'HTTP %{http_code}' https://crates.io/ 2>&1" "rust" 2>&1); code=$?
+assert_contains "15 bypassing the proxy entirely still fails outright (no route exists, not just non-compliance)" "$out" "ould not resolve host"
+
+echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed scenarios:"
