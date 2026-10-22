@@ -686,6 +686,121 @@ function Invoke-Isolation {
     [PSCustomObject]@{ phase = $phaseId; isolation = $final; overridden = $overridden; rejectedOverride = $rejectedOverride } | ConvertTo-Json -Compress
 }
 
+# Finds the merge-base between HEAD and the first existing candidate
+# integration branch (main, master, develop, in that order). Returns "" if
+# none exist. Mirrors isolation_diff_base in workflow.sh function-for-function.
+function Get-IsolationDiffBase {
+    param([string]$Root)
+    Push-Location $Root
+    try {
+        foreach ($cand in @("main", "master", "develop")) {
+            git show-ref --verify --quiet "refs/heads/$cand" 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $base = (git merge-base HEAD $cand 2>$null)
+                if ($LASTEXITCODE -eq 0 -and $base) { return $base.Trim() }
+            }
+        }
+        return ""
+    } finally {
+        Pop-Location
+    }
+}
+
+# Materializes a containerized phase's input files under
+# .llm/isolation/<slug>/<phase>/input/ -- prompt.md (the same assembled
+# content a direct Task-tool dispatch would otherwise inline, written to a
+# file instead) and task.json (structured metadata for the container
+# entrypoint). Returns the input directory path. Mirrors
+# isolation_materialize_input in workflow.sh function-for-function; see that
+# function's scope note on what's deliberately simplified here (verbatim
+# Standards/Toolchain/Context, bare task id) and workflow/isolation.md
+# section 6.
+function Write-IsolationInput {
+    param([string]$Root, [string]$Task, [string]$Pipeline, [string]$Branch, [string]$PhaseId, [string]$Agent, [string]$StateFile, [string]$Slug)
+    $dir = Join-Path $Root ".llm/isolation/$Slug/$PhaseId/input"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+
+    $standards = Get-StateSection -Path $StateFile -Heading "Standards"
+    $toolchain = Get-StateSection -Path $StateFile -Heading "Toolchain"
+    $context = Get-StateSection -Path $StateFile -Heading "Context"
+    $existingWork = Get-StateSection -Path $StateFile -Heading "Existing Work"
+
+    # Matches conductor.md's own template: RED/GREEN (and the infra analogue,
+    # IMPLEMENT) get no Diff section -- there's nothing meaningful to diff
+    # against before the first code-writing phase has run. REFACTOR/AUDIT do.
+    $diffBlock = ""
+    if ($PhaseId -in @("REFACTOR", "AUDIT")) {
+        $base = Get-IsolationDiffBase -Root $Root
+        if ($base) {
+            Push-Location $Root
+            try {
+                $diffText = (git diff $base 2>$null) -join "`n"
+            } finally {
+                Pop-Location
+            }
+            $diffBlock = "`n## Diff`n$diffText`n"
+        }
+    }
+
+    $prompt = "## Working Directory`nWork in the current git workspace.`n`n"
+    $prompt += "## Task`n#$Task`n`n"
+    $prompt += "## Standards`n$standards`n`n"
+    $prompt += "## Toolchain`n$toolchain`n`n"
+    $prompt += "## Context`n$context`n`n"
+    $prompt += "## Existing Work`n$existingWork`n"
+    if ($diffBlock) { $prompt += $diffBlock }
+
+    Set-Content -Path (Join-Path $dir "prompt.md") -Value $prompt
+
+    $taskJson = [PSCustomObject]@{ id = $Task; title = $Task; pipeline = $Pipeline; phase = $PhaseId; branch = $Branch; agent = $Agent } | ConvertTo-Json -Compress
+    Set-Content -Path (Join-Path $dir "task.json") -Value $taskJson
+
+    return $dir
+}
+
+function Invoke-RunIsolated {
+    param([string[]]$ArgList)
+    $phaseId = ""; $pipeline = ""
+    for ($i = 0; $i -lt $ArgList.Count; $i += 2) {
+        switch ($ArgList[$i]) {
+            "--phase" { $phaseId = $ArgList[$i + 1] }
+            "--pipeline" { $pipeline = $ArgList[$i + 1] }
+            default { Fail "run-isolated: unknown argument $($ArgList[$i])" }
+        }
+    }
+    if (-not $phaseId) { Fail "run-isolated: --phase is required" }
+
+    $root = Get-RepoRoot
+    $data = Get-PipelinesData -Root $root
+    $resolved = if ($pipeline) { Resolve-NamedPipeline -Data $data -Root $root -Pipeline $pipeline } else { Resolve-ActivePipeline -Data $data -Root $root }
+    if (-not (Test-Path $resolved.StateFile)) { Fail "no state file for $($resolved.Name); run 'init' first" }
+    $stateFile = $resolved.StateFile
+    $block = $resolved.Block
+
+    $phase = Get-Phase -PipelineBlock $block -PhaseId $phaseId
+    if (-not $phase) { Fail "unknown phase: $phaseId" }
+
+    $isolationMode = Resolve-AndCacheIsolation -StateFile $stateFile -Root $root -Phase $phase -PhaseId $phaseId
+    if ($isolationMode -ne "container") { Fail "run-isolated: phase $phaseId is not isolated (resolved mode: $isolationMode)" }
+
+    $task = Get-StateField -Path $stateFile -Field "Task"
+    $pipelineVal = Get-StateField -Path $stateFile -Field "Pipeline"
+    $branch = Get-StateField -Path $stateFile -Field "Branch"
+    $agent = $phase.agent
+    $prefix = $block.branchPrefix
+    $slug = if ($branch.StartsWith($prefix)) { $branch.Substring($prefix.Length) } else { $branch }
+
+    $inputDir = Write-IsolationInput -Root $root -Task $task -Pipeline $pipelineVal -Branch $branch -PhaseId $phaseId -Agent $agent -StateFile $stateFile -Slug $slug
+
+    $verdictFile = Join-Path $root ".llm/isolation/$slug/$phaseId/output/verdict.json"
+    if (Test-Path $verdictFile) {
+        Get-Content $verdictFile -Raw
+        return
+    }
+
+    Fail "run-isolated: container spawn is not yet implemented (input materialized at $inputDir; workflow/isolation.md section 3's container lifecycle remains to be built)"
+}
+
 function Invoke-Classify {
     param([string[]]$ArgList)
     $task = ""
@@ -923,5 +1038,6 @@ switch ($Command) {
     }
     "tier" { Invoke-Tier -ArgList $Rest }
     "isolation" { Invoke-Isolation -ArgList $Rest }
+    "run-isolated" { Invoke-RunIsolated -ArgList $Rest }
     default { Fail "unknown command: $Command" }
 }

@@ -593,6 +593,74 @@ $r = Invoke-Wf $scr20 @("next", "--pipeline", "infrastructure")
 Assert-Contains "91 infra pipeline: SECURITY defaults to isolation:direct" $r.Output '"phase":"SECURITY","agent":"Security Reviewer","isolation":"direct"'
 
 Write-Host ""
+Write-Host "Tier 9 - run-isolated (materialization)"
+
+function Set-TestSectionMarker([string]$Path, [string]$Heading, [string]$Marker) {
+    $lines = Get-Content $Path
+    $result = New-Object System.Collections.Generic.List[string]
+    $replaceNext = $false
+    foreach ($line in $lines) {
+        if ($replaceNext) { $result.Add($Marker); $replaceNext = $false; continue }
+        $result.Add($line)
+        if ($line -eq "## $Heading") { $replaceNext = $true }
+    }
+    Set-Content -Path $Path -Value $result
+}
+
+$scr21 = Join-Path $env:TEMP "wf-ps-t21-$(Get-Random)"
+New-Scratch $scr21
+Invoke-Wf $scr21 @("init", "--task", "iso-run1", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr21 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+
+$stateFile21 = Join-Path $scr21 ".llm/workflow-state.md"
+Set-TestSectionMarker $stateFile21 "Standards" "TEST STANDARDS MARKER"
+Set-TestSectionMarker $stateFile21 "Context" "TEST CONTEXT MARKER"
+
+$r = Invoke-Wf $scr21 @("run-isolated", "--phase", "RED")
+Assert-Eq "92 run-isolated on a container phase materializes inputs then reports the spawn as not yet built" "1" $r.ExitCode
+Assert-Contains "93 the not-yet-implemented message names what's missing, not a generic failure" $r.Output "container spawn is not yet implemented"
+
+$promptPath = Join-Path $scr21 ".llm/isolation/iso-run1/RED/input/prompt.md"
+$taskJsonPath = Join-Path $scr21 ".llm/isolation/iso-run1/RED/input/task.json"
+if (Test-Path $promptPath) { Pass "94 prompt.md was materialized" } else { Fail "94 prompt.md was materialized" "not found at $promptPath" }
+$promptContent = if (Test-Path $promptPath) { Get-Content $promptPath -Raw } else { "" }
+Assert-Contains "95 prompt.md carries the live Standards section content" $promptContent "TEST STANDARDS MARKER"
+Assert-Contains "96 prompt.md carries the live Context section content" $promptContent "TEST CONTEXT MARKER"
+if ($promptContent.Contains("## Diff")) {
+    Fail "97 RED must not get a Diff section (nothing to diff before GREEN runs)" "found ## Diff"
+} else {
+    Pass "97 RED must not get a Diff section (nothing to diff before GREEN runs)"
+}
+$taskJsonContent = if (Test-Path $taskJsonPath) { Get-Content $taskJsonPath -Raw } else { "" }
+Assert-Contains "98 task.json carries the resolved phase" $taskJsonContent '"phase":"RED"'
+Assert-Contains "99 task.json carries the resolved agent name" $taskJsonContent '"agent":"Tester"'
+Assert-Contains "100 task.json carries the resolved pipeline" $taskJsonContent '"pipeline":"software"'
+
+Invoke-Wf $scr21 @("gate", "--phase", "RED", "--verdict", "done") | Out-Null
+Invoke-Wf $scr21 @("gate", "--phase", "GREEN", "--verdict", "done") | Out-Null
+"a change" | Add-Content (Join-Path $scr21 "README.md")
+Push-Location $scr21; git add README.md; git commit -q -m "a change for the diff"; Pop-Location
+$r = Invoke-Wf $scr21 @("run-isolated", "--phase", "REFACTOR")
+Assert-Eq "101 run-isolated on REFACTOR also materializes then reports not-yet-implemented" "1" $r.ExitCode
+$refactorPromptPath = Join-Path $scr21 ".llm/isolation/iso-run1/REFACTOR/input/prompt.md"
+$refactorPromptContent = if (Test-Path $refactorPromptPath) { Get-Content $refactorPromptPath -Raw } else { "" }
+Assert-Contains "102 REFACTOR gets a Diff section" $refactorPromptContent "## Diff"
+Assert-Contains "103 the Diff section shows the actual change" $refactorPromptContent "a change"
+
+$r = Invoke-Wf $scr21 @("run-isolated", "--phase", "SECURITY")
+Assert-Eq "104 run-isolated on a direct phase refuses outright" "1" $r.ExitCode
+Assert-Contains "105 the refusal names the resolved (direct) mode" $r.Output "is not isolated"
+
+# Round-trip: a pre-seeded verdict.json is read back, not re-materialized
+# into a not-yet-implemented error.
+$outputDir21 = Join-Path $scr21 ".llm/isolation/iso-run1/REFACTOR/output"
+New-Item -ItemType Directory -Path $outputDir21 -Force | Out-Null
+'{"verdict":"CLEAR","findings":[]}' | Set-Content (Join-Path $outputDir21 "verdict.json")
+$r = Invoke-Wf $scr21 @("run-isolated", "--phase", "REFACTOR")
+Assert-Eq "106 a pre-existing verdict.json is read back successfully" "0" $r.ExitCode
+Assert-Contains "107 the read-back verdict is returned verbatim" $r.Output '"verdict":"CLEAR"'
+
+Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="
 if ($script:FailCount -gt 0) {
     Write-Host "Failed scenarios:"

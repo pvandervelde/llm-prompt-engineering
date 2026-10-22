@@ -107,6 +107,21 @@ state_append_existing_work() {
   ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 }
 
+# Prints every line of a "## <heading>" section's body (everything between
+# that heading and the next "## " heading, or EOF), excluding the heading
+# line itself. Empty string if the heading isn't found. Read-only -- used to
+# pull Standards/Toolchain/Context/Existing Work verbatim into a
+# containerized phase's materialized prompt (workflow/isolation.md section 6).
+state_get_section() {
+  local file="$1" heading="$2"
+  [ -f "$file" ] || return 0
+  awk -v target="## ${heading}" '
+    $0 == target { inb = 1; next }
+    inb && /^## / { exit }
+    inb { print }
+  ' "$file"
+}
+
 # Prints the recorded "<mode> (<source>)" string for one phase under
 # "## Isolation", or empty if that phase's isolation mode hasn't been resolved
 # yet for this task.

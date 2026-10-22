@@ -740,6 +740,132 @@ cmd_isolation() {
     "$(json_escape "$phase")" "$(json_escape "$final")" "$overridden" "$rejected"
 }
 
+# Finds the merge-base between HEAD and the first existing candidate
+# integration branch (main, master, develop, in that order). Prints empty
+# if none exist -- the caller treats that as "no base, no diff" rather than
+# an error (a single-branch repo, or a phase run before any integration
+# branch was created).
+isolation_diff_base() {
+  local root="$1" cand base=""
+  for cand in main master develop; do
+    if (cd "$root" && git show-ref --verify --quiet "refs/heads/${cand}") 2>/dev/null; then
+      base=$(cd "$root" && git merge-base HEAD "$cand" 2>/dev/null || true)
+      [ -n "$base" ] && break
+    fi
+  done
+  echo "$base"
+}
+
+# Materializes a containerized phase's input files under
+# .llm/isolation/<slug>/<phase>/input/ -- prompt.md (the same assembled
+# content a direct Task-tool dispatch would otherwise inline, written to a
+# file instead) and task.json (structured metadata for the container
+# entrypoint). Prints the input directory path. See workflow/isolation.md
+# section 6.
+#
+# Scope note: Standards/Toolchain/Context are written verbatim from the
+# state file, not per-agent-filtered the way conductor.md's own prompt
+# template describes for a direct dispatch -- that filtering is a
+# refinement for later, not a security requirement (Context content isn't
+# secret), and this keeps the materialize/read-back mechanism itself the
+# thing being built here. "## Task" is the bare task id, not the full
+# title/description a direct dispatch gets from the Conductor's own
+# knowledge of .llm/tasks.md -- same reasoning, documented simplification.
+isolation_materialize_input() {
+  local root="$1" task="$2" pipeline="$3" branch="$4" phase_id="$5" agent="$6" state_file="$7" slug="$8"
+  local dir="${root}/.llm/isolation/${slug}/${phase_id}/input"
+  mkdir -p "$dir"
+
+  local standards toolchain context existing_work
+  standards=$(state_get_section "$state_file" "Standards")
+  toolchain=$(state_get_section "$state_file" "Toolchain")
+  context=$(state_get_section "$state_file" "Context")
+  existing_work=$(state_get_section "$state_file" "Existing Work")
+
+  # Matches conductor.md's own template: RED/GREEN (and the infra analogue,
+  # IMPLEMENT) get no Diff section -- there's nothing meaningful to diff
+  # against before the first code-writing phase has run. REFACTOR/AUDIT do.
+  local diff_block=""
+  case "$phase_id" in
+    REFACTOR|AUDIT)
+      local base diff_text
+      base=$(isolation_diff_base "$root")
+      if [ -n "$base" ]; then
+        diff_text=$(cd "$root" && git diff "$base" 2>/dev/null || true)
+        diff_block=$'\n## Diff\n'"${diff_text}"$'\n'
+      fi
+      ;;
+  esac
+
+  {
+    printf '## Working Directory\nWork in the current git workspace.\n\n'
+    printf '## Task\n#%s\n\n' "$task"
+    printf '## Standards\n%s\n\n' "$standards"
+    printf '## Toolchain\n%s\n\n' "$toolchain"
+    printf '## Context\n%s\n\n' "$context"
+    printf '## Existing Work\n%s\n' "$existing_work"
+    [ -n "$diff_block" ] && printf '%s' "$diff_block"
+  } > "${dir}/prompt.md"
+
+  printf '{"id":"%s","title":"%s","pipeline":"%s","phase":"%s","branch":"%s","agent":"%s"}\n' \
+    "$(json_escape "$task")" "$(json_escape "$task")" "$(json_escape "$pipeline")" \
+    "$(json_escape "$phase_id")" "$(json_escape "$branch")" "$(json_escape "$agent")" \
+    > "${dir}/task.json"
+
+  echo "$dir"
+}
+
+cmd_run_isolated() {
+  local phase="" pipeline=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --phase) phase="$2"; shift 2 ;;
+      --pipeline) pipeline="$2"; shift 2 ;;
+      *) die "run-isolated: unknown argument $1" ;;
+    esac
+  done
+  [ -n "$phase" ] || die "run-isolated: --phase is required"
+
+  local root pfile resolved name state_file block phase_block
+  root="$(repo_root)"
+  pfile="$(pipelines_file)"
+  if [ -n "$pipeline" ]; then
+    resolved=$(resolve_named_pipeline "$pipeline")
+  else
+    resolved=$(resolve_active_pipeline)
+  fi
+  name=$(echo "$resolved" | cut -d' ' -f1)
+  state_file=$(echo "$resolved" | cut -d' ' -f2-)
+  [ -f "$state_file" ] || die "no state file for ${name}; run 'init' first"
+
+  block=$(pl_pipeline_block "$pfile" "$name")
+  phase_block=$(pl_phase_block "$block" "$phase")
+  [ -n "$phase_block" ] || die "unknown phase: ${phase}"
+
+  local isolation_mode
+  isolation_mode=$(resolve_and_cache_isolation "$state_file" "$root" "$phase_block" "$phase")
+  [ "$isolation_mode" = "container" ] || die "run-isolated: phase ${phase} is not isolated (resolved mode: ${isolation_mode})"
+
+  local task pipeline_val branch agent prefix slug
+  task=$(state_get_field "$state_file" "Task")
+  pipeline_val=$(state_get_field "$state_file" "Pipeline")
+  branch=$(state_get_field "$state_file" "Branch")
+  agent=$(pl_phase_scalar "$phase_block" agent)
+  prefix=$(pl_scalar "$block" branchPrefix)
+  slug="${branch#"$prefix"}"
+
+  local input_dir
+  input_dir=$(isolation_materialize_input "$root" "$task" "$pipeline_val" "$branch" "$phase" "$agent" "$state_file" "$slug")
+
+  local verdict_file="${root}/.llm/isolation/${slug}/${phase}/output/verdict.json"
+  if [ -f "$verdict_file" ]; then
+    cat "$verdict_file"
+    return 0
+  fi
+
+  die "run-isolated: container spawn is not yet implemented (input materialized at ${input_dir}; workflow/isolation.md section 3's container lifecycle remains to be built)"
+}
+
 cmd_classify() {
   local task="" paths=()
   while [ $# -gt 0 ]; do
@@ -1000,7 +1126,7 @@ cmd_tasks_next() {
 
 main() {
   local cmd="${1:-}"
-  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify|context|tasks|tier|isolation> [options]"
+  [ -n "$cmd" ] || die "usage: workflow.sh <init|next|gate|complete|classify|context|tasks|tier|isolation|run-isolated> [options]"
   shift
   case "$cmd" in
     init) cmd_init "$@" ;;
@@ -1012,6 +1138,7 @@ main() {
     context) cmd_context "$@" ;;
     tier) cmd_tier "$@" ;;
     isolation) cmd_isolation "$@" ;;
+    run-isolated) cmd_run_isolated "$@" ;;
     *) die "unknown command: ${cmd}" ;;
   esac
 }

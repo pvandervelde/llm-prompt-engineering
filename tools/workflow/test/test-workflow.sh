@@ -553,6 +553,57 @@ out=$(wf "$SCR20" next --pipeline infrastructure)
 assert_contains "91 infra pipeline: SECURITY defaults to isolation:direct" "$out" '"phase":"SECURITY","agent":"Security Reviewer","isolation":"direct"'
 
 echo
+echo "Tier 9 - run-isolated (materialization)"
+
+SCR21="$(mktemp -d)"; new_scratch "$SCR21"
+wf "$SCR21" init --task iso-run1 --pipeline software >/dev/null
+wf "$SCR21" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+
+# Custom Standards/Context content, to prove state_get_section actually
+# extracts live content, not just that prompt.md gets created.
+awk '/^## Standards$/{print;getline;print "TEST STANDARDS MARKER";next}1' "$SCR21/.llm/workflow-state.md" > "$SCR21/.llm/workflow-state.md.tmp" && mv "$SCR21/.llm/workflow-state.md.tmp" "$SCR21/.llm/workflow-state.md"
+awk '/^## Context$/{print;getline;print "TEST CONTEXT MARKER";next}1' "$SCR21/.llm/workflow-state.md" > "$SCR21/.llm/workflow-state.md.tmp" && mv "$SCR21/.llm/workflow-state.md.tmp" "$SCR21/.llm/workflow-state.md"
+
+out=$(wf "$SCR21" run-isolated --phase RED 2>&1); code=$?
+assert_eq "92 run-isolated on a container phase materializes inputs then reports the spawn as not yet built" "1" "$code"
+assert_contains "93 the not-yet-implemented message names what's missing, not a generic failure" "$out" "container spawn is not yet implemented"
+
+PROMPT="$SCR21/.llm/isolation/iso-run1/RED/input/prompt.md"
+TASKJSON="$SCR21/.llm/isolation/iso-run1/RED/input/task.json"
+[ -f "$PROMPT" ] && pass "94 prompt.md was materialized" || fail "94 prompt.md was materialized" "not found at $PROMPT"
+assert_contains "95 prompt.md carries the live Standards section content" "$(cat "$PROMPT" 2>/dev/null)" "TEST STANDARDS MARKER"
+assert_contains "96 prompt.md carries the live Context section content" "$(cat "$PROMPT" 2>/dev/null)" "TEST CONTEXT MARKER"
+case "$(cat "$PROMPT" 2>/dev/null)" in
+  *"## Diff"*) fail "97 RED must not get a Diff section (nothing to diff before GREEN runs)" "found ## Diff" ;;
+  *) pass "97 RED must not get a Diff section (nothing to diff before GREEN runs)" ;;
+esac
+assert_contains "98 task.json carries the resolved phase" "$(cat "$TASKJSON" 2>/dev/null)" '"phase":"RED"'
+assert_contains "99 task.json carries the resolved agent name" "$(cat "$TASKJSON" 2>/dev/null)" '"agent":"Tester"'
+assert_contains "100 task.json carries the resolved pipeline" "$(cat "$TASKJSON" 2>/dev/null)" '"pipeline":"software"'
+
+wf "$SCR21" gate --phase RED --verdict done >/dev/null
+wf "$SCR21" gate --phase GREEN --verdict done >/dev/null
+echo "a change" >> "$SCR21/README.md"
+(cd "$SCR21" && git add README.md && git commit -q -m "a change for the diff")
+out=$(wf "$SCR21" run-isolated --phase REFACTOR 2>&1); code=$?
+assert_eq "101 run-isolated on REFACTOR also materializes then reports not-yet-implemented" "1" "$code"
+REFACTOR_PROMPT="$SCR21/.llm/isolation/iso-run1/REFACTOR/input/prompt.md"
+assert_contains "102 REFACTOR gets a Diff section" "$(cat "$REFACTOR_PROMPT" 2>/dev/null)" "## Diff"
+assert_contains "103 the Diff section shows the actual change" "$(cat "$REFACTOR_PROMPT" 2>/dev/null)" "a change"
+
+out=$(wf "$SCR21" run-isolated --phase SECURITY 2>&1); code=$?
+assert_eq "104 run-isolated on a direct phase refuses outright" "1" "$code"
+assert_contains "105 the refusal names the resolved (direct) mode" "$out" "is not isolated"
+
+# Round-trip: a pre-seeded verdict.json is read back, not re-materialized
+# into a not-yet-implemented error.
+mkdir -p "$SCR21/.llm/isolation/iso-run1/REFACTOR/output"
+echo '{"verdict":"CLEAR","findings":[]}' > "$SCR21/.llm/isolation/iso-run1/REFACTOR/output/verdict.json"
+out=$(wf "$SCR21" run-isolated --phase REFACTOR 2>&1); code=$?
+assert_eq "106 a pre-existing verdict.json is read back successfully" "0" "$code"
+assert_contains "107 the read-back verdict is returned verbatim" "$out" '"verdict":"CLEAR"'
+
+echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed scenarios:"

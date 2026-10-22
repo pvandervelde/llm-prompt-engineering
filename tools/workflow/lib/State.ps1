@@ -131,6 +131,28 @@ function Clear-StateBlockingIssues {
     Set-Content -Path $Path -Value $result
 }
 
+# Returns every line of a "## <Heading>" section's body (everything between
+# that heading and the next "## " heading, or EOF), joined with newlines,
+# excluding the heading line itself. "" if the heading isn't found.
+# Read-only -- used to pull Standards/Toolchain/Context/Existing Work
+# verbatim into a containerized phase's materialized prompt
+# (workflow/isolation.md section 6). Mirrors state_get_section in
+# lib/state.sh function-for-function.
+function Get-StateSection {
+    param([string]$Path, [string]$Heading)
+    if (-not (Test-Path $Path)) { return "" }
+    $lines = Get-Content $Path
+    $target = "## $Heading"
+    $inSection = $false
+    $result = New-Object System.Collections.Generic.List[string]
+    foreach ($line in $lines) {
+        if ($line -eq $target) { $inSection = $true; continue }
+        if ($inSection -and $line -like "## *") { break }
+        if ($inSection) { $result.Add($line) }
+    }
+    return ($result -join "`n")
+}
+
 # Returns the recorded "<mode> (<source>)" string for one phase under
 # "## Isolation", or "" if that phase's isolation mode hasn't been resolved
 # yet for this task.
