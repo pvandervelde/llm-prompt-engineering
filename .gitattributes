@@ -4,3 +4,14 @@
 # scripts or produces noisy whole-file diffs.
 claude-agents/*.md text eol=lf
 agents/*.agent.md text eol=lf
+
+# Same reasoning, sharper consequence: tools/workflow/isolation/git-wrapper.sh
+# is bind-mounted into a Linux container (workflow/isolation.md section 3 --
+# containers are always Linux, never Windows containers) and run via its
+# #!/bin/sh shebang. A CRLF checkout (core.autocrlf=true is a common Windows
+# Git default, even though this dev machine happens to have it off) turns
+# that into `#!/bin/sh\r`, which the kernel's script loader can't resolve --
+# a hard exec failure inside the container, not just dirty diffs. Pinning
+# every *.sh in the repo, not just this one file, since the same risk class
+# applies to anything here a Linux-targeted shell eventually runs.
+*.sh text eol=lf

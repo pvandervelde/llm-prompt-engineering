@@ -101,6 +101,37 @@ code path for both "repo has a `devcontainer.json`" and "derive an image from
 tools. We still *read* `devcontainer.json`'s `image`/`build`/`features` fields —
 just not via that CLI.
 
+**Resolved (2026-10-23) — Linux containers only, never Windows containers, on
+every host OS including Windows.** Every image this spec names (§4's toolchain
+defaults, the `alpine/git`-class test image, a repo's own `devcontainer.json`)
+is a Linux image; `isolation_spawn_container`/`Start-IsolationContainer` assume
+a POSIX environment inside the container unconditionally (`GIT_WRAPPER_REAL_BIN=
+/usr/bin/git`, `-w /workspace`, `--entrypoint sh`). On a Windows host this means
+Docker Desktop (or Podman) running in **Linux-container mode**, the standard/
+default mode, backed by WSL2 — never Windows-container mode, which has no
+equivalent story for any of this (no POSIX shell, no git-wrapper.sh shebang, a
+completely different image ecosystem). This was always the only mode any of
+§3's testing used; stating it here makes it a decision, not an unstated
+assumption a future change could quietly break.
+
+**Consequence worth stating plainly: line endings.** The task worktree bind-
+mounted into the container is a real Windows git checkout when the host is
+Windows, and Windows git configurations commonly convert text files to CRLF on
+checkout (`core.autocrlf=true` is a common Git for Windows default, even where
+a given dev machine happens to have it off). A CRLF `#!/bin/sh` shebang in any
+script this tooling writes or distributes becomes `#!/bin/sh\r` on disk, which
+the container's kernel script-loader can't resolve — a hard exec failure, not
+a cosmetic one. This repo's own `.gitattributes` now pins `eol=lf` for every
+`*.sh` file for exactly this reason, closing it for every script *this tooling*
+distributes (`git-wrapper.sh` included). What this does **not** do, and isn't
+meant to: normalize the *target* repo's own existing files. This tooling runs
+against repos it doesn't own and has no business rewriting their line-ending
+choices; a target repo's own CRLF files inside the container are the target
+repo's own decision, tolerable for anything read as data, and only a problem
+for a script *that repo* ships with an inconsistent shebang/line-ending
+pairing — which is that repo's pre-existing portability bug, not one this
+feature introduces.
+
 ### 3.2 Sequence for a `container` phase
 
 ```mermaid
