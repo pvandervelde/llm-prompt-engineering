@@ -604,6 +604,82 @@ assert_eq "106 a pre-existing verdict.json is read back successfully" "0" "$code
 assert_contains "107 the read-back verdict is returned verbatim" "$out" '"verdict":"CLEAR"'
 
 echo
+echo "Tier 10 - image resolution"
+
+SCR22="$(mktemp -d)"; new_scratch "$SCR22"
+wf "$SCR22" init --task img1 --pipeline software >/dev/null
+wf "$SCR22" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR22" run-isolated --phase RED >/dev/null 2>&1
+out=$(cat "$SCR22/.llm/isolation/img1/RED/input/task.json")
+assert_contains "108 no .tech-decisions.yml, no devcontainer.json -> generic fallback image" "$out" '"image":"image:debian:12-slim"'
+
+SCR23="$(mktemp -d)"; new_scratch "$SCR23"
+cat > "$SCR23/.tech-decisions.yml" <<'TD'
+toolchains:
+  default: null
+
+  detect:
+    - if_exists: "Cargo.toml"
+      toolchain: rust
+    - if_exists: "package.json"
+      toolchain: typescript
+TD
+touch "$SCR23/Cargo.toml"
+(cd "$SCR23" && git add Cargo.toml .tech-decisions.yml && git commit -q -m "add cargo")
+wf "$SCR23" init --task img2 --pipeline software >/dev/null
+wf "$SCR23" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR23" run-isolated --phase RED >/dev/null 2>&1
+out=$(cat "$SCR23/.llm/isolation/img2/RED/input/task.json")
+assert_contains "109 toolchains.detect matches Cargo.toml -> rust image" "$out" '"image":"image:rust:1-slim"'
+
+SCR24="$(mktemp -d)"; new_scratch "$SCR24"
+touch "$SCR24/Cargo.toml"
+mkdir -p "$SCR24/.devcontainer"
+cat > "$SCR24/.devcontainer/devcontainer.json" <<'DC'
+{
+  "name": "test",
+  "image": "custom/foo:latest"
+}
+DC
+(cd "$SCR24" && git add Cargo.toml .devcontainer/devcontainer.json && git commit -q -m "add devcontainer")
+wf "$SCR24" init --task img3 --pipeline software >/dev/null
+wf "$SCR24" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR24" run-isolated --phase RED >/dev/null 2>&1
+out=$(cat "$SCR24/.llm/isolation/img3/RED/input/task.json")
+assert_contains "110 a devcontainer.json image field takes precedence over toolchain detection" "$out" '"image":"image:custom/foo:latest"'
+
+SCR25="$(mktemp -d)"; new_scratch "$SCR25"
+mkdir -p "$SCR25/.devcontainer"
+cat > "$SCR25/.devcontainer/devcontainer.json" <<'DC'
+{
+  "name": "test",
+  "build": { "dockerfile": "Dockerfile", "context": ".." }
+}
+DC
+(cd "$SCR25" && git add .devcontainer/devcontainer.json && git commit -q -m "add devcontainer build")
+wf "$SCR25" init --task img4 --pipeline software >/dev/null
+wf "$SCR25" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR25" run-isolated --phase RED >/dev/null 2>&1
+out=$(cat "$SCR25/.llm/isolation/img4/RED/input/task.json")
+assert_contains "111 a devcontainer.json build block resolves to a build: spec, not an image pull" "$out" '"image":"build:Dockerfile:.."'
+
+SCR26="$(mktemp -d)"; new_scratch "$SCR26"
+cat > "$SCR26/.tech-decisions.yml" <<'TD'
+toolchains:
+  default: rust
+
+  detect:
+    - if_exists: "pyproject.toml"
+      toolchain: python
+TD
+(cd "$SCR26" && git add .tech-decisions.yml && git commit -q -m "add tech-decisions")
+wf "$SCR26" init --task img5 --pipeline software >/dev/null
+wf "$SCR26" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
+wf "$SCR26" run-isolated --phase RED >/dev/null 2>&1
+out=$(cat "$SCR26/.llm/isolation/img5/RED/input/task.json")
+assert_contains "112 no if_exists match falls back to toolchains.default" "$out" '"image":"image:rust:1-slim"'
+
+echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed scenarios:"

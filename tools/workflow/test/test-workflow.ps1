@@ -661,6 +661,87 @@ Assert-Eq "106 a pre-existing verdict.json is read back successfully" "0" $r.Exi
 Assert-Contains "107 the read-back verdict is returned verbatim" $r.Output '"verdict":"CLEAR"'
 
 Write-Host ""
+Write-Host "Tier 10 - image resolution"
+
+$scr22 = Join-Path $env:TEMP "wf-ps-t22-$(Get-Random)"
+New-Scratch $scr22
+Invoke-Wf $scr22 @("init", "--task", "img1", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr22 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr22 @("run-isolated", "--phase", "RED") | Out-Null
+$out = Get-Content (Join-Path $scr22 ".llm/isolation/img1/RED/input/task.json") -Raw
+Assert-Contains "108 no .tech-decisions.yml, no devcontainer.json -> generic fallback image" $out '"image":"image:debian:12-slim"'
+
+$scr23 = Join-Path $env:TEMP "wf-ps-t23-$(Get-Random)"
+New-Scratch $scr23
+@'
+toolchains:
+  default: null
+
+  detect:
+    - if_exists: "Cargo.toml"
+      toolchain: rust
+    - if_exists: "package.json"
+      toolchain: typescript
+'@ | Set-Content (Join-Path $scr23 ".tech-decisions.yml")
+"" | Set-Content (Join-Path $scr23 "Cargo.toml")
+Push-Location $scr23; git add Cargo.toml .tech-decisions.yml; git commit -q -m "add cargo"; Pop-Location
+Invoke-Wf $scr23 @("init", "--task", "img2", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr23 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr23 @("run-isolated", "--phase", "RED") | Out-Null
+$out = Get-Content (Join-Path $scr23 ".llm/isolation/img2/RED/input/task.json") -Raw
+Assert-Contains "109 toolchains.detect matches Cargo.toml -> rust image" $out '"image":"image:rust:1-slim"'
+
+$scr24 = Join-Path $env:TEMP "wf-ps-t24-$(Get-Random)"
+New-Scratch $scr24
+"" | Set-Content (Join-Path $scr24 "Cargo.toml")
+New-Item -ItemType Directory -Path (Join-Path $scr24 ".devcontainer") -Force | Out-Null
+@'
+{
+  "name": "test",
+  "image": "custom/foo:latest"
+}
+'@ | Set-Content (Join-Path $scr24 ".devcontainer/devcontainer.json")
+Push-Location $scr24; git add Cargo.toml .devcontainer/devcontainer.json; git commit -q -m "add devcontainer"; Pop-Location
+Invoke-Wf $scr24 @("init", "--task", "img3", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr24 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr24 @("run-isolated", "--phase", "RED") | Out-Null
+$out = Get-Content (Join-Path $scr24 ".llm/isolation/img3/RED/input/task.json") -Raw
+Assert-Contains "110 a devcontainer.json image field takes precedence over toolchain detection" $out '"image":"image:custom/foo:latest"'
+
+$scr25 = Join-Path $env:TEMP "wf-ps-t25-$(Get-Random)"
+New-Scratch $scr25
+New-Item -ItemType Directory -Path (Join-Path $scr25 ".devcontainer") -Force | Out-Null
+@'
+{
+  "name": "test",
+  "build": { "dockerfile": "Dockerfile", "context": ".." }
+}
+'@ | Set-Content (Join-Path $scr25 ".devcontainer/devcontainer.json")
+Push-Location $scr25; git add .devcontainer/devcontainer.json; git commit -q -m "add devcontainer build"; Pop-Location
+Invoke-Wf $scr25 @("init", "--task", "img4", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr25 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr25 @("run-isolated", "--phase", "RED") | Out-Null
+$out = Get-Content (Join-Path $scr25 ".llm/isolation/img4/RED/input/task.json") -Raw
+Assert-Contains "111 a devcontainer.json build block resolves to a build: spec, not an image pull" $out '"image":"build:Dockerfile:.."'
+
+$scr26 = Join-Path $env:TEMP "wf-ps-t26-$(Get-Random)"
+New-Scratch $scr26
+@'
+toolchains:
+  default: rust
+
+  detect:
+    - if_exists: "pyproject.toml"
+      toolchain: python
+'@ | Set-Content (Join-Path $scr26 ".tech-decisions.yml")
+Push-Location $scr26; git add .tech-decisions.yml; git commit -q -m "add tech-decisions"; Pop-Location
+Invoke-Wf $scr26 @("init", "--task", "img5", "--pipeline", "software") | Out-Null
+Invoke-Wf $scr26 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
+Invoke-Wf $scr26 @("run-isolated", "--phase", "RED") | Out-Null
+$out = Get-Content (Join-Path $scr26 ".llm/isolation/img5/RED/input/task.json") -Raw
+Assert-Contains "112 no if_exists match falls back to toolchains.default" $out '"image":"image:rust:1-slim"'
+
+Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="
 if ($script:FailCount -gt 0) {
     Write-Host "Failed scenarios:"

@@ -706,6 +706,111 @@ function Get-IsolationDiffBase {
     }
 }
 
+# Resolves the active toolchain name for this repo via .tech-decisions.yml's
+# toolchains.detect (first if_exists glob -- possibly "a|b" alternation --
+# that matches a direct child of the repo root wins, checked in file
+# order) else toolchains.default. "" if .tech-decisions.yml is absent, its
+# toolchains: block is missing, or neither resolves (including an explicit
+# YAML `default: null`). Mirrors isolation_resolve_toolchain in
+# workflow.sh function-for-function. See workflow/isolation.md section 12.
+function Get-IsolationToolchain {
+    param([string]$Root)
+    $techFile = Join-Path $Root ".tech-decisions.yml"
+    if (-not (Test-Path $techFile)) { return "" }
+    $lines = Get-Content $techFile
+
+    $inToolchains = $false
+    $inDetect = $false
+    $curGlob = $null
+    $curName = $null
+    $entries = @()
+    $defaultVal = ""
+
+    foreach ($line in $lines) {
+        if (-not $inToolchains) {
+            if ($line -match '^toolchains:') { $inToolchains = $true }
+            continue
+        }
+        if ($line -match '^[A-Za-z]') { break }
+
+        if ($line -match '^  detect:') { $inDetect = $true; continue }
+        if ($inDetect -and $line -match '^  [A-Za-z]') { $inDetect = $false }
+
+        if ($inDetect -and $line -match '^    - if_exists:\s*(.*)$') {
+            if ($curGlob) { $entries += [PSCustomObject]@{ Glob = $curGlob; Name = $curName } }
+            $curGlob = ($Matches[1] -replace '\s+#.*$', '').Trim().Trim('"')
+            $curName = $null
+            continue
+        }
+        if ($inDetect -and $line -match '^      toolchain:\s*(.*)$') {
+            $curName = ($Matches[1] -replace '\s+#.*$', '').Trim()
+            continue
+        }
+        if (-not $inDetect -and $line -match '^  default:\s*(.*)$') {
+            $defaultVal = ($Matches[1] -replace '\s+#.*$', '').Trim()
+        }
+    }
+    if ($curGlob) { $entries += [PSCustomObject]@{ Glob = $curGlob; Name = $curName } }
+
+    foreach ($entry in $entries) {
+        foreach ($alt in ($entry.Glob -split '\|')) {
+            $found = Get-ChildItem -Path $Root -Filter $alt -File -ErrorAction SilentlyContinue
+            if ($found) { return $entry.Name }
+        }
+    }
+
+    if ($defaultVal -eq "null") { return "" }
+    return $defaultVal
+}
+
+# Hardcoded toolchain-name -> default base image table -- a deliberately
+# narrow v1 choice (same reasoning as section 6's hardcoded timeout/quota
+# defaults): not configurable yet, add a .tech-decisions.yml override only
+# once a real repo actually needs one. An unresolved/unrecognized
+# toolchain falls back to a generic minimal image rather than failing.
+function Get-IsolationDefaultImage {
+    param([string]$Toolchain)
+    switch ($Toolchain) {
+        "rust" { return "rust:1-slim" }
+        "dotnet" { return "mcr.microsoft.com/dotnet/sdk:8.0" }
+        "typescript" { return "node:20-slim" }
+        "javascript" { return "node:20-slim" }
+        "python" { return "python:3.12-slim" }
+        default { return "debian:12-slim" }
+    }
+}
+
+# Resolves the container image for a containerized phase: the target
+# repo's own .devcontainer/devcontainer.json ("image" field directly, or
+# "build.dockerfile"/"build.context" if it builds one instead), falling
+# back to a toolchain-derived default image when no devcontainer.json
+# exists or it names neither. Returns "image:<reference>" or
+# "build:<dockerfile>:<context>". Does not pull or build anything itself --
+# that's the (not yet built) spawn step's job; this is resolution only.
+# Mirrors isolation_resolve_image in workflow.sh function-for-function; see
+# that function's note on the devcontainer.json reader's limitations.
+function Resolve-IsolationImage {
+    param([string]$Root)
+    $dcFile = Join-Path $Root ".devcontainer/devcontainer.json"
+    if (Test-Path $dcFile) {
+        $content = Get-Content $dcFile -Raw
+        $m = [regex]::Match($content, '"image"\s*:\s*"([^"]*)"')
+        if ($m.Success -and $m.Groups[1].Value) {
+            return "image:$($m.Groups[1].Value)"
+        }
+        $mDockerfile = [regex]::Match($content, '"dockerfile"\s*:\s*"([^"]*)"')
+        if ($mDockerfile.Success -and $mDockerfile.Groups[1].Value) {
+            $mContext = [regex]::Match($content, '"context"\s*:\s*"([^"]*)"')
+            $context = if ($mContext.Success -and $mContext.Groups[1].Value) { $mContext.Groups[1].Value } else { "." }
+            return "build:$($mDockerfile.Groups[1].Value):$context"
+        }
+    }
+
+    $toolchain = Get-IsolationToolchain -Root $Root
+    $image = Get-IsolationDefaultImage -Toolchain $toolchain
+    return "image:$image"
+}
+
 # Materializes a containerized phase's input files under
 # .llm/isolation/<slug>/<phase>/input/ -- prompt.md (the same assembled
 # content a direct Task-tool dispatch would otherwise inline, written to a
@@ -752,7 +857,8 @@ function Write-IsolationInput {
 
     Set-Content -Path (Join-Path $dir "prompt.md") -Value $prompt
 
-    $taskJson = [PSCustomObject]@{ id = $Task; title = $Task; pipeline = $Pipeline; phase = $PhaseId; branch = $Branch; agent = $Agent } | ConvertTo-Json -Compress
+    $image = Resolve-IsolationImage -Root $Root
+    $taskJson = [PSCustomObject]@{ id = $Task; title = $Task; pipeline = $Pipeline; phase = $PhaseId; branch = $Branch; agent = $Agent; image = $image } | ConvertTo-Json -Compress
     Set-Content -Path (Join-Path $dir "task.json") -Value $taskJson
 
     return $dir

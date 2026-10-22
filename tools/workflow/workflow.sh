@@ -756,12 +756,131 @@ isolation_diff_base() {
   echo "$base"
 }
 
+# Resolves the active toolchain name for this repo via .tech-decisions.yml's
+# toolchains.detect (first if_exists glob -- possibly "a|b" alternation --
+# that matches a direct child of the repo root wins, checked in file
+# order) else toolchains.default. Empty if .tech-decisions.yml is absent,
+# its toolchains: block is missing, or neither resolves (including an
+# explicit YAML `default: null`). See workflow/isolation.md section 12.
+isolation_resolve_toolchain() {
+  local root="$1" tech_file="${root}/.tech-decisions.yml"
+  [ -f "$tech_file" ] || { echo ""; return 0; }
+
+  local toolchains_block
+  toolchains_block=$(awk '
+    /^toolchains:/ { inb = 1; next }
+    inb && /^[A-Za-z]/ { exit }
+    inb { print }
+  ' "$tech_file")
+  [ -n "$toolchains_block" ] || { echo ""; return 0; }
+
+  local detect_block
+  detect_block=$(printf '%s\n' "$toolchains_block" | awk '
+    /^  detect:/ { ind = 1; next }
+    ind && /^  [A-Za-z]/ { exit }
+    ind { print }
+  ')
+
+  local globs=() names=() cur_glob="" cur_name="" line
+  while IFS= read -r line; do
+    case "$line" in
+      "    - if_exists:"*)
+        [ -n "$cur_glob" ] && { globs+=("$cur_glob"); names+=("$cur_name"); }
+        cur_glob=$(printf '%s' "$line" | sed -E 's/^    - if_exists: *//; s/ +#.*$//; s/^"(.*)"$/\1/')
+        cur_name=""
+        ;;
+      "      toolchain:"*)
+        cur_name=$(printf '%s' "$line" | sed -E 's/^      toolchain: *//; s/ +#.*$//; s/ +$//')
+        ;;
+    esac
+  done <<< "$detect_block"
+  [ -n "$cur_glob" ] && { globs+=("$cur_glob"); names+=("$cur_name"); }
+
+  local i alt alts
+  for i in "${!globs[@]}"; do
+    IFS='|' read -ra alts <<< "${globs[$i]}"
+    for alt in "${alts[@]}"; do
+      if compgen -G "${root}/${alt}" >/dev/null 2>&1; then
+        echo "${names[$i]}"
+        return 0
+      fi
+    done
+  done
+
+  local default_val
+  default_val=$(printf '%s\n' "$toolchains_block" | { grep -m1 -E "^  default:" || true; } | sed -E 's/^  default: *//; s/ +#.*$//; s/ +$//')
+  [ "$default_val" = "null" ] && default_val=""
+  echo "$default_val"
+}
+
+# Hardcoded toolchain-name -> default base image table -- a deliberately
+# narrow v1 choice (same reasoning as section 6's hardcoded timeout/quota
+# defaults): not configurable yet, add a .tech-decisions.yml override only
+# once a real repo actually needs one. An unresolved/unrecognized
+# toolchain falls back to a generic minimal image rather than failing --
+# image resolution should never block on an unknown toolchain name.
+isolation_default_image() {
+  case "$1" in
+    rust) echo "rust:1-slim" ;;
+    dotnet) echo "mcr.microsoft.com/dotnet/sdk:8.0" ;;
+    typescript|javascript) echo "node:20-slim" ;;
+    python) echo "python:3.12-slim" ;;
+    *) echo "debian:12-slim" ;;
+  esac
+}
+
+# Resolves the container image for a containerized phase: the target
+# repo's own .devcontainer/devcontainer.json ("image" field directly, or
+# "build.dockerfile"/"build.context" if it builds one instead), falling
+# back to a toolchain-derived default image when no devcontainer.json
+# exists or it names neither. See workflow/isolation.md section 12.
+#
+# Prints one of:
+#   image:<reference>              -- pull/run this image directly
+#   build:<dockerfile>:<context>   -- build from this Dockerfile first
+#
+# Does not pull or build anything itself -- that's the (not yet built)
+# spawn step's job; this is resolution only.
+#
+# Documented limitation, not assumed away: devcontainer.json is read with a
+# minimal regex extraction, not a real JSON(C) parser -- a comment
+# interleaved with the "image"/"build" keys in an unusual way could defeat
+# it. Matches this engine's existing "not a general parser" posture for
+# .tech-decisions.yml/pipelines.yml.
+isolation_resolve_image() {
+  local root="$1" dc_file="${root}/.devcontainer/devcontainer.json"
+
+  if [ -f "$dc_file" ]; then
+    local image
+    image=$(grep -oE '"image"[[:space:]]*:[[:space:]]*"[^"]*"' "$dc_file" | head -1 | sed -E 's/^"image"[[:space:]]*:[[:space:]]*"//; s/"$//')
+    if [ -n "$image" ]; then
+      echo "image:${image}"
+      return 0
+    fi
+
+    local dockerfile context
+    dockerfile=$(grep -oE '"dockerfile"[[:space:]]*:[[:space:]]*"[^"]*"' "$dc_file" | head -1 | sed -E 's/^"dockerfile"[[:space:]]*:[[:space:]]*"//; s/"$//')
+    if [ -n "$dockerfile" ]; then
+      context=$(grep -oE '"context"[[:space:]]*:[[:space:]]*"[^"]*"' "$dc_file" | head -1 | sed -E 's/^"context"[[:space:]]*:[[:space:]]*"//; s/"$//')
+      [ -n "$context" ] || context="."
+      echo "build:${dockerfile}:${context}"
+      return 0
+    fi
+  fi
+
+  local toolchain image
+  toolchain=$(isolation_resolve_toolchain "$root")
+  image=$(isolation_default_image "$toolchain")
+  echo "image:${image}"
+}
+
 # Materializes a containerized phase's input files under
 # .llm/isolation/<slug>/<phase>/input/ -- prompt.md (the same assembled
 # content a direct Task-tool dispatch would otherwise inline, written to a
 # file instead) and task.json (structured metadata for the container
-# entrypoint). Prints the input directory path. See workflow/isolation.md
-# section 6.
+# entrypoint, including the resolved image/build spec from
+# isolation_resolve_image -- section 12). Prints the input directory path.
+# See workflow/isolation.md section 6.
 #
 # Scope note: Standards/Toolchain/Context are written verbatim from the
 # state file, not per-agent-filtered the way conductor.md's own prompt
@@ -807,9 +926,13 @@ isolation_materialize_input() {
     [ -n "$diff_block" ] && printf '%s' "$diff_block"
   } > "${dir}/prompt.md"
 
-  printf '{"id":"%s","title":"%s","pipeline":"%s","phase":"%s","branch":"%s","agent":"%s"}\n' \
+  local image
+  image=$(isolation_resolve_image "$root")
+
+  printf '{"id":"%s","title":"%s","pipeline":"%s","phase":"%s","branch":"%s","agent":"%s","image":"%s"}\n' \
     "$(json_escape "$task")" "$(json_escape "$task")" "$(json_escape "$pipeline")" \
     "$(json_escape "$phase_id")" "$(json_escape "$branch")" "$(json_escape "$agent")" \
+    "$(json_escape "$image")" \
     > "${dir}/task.json"
 
   echo "$dir"
