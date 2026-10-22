@@ -385,6 +385,35 @@ proxy sidecar and container with the policy from §7–§10 applied, runs its ow
 poll loop against §3.4's two timeout tiers, tears everything down, and returns
 one of two shapes.
 
+**Resolved (2026-10-23) — exact file layout:**
+
+```
+.llm/isolation/{slug}/{phase}/
+  input/
+    prompt.md    # the same assembled markdown Conductor would otherwise inline
+                 # into a Task-tool call (Standards/Toolchain/Context/Existing
+                 # Work/Diff) -- written to a file instead, not restructured
+    task.json    # {id, title, pipeline, phase, branch} -- structured metadata
+                 # for the entrypoint script, not for the model
+  output/
+    verdict.json # {verdict, findings} -- single structured file, not free
+                 # text, so run-isolated parses it the same way every time
+  run.jsonl      # §3.4's liveness log
+```
+
+One combined `prompt.md` rather than one file per context section — nothing
+today needs per-section granularity, and splitting it would be complexity with
+no consumer. `verdict.json` being structured (not prose `run-isolated` has to
+parse heuristically) matters more: it's the one output every phase must produce
+correctly for `gate` to work at all.
+
+**Resolved (2026-10-23) — timeout and quota defaults, hardcoded for v1, not a
+new `.tech-decisions.yml` block:** liveness timeout 10 minutes, wall-clock
+ceiling 60 minutes, `--memory 4g`, `--cpus 2`, `--pids-limit 512`. Growing the
+config schema speculatively isn't warranted yet — an override knob is cheap to
+add once a real task actually needs one, the same way `tier --override` was
+added for a real need rather than upfront.
+
 **Normal completion:**
 
 ```json
@@ -408,9 +437,7 @@ Podman/Docker's native flags, not a separate mechanism:
 | Process count | `--pids-limit` | Caps fork-bomb-shaped runaway behavior |
 | Wall-clock | enforced by `run-isolated`'s own poll loop, not a container flag | §3.4's hard ceiling |
 
-Defaults and per-toolchain overrides for the first three live alongside the
-liveness/wall-clock timeout durations — exact config surface (a new
-`.tech-decisions.yml` block vs. hardcoded sane defaults) is still open, see §13.
+Defaults per the hardcoded values resolved above.
 
 On a missing runtime (§11) or a policy violation detected during the run (e.g. the
 subagent's git wrapper rejected a denied command), returns a non-zero exit and a
@@ -460,6 +487,17 @@ bind-mounted worktree still shares the host repo's `.git` object/ref database, s
 filesystem confinement alone does not prevent `git checkout main` from succeeding
 inside the container unless this list is actively enforced.
 
+**Finding, folded into the wrapper rather than listed as a separate denial:**
+`core.hooksPath` can point at a tracked directory inside the repo (a legitimate,
+common convention — e.g. `.githooks/`) rather than the untracked, local-only
+`.git/hooks/`. If it does, an otherwise-harmless allowed command like `git
+commit` would execute whatever hook script the target repo's own tracked tree
+names — which is exactly the "adversarial content in the target repo" vector §1
+already names, reached through a command this policy otherwise permits. The
+wrapper forces `-c core.hooksPath=/dev/null` on every invocation, unconditionally,
+regardless of what the repo's own config says — harmless for the read-only
+commands, and closes this for `commit` without needing a separate check.
+
 ## 9. Network policy
 
 **Default-deny, with a toolchain-derived allowlist, repo-adjustable.**
@@ -478,9 +516,16 @@ environment) and native Linux Podman alike — the iptables/ipset alternative
 means manipulating kernel netfilter state inside whatever network namespace the
 runtime happens to give you (Docker Desktop's WSL2 VM, or Podman rootless
 `slirp4netns`/`pasta`), which is real surgery that's easy to get subtly,
-silently wrong per-platform. Concrete proxy software (Squid or Envoy in
-SNI-passthrough mode, vs. a minimal custom implementation) is still open — see
-§13.
+silently wrong per-platform.
+
+**Resolved (2026-10-23) — proxy software: Squid, in `ssl_bump splice` (SNI-
+sniffing passthrough) mode, not Envoy and not a custom implementation.** Envoy
+is built for L7 service-mesh routing — more configuration surface than a plain
+allow/deny-by-SNI sidecar needs. A custom implementation means this project
+writing and trusting its own TLS ClientHello parsing, which is exactly the kind
+of security-adjacent code to reuse an audited tool for rather than author from
+scratch. Squid's `ssl_bump splice` ACLs are a direct, well-documented fit:
+inspect the SNI, splice (pass through unmodified) if allowed, drop otherwise.
 
 Default allowlist entries come from the resolved toolchain (reusing
 `.tech-decisions.yml`'s existing `toolchains` resolution, computed today for
@@ -550,14 +595,6 @@ sandbox by granting access back in.
 ## 13. Open items
 
 - Dotfile/secret-path exclusion within the repo (§2, §10) — follow-up tightening.
-- Exact file layout under `.llm/isolation/{slug}/{phase}/{input,output}/` — named
-  here for concreteness in §3.2 and §6, but the literal filenames within
-  `input`/`output` (one file per context section vs. one combined file, etc.)
-  haven't been specified yet.
-- Concrete proxy software for §9's SNI-filtered sidecar (Squid or Envoy in
-  SNI-passthrough mode, vs. a minimal custom implementation) — the mechanism
-  is decided, the specific tool isn't; worth a short spike before
-  implementation starts.
-- Config surface and default values for §3.4's liveness/wall-clock timeouts and
-  §6's CPU/memory/`pids-limit` quotas — a new `.tech-decisions.yml` block vs.
-  hardcoded sane defaults, and what those defaults actually are, isn't decided.
+  The only item remaining here; everything else previously listed (file layout,
+  proxy software, timeout/quota defaults) is resolved as of 2026-10-23 — see
+  §6 and §9.
