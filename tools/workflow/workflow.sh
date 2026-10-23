@@ -922,14 +922,28 @@ tech_isolation_network_allow() {
   printf '%s\n' "$raw" | tr ',' '\n' | sed -E 's/^ +//; s/ +$//; s/^"(.*)"$/\1/' | grep -v '^$'
 }
 
-# Resolves the full SNI allowlist for a containerized phase's network
-# sidecar: the LLM API domain (always present -- section 7's credential
-# exception), the resolved toolchain's defaults (section 9), and the
-# repo's own .tech-decisions.yml additions -- deduplicated, one per line.
+# Resolves the full SNI/dstdomain allowlist for a containerized phase's
+# network sidecar: the always-present entries, the resolved toolchain's
+# defaults (section 9), and the repo's own .tech-decisions.yml additions
+# -- deduplicated, one per line.
+#
+# Always-present entries, confirmed empirically (2026-10-23) by actually
+# installing and running Claude Code inside a sandboxed container end to
+# end, not assumed: api.anthropic.com (section 7's credential exception,
+# the agent's own LLM calls), claude.ai + downloads.claude.ai (Claude
+# Code's own native installer and binary download -- the access log
+# showed exactly these three domains and no hidden CDN underneath), and
+# deb.debian.org (every current toolchain default image -- section 12 --
+# is Debian-based and ships with neither curl nor wget, so bootstrapping
+# a way to run that installer at all means `apt-get install curl` first,
+# which itself needs this one apt mirror host, served over plain HTTP).
 isolation_resolve_network_allowlist() {
   local root="$1" toolchain="$2"
   {
     echo "api.anthropic.com"
+    echo "claude.ai"
+    echo "downloads.claude.ai"
+    echo "deb.debian.org"
     isolation_toolchain_network_allow "$toolchain"
     tech_isolation_network_allow "${root}/.tech-decisions.yml"
   } | sort -u
@@ -962,10 +976,11 @@ isolation_generate_dummy_cert() {
 }
 
 # Writes a minimal standalone squid.conf (read from a newline-separated
-# allowlist on stdin) implementing SNI-based peek-and-splice: an allowed
-# SNI is spliced through unmodified; everything else is terminated right
-# after the peek, before any TLS handshake completes. Nothing is ever
-# decrypted either way -- see workflow/isolation.md section 9.
+# allowlist on stdin) implementing SNI-based peek-and-splice for HTTPS:
+# an allowed SNI is spliced through unmodified; everything else is
+# terminated right after the peek, before any TLS handshake completes.
+# Nothing is ever decrypted either way -- see workflow/isolation.md
+# section 9.
 #
 # Requires a Squid built against OpenSSL, not GnuTLS. Confirmed
 # empirically (2026-10-23) that Ubuntu's packaged Squid lacks the
@@ -975,19 +990,36 @@ isolation_generate_dummy_cert() {
 # isolation_spawn_container actually runs. The cert path is fixed to where
 # that function mounts the dummy cert -- not a parameter, since both sides
 # of this contract are owned by the same function pair.
+#
+# Plain HTTP (e.g. Debian's own apt mirror, deb.debian.org, confirmed
+# needed to bootstrap curl before Claude Code's own installer can run --
+# see section 9's "always present" entries) is a SEPARATE code path from
+# the ssl_bump logic above: it never goes through CONNECT or TLS at all,
+# so SNI peeking doesn't apply to it. Confirmed empirically (2026-10-23)
+# that without a second, explicit `dstdomain`-based gate, plain HTTP to
+# ANY destination was allowed through unfiltered -- the allowlist was
+# only ever enforced for HTTPS. `allowed_dst` closes that: CONNECT
+# (HTTPS tunnel setup) is allowed unconditionally since ssl_bump is the
+# real gate for it; everything else (plain HTTP) is gated directly on
+# the same allowlist via dstdomain.
 isolation_write_squid_config() {
   local outfile="$1"
+  local hosts="" host
+  while IFS= read -r host; do
+    [ -n "$host" ] && hosts="${hosts} .${host}"
+  done
   {
     echo "acl localnet src 10.0.0.0/8"
     echo "acl localnet src 172.16.0.0/12"
     echo "acl localnet src 192.168.0.0/16"
     echo
-    printf 'acl allowed_sni ssl::server_name'
-    while IFS= read -r host; do
-      [ -n "$host" ] && printf ' .%s' "$host"
-    done
-    printf '\n\n'
-    echo "http_access allow localnet"
+    echo "acl CONNECT method CONNECT"
+    echo
+    echo "acl allowed_sni ssl::server_name${hosts}"
+    echo "acl allowed_dst dstdomain${hosts}"
+    echo
+    echo "http_access allow localnet CONNECT"
+    echo "http_access allow localnet allowed_dst"
     echo "http_access deny all"
     echo
     echo "http_port 3129 ssl-bump cert=/etc/squid/certs/dummy.pem generate-host-certificates=off"
@@ -1077,6 +1109,15 @@ isolation_container_runtime() {
 #
 # The sidecar readiness wait is a fixed sleep, not a poll -- a documented
 # v1 simplification (section 13), not a hidden assumption.
+#
+# Every proxy env var is set in BOTH cases, not just HTTP_PROXY/
+# HTTPS_PROXY. Confirmed empirically (2026-10-23) that curl specifically
+# ignores uppercase-only HTTP_PROXY (its CVE-2016-5385 "httpoxy"
+# mitigation -- HTTPS_PROXY has no equivalent legacy CGI-header ambiguity,
+# so curl honors it uppercase fine) and falls back to a direct connection,
+# which then fails outright on this network anyway, but silently as the
+# wrong failure mode for the wrong reason. Other tools vary the other way.
+# Setting both is the only way to not have to know which.
 isolation_spawn_container() {
   local root="$1" image="$2" command="$3" toolchain="${4:-}"
   local runtime
@@ -1133,8 +1174,11 @@ isolation_spawn_container() {
     --mount "type=bind,src=${mount_wrapper},dst=/usr/local/bin/git,readonly" \
     -e "GIT_WRAPPER_REAL_BIN=/usr/bin/git" \
     -e "HTTP_PROXY=http://${squid_name}:3129" \
+    -e "http_proxy=http://${squid_name}:3129" \
     -e "HTTPS_PROXY=http://${squid_name}:3129" \
+    -e "https_proxy=http://${squid_name}:3129" \
     -e "NO_PROXY=localhost,127.0.0.1" \
+    -e "no_proxy=localhost,127.0.0.1" \
     -w /workspace \
     --entrypoint sh \
     "$image" \

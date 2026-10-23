@@ -144,6 +144,34 @@ out=$(isolation_spawn_container "$SCR" "curlimages/curl:latest" \
   "curl -sS -m 10 --noproxy '*' -o /dev/null -w 'HTTP %{http_code}' https://crates.io/ 2>&1" "rust" 2>&1); code=$?
 assert_contains "15 bypassing the proxy entirely still fails outright (no route exists, not just non-compliance)" "$out" "ould not resolve host"
 
+# Plain HTTP is a separate code path from the ssl_bump/CONNECT logic above
+# (section 9) -- found (2026-10-23) that without its own dstdomain gate,
+# ANY plain-HTTP destination was allowed through unfiltered. Both cases
+# of the proxy env vars matter here too: curl's httpoxy mitigation
+# ignores uppercase-only HTTP_PROXY for exactly this traffic.
+out=$(isolation_spawn_container "$SCR" "curlimages/curl:latest" \
+  "curl -sS -m 10 -o /dev/null -w 'HTTP %{http_code}' http://deb.debian.org/debian/dists/bookworm/Release" "rust" 2>&1); code=$?
+assert_eq "16 plain HTTP to an allowlisted host (deb.debian.org) is reachable through the proxy" "0" "$code"
+assert_contains "17 a reached allowed plain-HTTP host returns a real response" "$out" "HTTP 2"
+
+out=$(isolation_spawn_container "$SCR" "curlimages/curl:latest" \
+  "curl -sS -m 10 -o /dev/null -w 'HTTP %{http_code}' http://neverssl.com/" "rust" 2>&1); code=$?
+assert_contains "18 plain HTTP to a non-allowlisted host gets Squid's own denial, not a silent allow" "$out" "HTTP 403"
+
+# End-to-end proof this whole mechanism actually supports the feature's
+# real purpose: installing and running Claude Code itself inside the
+# sandbox (section 7's credential exception, section 9's always-present
+# allowlist entries). Confirmed manually (2026-10-23) before writing any
+# of this; this scenario locks that proof in as a regression check. The
+# slowest scenario in this suite by a wide margin (apt-get + a real
+# ~100MB-class binary download) -- deliberately kept to one scenario, not
+# several, to bound that cost.
+out=$(isolation_spawn_container "$SCR" "debian:12-slim" \
+  "apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq curl ca-certificates >/dev/null 2>&1 && curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1 && export PATH=\"\$HOME/.local/bin:\$PATH\" && claude --version" \
+  "rust" 2>&1); code=$?
+assert_eq "19 Claude Code installs and runs successfully inside the sandbox, end to end" "0" "$code"
+assert_contains "20 the installed claude actually reports a version, not a stale/empty success" "$out" "Claude Code"
+
 echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then

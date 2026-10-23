@@ -158,6 +158,28 @@ if ($r.ExitCode -ne 0) {
 $r = Start-IsolationContainer -Root $scr -Image "curlimages/curl:latest" -Command "curl -sS -m 10 --noproxy '*' -o /dev/null -w 'HTTP %{http_code}' https://crates.io/ 2>&1" -Toolchain "rust"
 Assert-Contains "15 bypassing the proxy entirely still fails outright (no route exists, not just non-compliance)" $r.Output "ould not resolve host"
 
+# Plain HTTP is a separate code path from the ssl_bump/CONNECT logic
+# above (section 9) -- found (2026-10-23) that without its own dstdomain
+# gate, ANY plain-HTTP destination was allowed through unfiltered.
+$r = Start-IsolationContainer -Root $scr -Image "curlimages/curl:latest" -Command "curl -sS -m 10 -o /dev/null -w 'HTTP %{http_code}' http://deb.debian.org/debian/dists/bookworm/Release" -Toolchain "rust"
+Assert-Eq "16 plain HTTP to an allowlisted host (deb.debian.org) is reachable through the proxy" "0" $r.ExitCode
+Assert-Contains "17 a reached allowed plain-HTTP host returns a real response" $r.Output "HTTP 2"
+
+$r = Start-IsolationContainer -Root $scr -Image "curlimages/curl:latest" -Command "curl -sS -m 10 -o /dev/null -w 'HTTP %{http_code}' http://neverssl.com/" -Toolchain "rust"
+Assert-Contains "18 plain HTTP to a non-allowlisted host gets Squid's own denial, not a silent allow" $r.Output "HTTP 403"
+
+# End-to-end proof this whole mechanism actually supports the feature's
+# real purpose: installing and running Claude Code itself inside the
+# sandbox (section 7's credential exception, section 9's always-present
+# allowlist entries). Confirmed manually (2026-10-23) before writing any
+# of this; this scenario locks that proof in as a regression check. The
+# slowest scenario in this suite by a wide margin -- deliberately kept to
+# one, not several, to bound that cost.
+$installCmd = 'apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq curl ca-certificates >/dev/null 2>&1 && curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1 && export PATH="$HOME/.local/bin:$PATH" && claude --version'
+$r = Start-IsolationContainer -Root $scr -Image "debian:12-slim" -Command $installCmd -Toolchain "rust"
+Assert-Eq "19 Claude Code installs and runs successfully inside the sandbox, end to end" "0" $r.ExitCode
+Assert-Contains "20 the installed claude actually reports a version, not a stale/empty success" $r.Output "Claude Code"
+
 Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="
 if ($script:FailCount -gt 0) {

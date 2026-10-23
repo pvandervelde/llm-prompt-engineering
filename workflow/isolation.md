@@ -580,6 +580,34 @@ sidecar. The sidecar is attached to both that internal network and the
 default bridge network, so it alone can reach the real internet; the main
 container can reach only the sidecar.
 
+**Second load-bearing finding, confirmed empirically (2026-10-23) after the
+first implementation already shipped: plain HTTP is a completely separate code
+path from the SNI-peek logic above, and needs its own gate.** `ssl_bump`/SNI
+inspection only ever applies to CONNECT (HTTPS tunnel setup) — a plain HTTP
+request never goes through CONNECT or TLS at all, so without an explicit
+second rule, *every* plain-HTTP destination was reaching `http_access allow
+localnet` unfiltered and never hit any allowlist check. This surfaced while
+investigating how Claude Code itself gets installed inside the sandbox (see
+below) — Debian's own package mirror is plain HTTP. Fixed with a second ACL,
+`dstdomain`-matched against the same allowlist, gating non-CONNECT requests
+specifically: CONNECT attempts are still allowed through unconditionally
+(`ssl_bump` remains the real gate for what flows through them), but a plain
+HTTP request is now allowed only when its destination matches the allowlist.
+Verified the same way as the HTTPS case: an allowed plain-HTTP host returns a
+real response; a disallowed one gets Squid's own `403`, not a silent pass.
+
+**Third finding: setting only `HTTP_PROXY`/`HTTPS_PROXY` (uppercase) on the
+main container is not sufficient.** `curl` deliberately ignores uppercase-only
+`HTTP_PROXY` — its mitigation for CVE-2016-5385 ("httpoxy"), a vulnerability
+specific to CGI applications that doesn't apply here, but the mitigation fires
+regardless of context. `HTTPS_PROXY` has no equivalent legacy ambiguity, so
+curl honors it uppercase fine — which is exactly why the original HTTPS-only
+tests never caught this. `isolation_spawn_container`/`Start-IsolationContainer`
+now set both the uppercase and lowercase form of every proxy variable
+(`HTTP_PROXY`/`http_proxy`, `HTTPS_PROXY`/`https_proxy`, `NO_PROXY`/`no_proxy`),
+since different tools vary on which case they read and this repo can't assume
+it knows which a given toolchain's tools will check.
+
 Default allowlist entries come from the resolved toolchain (reusing
 `.tech-decisions.yml`'s existing `toolchains` resolution, computed today for
 `workflow context`/`workflow tier`):
@@ -591,8 +619,16 @@ Default allowlist entries come from the resolved toolchain (reusing
 | Python | `pypi.org`, `files.pythonhosted.org` |
 | *(others added as toolchains are added to `.tech-decisions.yml`)* | |
 
-Plus, unconditionally, the LLM API domain the containerized agent itself needs
-(§7's credential exception) — not toolchain-derived, always present.
+Plus, unconditionally, four always-present entries — confirmed by actually
+installing and running Claude Code inside a sandboxed container end to end
+(2026-10-23), not assumed:
+
+| Entry | Why |
+| --- | --- |
+| `api.anthropic.com` | §7's credential exception — the agent's own LLM calls |
+| `claude.ai` | Claude Code's own native installer script (`install.sh`) |
+| `downloads.claude.ai` | the installer's binary download — confirmed via Squid's access log to be the *only* other domain contacted, no hidden CDN underneath |
+| `deb.debian.org` | every current toolchain default image (§12) is Debian-based and ships with neither `curl` nor `wget` — bootstrapping either means `apt-get install curl` first, which needs this one apt mirror (served over plain HTTP, hence the second finding above) |
 
 A repo extends this via `.tech-decisions.yml`'s `isolation.network.allow` (§5.2) —
 e.g. a private registry mirror. Being on the allowlist never implies git push

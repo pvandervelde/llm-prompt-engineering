@@ -870,14 +870,15 @@ function Get-TechIsolationNetworkAllow {
     return @()
 }
 
-# Resolves the full SNI allowlist for a containerized phase's network
-# sidecar: the LLM API domain (always present), the resolved toolchain's
+# Resolves the full SNI/dstdomain allowlist for a containerized phase's
+# network sidecar: the always-present entries, the resolved toolchain's
 # defaults, and the repo's own .tech-decisions.yml additions --
-# deduplicated. Mirrors isolation_resolve_network_allowlist in workflow.sh
-# function-for-function.
+# deduplicated. See isolation_resolve_network_allowlist in workflow.sh for
+# why these four are always present, confirmed empirically rather than
+# assumed. Mirrors that function function-for-function.
 function Resolve-IsolationNetworkAllowlist {
     param([string]$Root, [string]$Toolchain)
-    $entries = @("api.anthropic.com")
+    $entries = @("api.anthropic.com", "claude.ai", "downloads.claude.ai", "deb.debian.org")
     $entries += Get-IsolationToolchainNetworkAllow -Toolchain $Toolchain
     $entries += Get-TechIsolationNetworkAllow -Path (Join-Path $Root ".tech-decisions.yml")
     return @($entries | Sort-Object -Unique)
@@ -903,21 +904,31 @@ function New-IsolationDummyCert {
 }
 
 # Writes a minimal standalone squid.conf implementing SNI-based
-# peek-and-splice from the given allowlist. Requires a Squid built against
-# OpenSSL, not GnuTLS -- see isolation_write_squid_config in workflow.sh
-# for the empirical finding this encodes. Mirrors that function
-# function-for-function; the cert path is fixed for the same reason.
+# peek-and-splice for HTTPS from the given allowlist, PLUS a separate
+# dstdomain-based gate for plain HTTP (e.g. Debian's own apt mirror,
+# confirmed needed to bootstrap curl before Claude Code's installer can
+# run). Requires a Squid built against OpenSSL, not GnuTLS -- see
+# isolation_write_squid_config in workflow.sh for the empirical findings
+# this encodes, including why plain HTTP needs its own gate (confirmed
+# empirically that without one, any destination was allowed through
+# unfiltered over HTTP -- the allowlist was only ever enforced for
+# HTTPS). Mirrors that function function-for-function; the cert path is
+# fixed for the same reason.
 function Write-IsolationSquidConfig {
     param([string]$OutFile, [string[]]$Allowlist)
-    $sniList = ($Allowlist | ForEach-Object { ".$_" }) -join ' '
+    $hosts = ($Allowlist | ForEach-Object { ".$_" }) -join ' '
     $content = @"
 acl localnet src 10.0.0.0/8
 acl localnet src 172.16.0.0/12
 acl localnet src 192.168.0.0/16
 
-acl allowed_sni ssl::server_name $sniList
+acl CONNECT method CONNECT
 
-http_access allow localnet
+acl allowed_sni ssl::server_name $hosts
+acl allowed_dst dstdomain $hosts
+
+http_access allow localnet CONNECT
+http_access allow localnet allowed_dst
 http_access deny all
 
 http_port 3129 ssl-bump cert=/etc/squid/certs/dummy.pem generate-host-certificates=off
@@ -956,6 +967,10 @@ coredump_dir /var/cache/squid
 # to Git Bash's MSYS path-conversion layer, which PowerShell calling
 # docker.exe directly never goes through. The sidecar readiness wait is a
 # fixed sleep, not a poll -- a documented v1 simplification (section 13).
+#
+# Every proxy env var is set in both cases, not just HTTP_PROXY/
+# HTTPS_PROXY -- see isolation_spawn_container in workflow.sh for the
+# curl httpoxy-mitigation finding this guards against.
 function Start-IsolationContainer {
     param([string]$Root, [string]$Image, [string]$Command, [string]$Toolchain = "")
     $runtime = Get-IsolationContainerRuntime
@@ -998,8 +1013,11 @@ function Start-IsolationContainer {
         --mount "type=bind,src=$gitWrapper,dst=/usr/local/bin/git,readonly" `
         -e "GIT_WRAPPER_REAL_BIN=/usr/bin/git" `
         -e "HTTP_PROXY=http://${squidName}:3129" `
+        -e "http_proxy=http://${squidName}:3129" `
         -e "HTTPS_PROXY=http://${squidName}:3129" `
+        -e "https_proxy=http://${squidName}:3129" `
         -e "NO_PROXY=localhost,127.0.0.1" `
+        -e "no_proxy=localhost,127.0.0.1" `
         -w /workspace `
         --entrypoint sh `
         $Image `
