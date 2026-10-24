@@ -7,7 +7,9 @@ description: >
   workflow/pipelines.yml (software: RED → GREEN → REFACTOR → AUDIT+SECURITY → DOCUMENT →
   VERIFY; infrastructure: IMPLEMENT → SECURITY → VERIFY) by calling the workflow engine
   (`tools/workflow/workflow.ps1` / `.sh`) for every branch decision, phase transition, and
-  gate — then dispatching the named subagent for each phase via the Task tool.
+  gate — then dispatching the named subagent for each phase via the Task tool, or via
+  `workflow run-isolated` for a phase resolved to container isolation (see
+  `workflow/isolation.md`).
 tools:
   - Read
   - Write
@@ -132,9 +134,29 @@ return it, it isn't happening this task.
 Loop:
 
 1. Run `workflow next`. If `status` is `complete`, go to Step 4.
-2. For each `{phase, agent}` in `phases` (more than one means a parallel stage — dispatch
-   all of them now, do not wait for one before starting the other): invoke that agent via
-   the Task tool with a prompt built from the state file:
+2. For each `{phase, agent, isolation}` in `phases` (more than one means a parallel stage —
+   dispatch all of them now, do not wait for one before starting the other): `isolation`
+   decides *how*, never *whether*, the phase runs — the phase/agent/gate contract below is
+   identical either way, so a phase's own file never needs to know which path dispatched it.
+
+   - **`isolation: "direct"`** — invoke the agent via the Task tool with a prompt built from
+     the state file, as below.
+   - **`isolation: "container"`** — run `workflow run-isolated --phase <id>` instead of the
+     Task tool (see `workflow/isolation.md` section 6). It materializes the same context
+     (Standards/Toolchain/Context/Existing Work/Diff) into the sandbox itself — you do not
+     build or pass a prompt for this path. Its response is one of two shapes:
+     - `{"status": "hung", "log": "<path>"}` — the phase never completed (liveness or
+       wall-clock timeout, `workflow/isolation.md` section 3.4). This does **not** go through
+       `pauseWhen`/`gate` — it means the agent never responded at all, unlike a `PAUSE`/`FAIL`
+       verdict where it did. Stop immediately, relay the log path to the user, and wait —
+       the same shape Step 1's `{"action":"ask",...}` already uses. Do not call `gate`, retry,
+       or fall back to a direct dispatch on your own judgment.
+     - `{"status": "done", "verdict": ..., "findings": [...], "outputRefs": [...]}` — treat
+       `verdict`/`findings` exactly as a Task-tool subagent's return value from here on; proceed
+       to step 3 below unchanged.
+
+   For a direct dispatch, invoke that agent via the Task tool with a prompt built from the
+   state file:
 
    ```
    ## Working Directory
@@ -203,6 +225,6 @@ one. Never re-run a completed phase unless explicitly requested.
 
 - **Receives from**: Spec Reviewer (`CLEAR` verdict)
 - **Works with**: all subagents it dispatches — Tester, Coder, Refactor, QA Engineer, Security Reviewer, Doc Writer, Verifier (software); Infrastructure Engineer, Security Reviewer, Verifier (infrastructure)
-- **Hands off to**: dispatches each phase's subagent in sequence via the Task tool, as directed by `workflow next`/`workflow gate`; opens the PR once Verifier returns `PASS`
+- **Hands off to**: dispatches each phase's subagent in sequence via the Task tool (`isolation: "direct"`) or `workflow run-isolated` (`isolation: "container"`, see `workflow/isolation.md`), as directed by `workflow next`/`workflow gate`; opens the PR once Verifier returns `PASS`
 
-*Note: this agent is the orchestrator for both pipelines — it performs all inter-agent delegation via the Task tool. No other agent invokes a subagent directly.*
+*Note: this agent is the orchestrator for both pipelines — it performs all inter-agent delegation, either directly via the Task tool or through `workflow run-isolated`'s sandboxed equivalent. No other agent invokes a subagent directly.*

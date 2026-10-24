@@ -555,6 +555,25 @@ assert_contains "91 infra pipeline: SECURITY defaults to isolation:direct" "$out
 echo
 echo "Tier 9 - run-isolated (materialization)"
 
+# isolation_materialize_input/isolation_resolve_image are exercised
+# directly from here on, not through the full `run-isolated` CLI --
+# that command now always attempts a real container spawn once
+# materialization succeeds (sections 3/3.4), which needs docker/podman
+# and a git-wrapper.sh this suite's scratch repos don't carry (new_scratch
+# only copies workflow.sh/pipelines.yml/lib). The real spawn-and-poll path
+# is covered end to end, against a stub entrypoint (no ANTHROPIC_API_KEY
+# is available in this dev environment, and a real `claude -p` call would
+# spend real money), in
+# tools/workflow/isolation/test/test-container-spawn.sh. This keeps the
+# main suite dependency-free while still testing the real production
+# materialization/image-resolution functions, not a reimplementation --
+# the same approach test-container-spawn.sh already uses for
+# isolation_spawn_container.
+# shellcheck source=../workflow.sh
+source "$WORKFLOW_SH"
+set -uo pipefail
+set +e
+
 SCR21="$(mktemp -d)"; new_scratch "$SCR21"
 wf "$SCR21" init --task iso-run1 --pipeline software >/dev/null
 wf "$SCR21" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
@@ -564,44 +583,34 @@ wf "$SCR21" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
 awk '/^## Standards$/{print;getline;print "TEST STANDARDS MARKER";next}1' "$SCR21/.llm/workflow-state.md" > "$SCR21/.llm/workflow-state.md.tmp" && mv "$SCR21/.llm/workflow-state.md.tmp" "$SCR21/.llm/workflow-state.md"
 awk '/^## Context$/{print;getline;print "TEST CONTEXT MARKER";next}1' "$SCR21/.llm/workflow-state.md" > "$SCR21/.llm/workflow-state.md.tmp" && mv "$SCR21/.llm/workflow-state.md.tmp" "$SCR21/.llm/workflow-state.md"
 
-out=$(wf "$SCR21" run-isolated --phase RED 2>&1); code=$?
-assert_eq "92 run-isolated on a container phase materializes inputs then reports the spawn as not yet built" "1" "$code"
-assert_contains "93 the not-yet-implemented message names what's missing, not a generic failure" "$out" "container spawn is not yet implemented"
+INPUT_DIR=$(isolation_materialize_input "$SCR21" iso-run1 software task/iso-run1 RED Tester "$SCR21/.llm/workflow-state.md" iso-run1)
+assert_eq "92 isolation_materialize_input prints the input directory" "$SCR21/.llm/isolation/iso-run1/RED/input" "$INPUT_DIR"
 
 PROMPT="$SCR21/.llm/isolation/iso-run1/RED/input/prompt.md"
 TASKJSON="$SCR21/.llm/isolation/iso-run1/RED/input/task.json"
-[ -f "$PROMPT" ] && pass "94 prompt.md was materialized" || fail "94 prompt.md was materialized" "not found at $PROMPT"
-assert_contains "95 prompt.md carries the live Standards section content" "$(cat "$PROMPT" 2>/dev/null)" "TEST STANDARDS MARKER"
-assert_contains "96 prompt.md carries the live Context section content" "$(cat "$PROMPT" 2>/dev/null)" "TEST CONTEXT MARKER"
+[ -f "$PROMPT" ] && pass "93 prompt.md was materialized" || fail "93 prompt.md was materialized" "not found at $PROMPT"
+assert_contains "94 prompt.md carries the live Standards section content" "$(cat "$PROMPT" 2>/dev/null)" "TEST STANDARDS MARKER"
+assert_contains "95 prompt.md carries the live Context section content" "$(cat "$PROMPT" 2>/dev/null)" "TEST CONTEXT MARKER"
 case "$(cat "$PROMPT" 2>/dev/null)" in
-  *"## Diff"*) fail "97 RED must not get a Diff section (nothing to diff before GREEN runs)" "found ## Diff" ;;
-  *) pass "97 RED must not get a Diff section (nothing to diff before GREEN runs)" ;;
+  *"## Diff"*) fail "96 RED must not get a Diff section (nothing to diff before GREEN runs)" "found ## Diff" ;;
+  *) pass "96 RED must not get a Diff section (nothing to diff before GREEN runs)" ;;
 esac
-assert_contains "98 task.json carries the resolved phase" "$(cat "$TASKJSON" 2>/dev/null)" '"phase":"RED"'
-assert_contains "99 task.json carries the resolved agent name" "$(cat "$TASKJSON" 2>/dev/null)" '"agent":"Tester"'
-assert_contains "100 task.json carries the resolved pipeline" "$(cat "$TASKJSON" 2>/dev/null)" '"pipeline":"software"'
+assert_contains "97 task.json carries the resolved phase" "$(cat "$TASKJSON" 2>/dev/null)" '"phase":"RED"'
+assert_contains "98 task.json carries the resolved agent name" "$(cat "$TASKJSON" 2>/dev/null)" '"agent":"Tester"'
+assert_contains "99 task.json carries the resolved pipeline" "$(cat "$TASKJSON" 2>/dev/null)" '"pipeline":"software"'
 
 wf "$SCR21" gate --phase RED --verdict done >/dev/null
 wf "$SCR21" gate --phase GREEN --verdict done >/dev/null
 echo "a change" >> "$SCR21/README.md"
 (cd "$SCR21" && git add README.md && git commit -q -m "a change for the diff")
-out=$(wf "$SCR21" run-isolated --phase REFACTOR 2>&1); code=$?
-assert_eq "101 run-isolated on REFACTOR also materializes then reports not-yet-implemented" "1" "$code"
+isolation_materialize_input "$SCR21" iso-run1 software task/iso-run1 REFACTOR Refactor "$SCR21/.llm/workflow-state.md" iso-run1 >/dev/null
 REFACTOR_PROMPT="$SCR21/.llm/isolation/iso-run1/REFACTOR/input/prompt.md"
-assert_contains "102 REFACTOR gets a Diff section" "$(cat "$REFACTOR_PROMPT" 2>/dev/null)" "## Diff"
-assert_contains "103 the Diff section shows the actual change" "$(cat "$REFACTOR_PROMPT" 2>/dev/null)" "a change"
+assert_contains "100 REFACTOR gets a Diff section" "$(cat "$REFACTOR_PROMPT" 2>/dev/null)" "## Diff"
+assert_contains "101 the Diff section shows the actual change" "$(cat "$REFACTOR_PROMPT" 2>/dev/null)" "a change"
 
 out=$(wf "$SCR21" run-isolated --phase SECURITY 2>&1); code=$?
-assert_eq "104 run-isolated on a direct phase refuses outright" "1" "$code"
-assert_contains "105 the refusal names the resolved (direct) mode" "$out" "is not isolated"
-
-# Round-trip: a pre-seeded verdict.json is read back, not re-materialized
-# into a not-yet-implemented error.
-mkdir -p "$SCR21/.llm/isolation/iso-run1/REFACTOR/output"
-echo '{"verdict":"CLEAR","findings":[]}' > "$SCR21/.llm/isolation/iso-run1/REFACTOR/output/verdict.json"
-out=$(wf "$SCR21" run-isolated --phase REFACTOR 2>&1); code=$?
-assert_eq "106 a pre-existing verdict.json is read back successfully" "0" "$code"
-assert_contains "107 the read-back verdict is returned verbatim" "$out" '"verdict":"CLEAR"'
+assert_eq "102 run-isolated on a direct phase refuses outright, before ever materializing or touching a runtime" "1" "$code"
+assert_contains "103 the refusal names the resolved (direct) mode" "$out" "is not isolated"
 
 echo
 echo "Tier 10 - image resolution"
@@ -609,9 +618,9 @@ echo "Tier 10 - image resolution"
 SCR22="$(mktemp -d)"; new_scratch "$SCR22"
 wf "$SCR22" init --task img1 --pipeline software >/dev/null
 wf "$SCR22" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
-wf "$SCR22" run-isolated --phase RED >/dev/null 2>&1
+isolation_materialize_input "$SCR22" img1 software task/img1 RED Tester "$SCR22/.llm/workflow-state.md" img1 >/dev/null
 out=$(cat "$SCR22/.llm/isolation/img1/RED/input/task.json")
-assert_contains "108 no .tech-decisions.yml, no devcontainer.json -> generic fallback image" "$out" '"image":"image:debian:12-slim"'
+assert_contains "104 no .tech-decisions.yml, no devcontainer.json -> generic fallback image" "$out" '"image":"image:debian:12-slim"'
 
 SCR23="$(mktemp -d)"; new_scratch "$SCR23"
 cat > "$SCR23/.tech-decisions.yml" <<'TD'
@@ -628,9 +637,9 @@ touch "$SCR23/Cargo.toml"
 (cd "$SCR23" && git add Cargo.toml .tech-decisions.yml && git commit -q -m "add cargo")
 wf "$SCR23" init --task img2 --pipeline software >/dev/null
 wf "$SCR23" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
-wf "$SCR23" run-isolated --phase RED >/dev/null 2>&1
+isolation_materialize_input "$SCR23" img2 software task/img2 RED Tester "$SCR23/.llm/workflow-state.md" img2 >/dev/null
 out=$(cat "$SCR23/.llm/isolation/img2/RED/input/task.json")
-assert_contains "109 toolchains.detect matches Cargo.toml -> rust image" "$out" '"image":"image:rust:1-slim"'
+assert_contains "105 toolchains.detect matches Cargo.toml -> rust image" "$out" '"image":"image:rust:1-slim"'
 
 SCR24="$(mktemp -d)"; new_scratch "$SCR24"
 touch "$SCR24/Cargo.toml"
@@ -644,9 +653,9 @@ DC
 (cd "$SCR24" && git add Cargo.toml .devcontainer/devcontainer.json && git commit -q -m "add devcontainer")
 wf "$SCR24" init --task img3 --pipeline software >/dev/null
 wf "$SCR24" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
-wf "$SCR24" run-isolated --phase RED >/dev/null 2>&1
+isolation_materialize_input "$SCR24" img3 software task/img3 RED Tester "$SCR24/.llm/workflow-state.md" img3 >/dev/null
 out=$(cat "$SCR24/.llm/isolation/img3/RED/input/task.json")
-assert_contains "110 a devcontainer.json image field takes precedence over toolchain detection" "$out" '"image":"image:custom/foo:latest"'
+assert_contains "106 a devcontainer.json image field takes precedence over toolchain detection" "$out" '"image":"image:custom/foo:latest"'
 
 SCR25="$(mktemp -d)"; new_scratch "$SCR25"
 mkdir -p "$SCR25/.devcontainer"
@@ -659,9 +668,9 @@ DC
 (cd "$SCR25" && git add .devcontainer/devcontainer.json && git commit -q -m "add devcontainer build")
 wf "$SCR25" init --task img4 --pipeline software >/dev/null
 wf "$SCR25" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
-wf "$SCR25" run-isolated --phase RED >/dev/null 2>&1
+isolation_materialize_input "$SCR25" img4 software task/img4 RED Tester "$SCR25/.llm/workflow-state.md" img4 >/dev/null
 out=$(cat "$SCR25/.llm/isolation/img4/RED/input/task.json")
-assert_contains "111 a devcontainer.json build block resolves to a build: spec, not an image pull" "$out" '"image":"build:Dockerfile:.."'
+assert_contains "107 a devcontainer.json build block resolves to a build: spec, not an image pull" "$out" '"image":"build:Dockerfile:.."'
 
 SCR26="$(mktemp -d)"; new_scratch "$SCR26"
 cat > "$SCR26/.tech-decisions.yml" <<'TD'
@@ -675,9 +684,34 @@ TD
 (cd "$SCR26" && git add .tech-decisions.yml && git commit -q -m "add tech-decisions")
 wf "$SCR26" init --task img5 --pipeline software >/dev/null
 wf "$SCR26" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null
-wf "$SCR26" run-isolated --phase RED >/dev/null 2>&1
+isolation_materialize_input "$SCR26" img5 software task/img5 RED Tester "$SCR26/.llm/workflow-state.md" img5 >/dev/null
 out=$(cat "$SCR26/.llm/isolation/img5/RED/input/task.json")
-assert_contains "112 no if_exists match falls back to toolchains.default" "$out" '"image":"image:rust:1-slim"'
+assert_contains "108 no if_exists match falls back to toolchains.default" "$out" '"image":"image:rust:1-slim"'
+
+echo
+echo "Tier 11 - real entrypoint command construction (section 3.4)"
+
+# isolation_build_entrypoint_command needs no container runtime at all --
+# it only builds a command string -- so the verified flags it must carry
+# are checked here, dependency-free, rather than in the Docker-dependent
+# isolation suite. The real spawn+liveness wiring that RUNS this command
+# is covered there instead (test-container-spawn.sh), against a stub, for
+# the reasons noted in Tier 9 above.
+ENTRY=$(isolation_build_entrypoint_command /isolation/input /isolation/output /isolation/run.jsonl)
+assert_contains "109 the entrypoint reads the materialized prompt.md" "$ENTRY" "cat '/isolation/input/prompt.md'"
+assert_contains "110 --bare is set (section 3.4: never auto-discover the target repo's own CLAUDE.md/hooks/MCP)" "$ENTRY" "--bare"
+assert_contains "111 --restricted is set (never load the target repo's own .claude/settings.json)" "$ENTRY" "--restricted"
+assert_contains "112 --permission-mode dontAsk is set" "$ENTRY" "--permission-mode dontAsk"
+assert_contains "113 --permission-prompts none is set (removes AskUserQuestion from the tool list entirely)" "$ENTRY" "--permission-prompts none"
+assert_contains "114 Bash/Read/Edit are restored via --tools after --restricted strips them" "$ENTRY" '--tools "Bash,Read,Edit"'
+assert_contains "115 --output-format stream-json is set (what gets piped to run.jsonl)" "$ENTRY" "--output-format stream-json"
+assert_contains "116 --include-partial-messages is set" "$ENTRY" "--include-partial-messages"
+assert_contains "117 --max-budget-usd is set (section 6's hardcoded v1 default)" "$ENTRY" "--max-budget-usd"
+assert_contains "118 the event stream is redirected to the host-visible run.jsonl path" "$ENTRY" "/isolation/run.jsonl"
+assert_contains "119 Claude Code's own install is bootstrapped (the image doesn't ship it)" "$ENTRY" "claude.ai/install.sh"
+
+ENTRY2=$(WORKFLOW_ISOLATION_TEST_ENTRYPOINT="echo stub" isolation_build_entrypoint_command /isolation/input /isolation/output /isolation/run.jsonl)
+assert_eq "120 WORKFLOW_ISOLATION_TEST_ENTRYPOINT substitutes the real command verbatim (test-only seam)" "echo stub" "$ENTRY2"
 
 echo
 echo "=== Results: $PASS passed, $FAIL failed ==="

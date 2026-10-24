@@ -830,6 +830,59 @@ function Get-IsolationContainerRuntime {
     Fail "isolation: neither podman nor docker is installed on this host (workflow/isolation.md section 11)"
 }
 
+# Shared setup extracted from Start-IsolationContainer (piece 5) so
+# Start-IsolationPhase (piece 6, section 3.4's liveness-polled entrypoint)
+# doesn't duplicate the sidecar/network/cert machinery. Returns
+# [PSCustomObject]@{ NetName; SquidName; WorkDir } on success, or $null on
+# failure (having already printed/cleaned up) -- the caller owns tearing
+# all three down via Remove-IsolationSidecar regardless of which path it
+# takes afterward.
+function New-IsolationSidecar {
+    param([string]$Root, [string]$Toolchain, [string]$Runtime)
+    $runId = "iso$PID-$(Get-Random)"
+    $netName = "isolation-net-$runId"
+    $squidName = "isolation-squid-$runId"
+    $workDir = Join-Path $env:TEMP "isolation-sidecar-$runId"
+    New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+    $certFile = Join-Path $workDir "dummy.pem"
+    $confFile = Join-Path $workDir "squid.conf"
+
+    if (-not (New-IsolationDummyCert -OutFile $certFile)) {
+        Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "isolation: failed to generate the sidecar's dummy certificate"
+        return $null
+    }
+    $allowlist = Resolve-IsolationNetworkAllowlist -Root $Root -Toolchain $Toolchain
+    Write-IsolationSquidConfig -OutFile $confFile -Allowlist $allowlist
+
+    & $Runtime network create --internal $netName *>$null
+    if ($LASTEXITCODE -ne 0) {
+        Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "isolation: failed to create the internal network"
+        return $null
+    }
+
+    & $Runtime run -d --name $squidName `
+        --network bridge `
+        --mount "type=bind,src=$confFile,dst=/etc/squid/squid.conf,readonly" `
+        --mount "type=bind,src=$certFile,dst=/etc/squid/certs/dummy.pem,readonly" `
+        alpine:3 sh -c "apk add --no-cache squid >/dev/null 2>&1 && exec squid -N" *>$null
+    & $Runtime network connect $netName $squidName *>$null
+    Start-Sleep -Seconds 8
+
+    return [PSCustomObject]@{ NetName = $netName; SquidName = $squidName; WorkDir = $workDir }
+}
+
+# Tears down everything New-IsolationSidecar created. Best-effort (every
+# command's errors are suppressed) since this runs on both success and
+# failure paths, including after a partial setup failure.
+function Remove-IsolationSidecar {
+    param([string]$Runtime, [string]$SquidName, [string]$NetName, [string]$WorkDir)
+    & $Runtime rm -f $SquidName *>$null
+    & $Runtime network rm $NetName *>$null
+    Remove-Item $WorkDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 # Toolchain-derived default network allowlist entries -- exactly
 # workflow/isolation.md section 9's resolved table, no more. Mirrors
 # isolation_toolchain_network_allow in workflow.sh function-for-function.
@@ -977,45 +1030,21 @@ function Start-IsolationContainer {
     $gitWrapper = Join-Path $Root "tools/workflow/isolation/git-wrapper.sh"
     if (-not (Test-Path $gitWrapper)) { Fail "isolation: git-wrapper.sh not found at $gitWrapper" }
 
-    $runId = "iso$PID-$(Get-Random)"
-    $netName = "isolation-net-$runId"
-    $squidName = "isolation-squid-$runId"
-    $workDir = Join-Path $env:TEMP "isolation-sidecar-$runId"
-    New-Item -ItemType Directory -Path $workDir -Force | Out-Null
-    $certFile = Join-Path $workDir "dummy.pem"
-    $confFile = Join-Path $workDir "squid.conf"
-
-    if (-not (New-IsolationDummyCert -OutFile $certFile)) {
-        Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
-        return [PSCustomObject]@{ Output = "isolation: failed to generate the sidecar's dummy certificate"; ExitCode = 1 }
+    $sidecar = New-IsolationSidecar -Root $Root -Toolchain $Toolchain -Runtime $runtime
+    if (-not $sidecar) {
+        return [PSCustomObject]@{ Output = "isolation: failed to set up the network sidecar"; ExitCode = 1 }
     }
-    $allowlist = Resolve-IsolationNetworkAllowlist -Root $Root -Toolchain $Toolchain
-    Write-IsolationSquidConfig -OutFile $confFile -Allowlist $allowlist
-
-    & $runtime network create --internal $netName *>$null
-    if ($LASTEXITCODE -ne 0) {
-        Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
-        return [PSCustomObject]@{ Output = "isolation: failed to create the internal network"; ExitCode = 1 }
-    }
-
-    & $runtime run -d --name $squidName `
-        --network bridge `
-        --mount "type=bind,src=$confFile,dst=/etc/squid/squid.conf,readonly" `
-        --mount "type=bind,src=$certFile,dst=/etc/squid/certs/dummy.pem,readonly" `
-        alpine:3 sh -c "apk add --no-cache squid >/dev/null 2>&1 && exec squid -N" *>$null
-    & $runtime network connect $netName $squidName *>$null
-    Start-Sleep -Seconds 8
 
     $containerOutput = & $runtime run --rm `
-        --network $netName `
+        --network $sidecar.NetName `
         --memory 4g --cpus 2 --pids-limit 512 `
         --mount "type=bind,src=$Root,dst=/workspace" `
         --mount "type=bind,src=$gitWrapper,dst=/usr/local/bin/git,readonly" `
         -e "GIT_WRAPPER_REAL_BIN=/usr/bin/git" `
-        -e "HTTP_PROXY=http://${squidName}:3129" `
-        -e "http_proxy=http://${squidName}:3129" `
-        -e "HTTPS_PROXY=http://${squidName}:3129" `
-        -e "https_proxy=http://${squidName}:3129" `
+        -e "HTTP_PROXY=http://$($sidecar.SquidName):3129" `
+        -e "http_proxy=http://$($sidecar.SquidName):3129" `
+        -e "HTTPS_PROXY=http://$($sidecar.SquidName):3129" `
+        -e "https_proxy=http://$($sidecar.SquidName):3129" `
         -e "NO_PROXY=localhost,127.0.0.1" `
         -e "no_proxy=localhost,127.0.0.1" `
         -w /workspace `
@@ -1024,11 +1053,128 @@ function Start-IsolationContainer {
         -c $Command 2>&1
     $exitCode = $LASTEXITCODE
 
-    & $runtime rm -f $squidName *>$null
-    & $runtime network rm $netName *>$null
-    Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-IsolationSidecar -Runtime $runtime -SquidName $sidecar.SquidName -NetName $sidecar.NetName -WorkDir $sidecar.WorkDir
 
     return [PSCustomObject]@{ Output = ($containerOutput -join "`n"); ExitCode = $exitCode }
+}
+
+# Builds the real container entrypoint command (section 3.4's verified
+# flags). Mirrors Get-IsolationBuildEntrypointCommand... i.e.
+# isolation_build_entrypoint_command in workflow.sh function-for-function,
+# including the WORKFLOW_ISOLATION_TEST_ENTRYPOINT test-only seam (see
+# that function's comment for why: no ANTHROPIC_API_KEY is available in
+# this dev environment, and a real `claude -p` call would spend real
+# money -- this lets the isolation test suite exercise
+# Start-IsolationPhase/Invoke-RunIsolated's real spawn-and-poll wiring
+# end to end with a cheap stub instead).
+function Build-IsolationEntrypointCommand {
+    param([string]$InputDir, [string]$OutputDir, [string]$LogPath)
+    if ($env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT) { return $env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT }
+    return @"
+mkdir -p '$OutputDir'
+command -v curl >/dev/null 2>&1 || { apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq curl ca-certificates >/dev/null 2>&1; }
+command -v claude >/dev/null 2>&1 || curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1
+export PATH="`$HOME/.local/bin:`$PATH"
+claude -p "`$(cat '$InputDir/prompt.md')" \
+  --bare --restricted \
+  --permission-mode dontAsk --permission-prompts none \
+  --tools "Bash,Read,Edit" --allowedTools "Bash,Read,Edit" \
+  --output-format stream-json --verbose --include-partial-messages \
+  --max-budget-usd 10 \
+  > '$LogPath' 2>&1
+"@
+}
+
+# Runs one containerized phase's real entrypoint with section 3.4's
+# liveness polling. Mirrors isolation_run_phase in workflow.sh
+# function-for-function -- see that function's comments for the full
+# rationale (detached run, two independent timeout tiers judged off
+# run_log's own mtime and the container's running state, either firing
+# kills the container+sidecar and reports hung).
+#
+# Returns [PSCustomObject]@{ Status; ExitCode } -- Status is "done" or
+# "hung"; ExitCode is $null for hung (a killed container has no
+# meaningful exit code).
+function Start-IsolationPhase {
+    param(
+        [string]$Root, [string]$Image, [string]$Command, [string]$Toolchain,
+        [string]$ExtraMountSrc, [string]$ExtraMountDst, [string]$RunLog,
+        [int]$LivenessTimeoutSeconds = 600, [int]$WallClockCeilingSeconds = 3600
+    )
+    $runtime = Get-IsolationContainerRuntime
+    $gitWrapper = Join-Path $Root "tools/workflow/isolation/git-wrapper.sh"
+    if (-not (Test-Path $gitWrapper)) { Fail "isolation: git-wrapper.sh not found at $gitWrapper" }
+
+    $sidecar = New-IsolationSidecar -Root $Root -Toolchain $Toolchain -Runtime $runtime
+    if (-not $sidecar) {
+        return [PSCustomObject]@{ Status = "hung"; ExitCode = $null }
+    }
+
+    $containerName = "isolation-main-$($sidecar.SquidName.Substring('isolation-squid-'.Length))"
+    $envArgs = @(
+        "-e", "GIT_WRAPPER_REAL_BIN=/usr/bin/git",
+        "-e", "HTTP_PROXY=http://$($sidecar.SquidName):3129",
+        "-e", "http_proxy=http://$($sidecar.SquidName):3129",
+        "-e", "HTTPS_PROXY=http://$($sidecar.SquidName):3129",
+        "-e", "https_proxy=http://$($sidecar.SquidName):3129",
+        "-e", "NO_PROXY=localhost,127.0.0.1",
+        "-e", "no_proxy=localhost,127.0.0.1"
+    )
+    if ($env:ANTHROPIC_API_KEY) { $envArgs += @("-e", "ANTHROPIC_API_KEY=$($env:ANTHROPIC_API_KEY)") }
+
+    $runArgs = @(
+        "run", "-d", "--name", $containerName,
+        "--network", $sidecar.NetName,
+        "--memory", "4g", "--cpus", "2", "--pids-limit", "512",
+        "--mount", "type=bind,src=$Root,dst=/workspace",
+        "--mount", "type=bind,src=$gitWrapper,dst=/usr/local/bin/git,readonly",
+        "--mount", "type=bind,src=$ExtraMountSrc,dst=$ExtraMountDst"
+    ) + $envArgs + @("-w", "/workspace", "--entrypoint", "sh", $Image, "-c", $Command)
+
+    & $runtime @runArgs *>$null
+    $spawnOk = ($LASTEXITCODE -eq 0)
+
+    $status = "hung"
+    $exitCode = $null
+    $startTs = Get-Date
+    $lastLiveTs = $startTs
+
+    if (-not $spawnOk) {
+        Write-Host "isolation: failed to start the main container"
+    } else {
+        while ($true) {
+            $now = Get-Date
+            $elapsed = ($now - $startTs).TotalSeconds
+
+            $running = $false
+            $state = & $runtime inspect -f '{{.State.Running}}' $containerName 2>$null
+            if ($state -eq "true") { $running = $true }
+
+            if (Test-Path $RunLog) {
+                $mtime = (Get-Item $RunLog).LastWriteTime
+                if ($mtime -gt $lastLiveTs) { $lastLiveTs = $mtime }
+            }
+            $sinceLive = ($now - $lastLiveTs).TotalSeconds
+
+            if (-not $running) { $status = "done"; break }
+            if ($elapsed -ge $WallClockCeilingSeconds -or $sinceLive -ge $LivenessTimeoutSeconds) {
+                $status = "hung"
+                & $runtime kill $containerName *>$null
+                break
+            }
+            Start-Sleep -Seconds 2
+        }
+    }
+
+    if ($status -eq "done") {
+        $ec = & $runtime inspect -f '{{.State.ExitCode}}' $containerName 2>$null
+        $exitCode = if ($ec) { [int]$ec } else { 1 }
+    }
+
+    & $runtime rm -f $containerName *>$null
+    Remove-IsolationSidecar -Runtime $runtime -SquidName $sidecar.SquidName -NetName $sidecar.NetName -WorkDir $sidecar.WorkDir
+
+    return [PSCustomObject]@{ Status = $status; ExitCode = $exitCode }
 }
 
 # Materializes a containerized phase's input files under
@@ -1116,15 +1262,46 @@ function Invoke-RunIsolated {
     $prefix = $block.branchPrefix
     $slug = if ($branch.StartsWith($prefix)) { $branch.Substring($prefix.Length) } else { $branch }
 
-    $inputDir = Write-IsolationInput -Root $root -Task $task -Pipeline $pipelineVal -Branch $branch -PhaseId $phaseId -Agent $agent -StateFile $stateFile -Slug $slug
+    Write-IsolationInput -Root $root -Task $task -Pipeline $pipelineVal -Branch $branch -PhaseId $phaseId -Agent $agent -StateFile $stateFile -Slug $slug | Out-Null
 
-    $verdictFile = Join-Path $root ".llm/isolation/$slug/$phaseId/output/verdict.json"
-    if (Test-Path $verdictFile) {
-        Get-Content $verdictFile -Raw
+    $phaseDir = Join-Path $root ".llm/isolation/$slug/$phaseId"
+    $outputDir = Join-Path $phaseDir "output"
+    $runLog = Join-Path $phaseDir "run.jsonl"
+    New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+    Set-Content -Path $runLog -Value $null
+
+    $toolchain = Get-IsolationToolchain -Root $root
+    $imageSpec = Resolve-IsolationImage -Root $root
+    $plainImage = Get-IsolationPlainImageRef -Spec $imageSpec
+
+    $entryCmd = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl"
+
+    # WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT/_WALL_CLOCK_CEILING: test-only
+    # overrides, same posture as Build-IsolationEntrypointCommand's
+    # WORKFLOW_ISOLATION_TEST_ENTRYPOINT -- see workflow.sh's
+    # cmd_run_isolated for why.
+    $livenessTimeout = if ($env:WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT) { [int]$env:WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT } else { 600 }
+    $wallClockCeiling = if ($env:WORKFLOW_ISOLATION_TEST_WALL_CLOCK_CEILING) { [int]$env:WORKFLOW_ISOLATION_TEST_WALL_CLOCK_CEILING } else { 3600 }
+
+    $result = Start-IsolationPhase -Root $root -Image $plainImage -Command $entryCmd -Toolchain $toolchain `
+        -ExtraMountSrc $phaseDir -ExtraMountDst "/isolation" -RunLog $runLog -LivenessTimeoutSeconds $livenessTimeout -WallClockCeilingSeconds $wallClockCeiling
+
+    if ($result.Status -eq "hung") {
+        [PSCustomObject]@{ status = "hung"; log = $runLog } | ConvertTo-Json -Compress
         return
     }
 
-    Fail "run-isolated: container spawn is not yet implemented (input materialized at $inputDir; workflow/isolation.md section 3's container lifecycle remains to be built)"
+    $verdictFile = Join-Path $outputDir "verdict.json"
+    if (Test-Path $verdictFile) {
+        $verdict = Get-Content $verdictFile -Raw | ConvertFrom-Json
+        $response = [ordered]@{ status = "done" }
+        foreach ($prop in $verdict.PSObject.Properties) { $response[$prop.Name] = $prop.Value }
+        $response["outputRefs"] = @("$outputDir/")
+        [PSCustomObject]$response | ConvertTo-Json -Compress
+        return
+    }
+
+    Fail "run-isolated: the agent container exited (code $($result.ExitCode)) without writing output/verdict.json -- see workflow/isolation.md sections 6/13; run log at $runLog"
 }
 
 function Invoke-Classify {

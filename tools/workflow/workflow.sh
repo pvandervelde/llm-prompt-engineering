@@ -1047,6 +1047,65 @@ isolation_container_runtime() {
   fi
 }
 
+# Shared setup extracted from isolation_spawn_container (piece 5) so
+# isolation_run_phase (piece 6, section 3.4's liveness-polled entrypoint)
+# doesn't duplicate the sidecar/network/cert machinery -- both need the
+# exact same topology, only how the MAIN container is run (foreground and
+# blocking vs. detached and polled) differs. Prints
+# "<net_name> <squid_name> <work_dir>" on success; the caller owns tearing
+# all three down via isolation_teardown_sidecar, even on its own failure
+# paths.
+isolation_setup_sidecar() {
+  local root="$1" toolchain="$2" runtime="$3"
+  local run_id net_name squid_name work_dir cert_file conf_file
+  run_id="iso$$-${RANDOM}"
+  net_name="isolation-net-${run_id}"
+  squid_name="isolation-squid-${run_id}"
+  work_dir=$(mktemp -d)
+  cert_file="${work_dir}/dummy.pem"
+  conf_file="${work_dir}/squid.conf"
+
+  isolation_generate_dummy_cert "$cert_file" || {
+    echo "isolation: failed to generate the sidecar's dummy certificate" >&2
+    rm -rf "$work_dir"
+    return 1
+  }
+  isolation_resolve_network_allowlist "$root" "$toolchain" | isolation_write_squid_config "$conf_file"
+
+  local mount_cert="$cert_file" mount_conf="$conf_file"
+  if command -v cygpath >/dev/null 2>&1; then
+    mount_cert=$(cygpath -m "$cert_file")
+    mount_conf=$(cygpath -m "$conf_file")
+  fi
+
+  "$runtime" network create --internal "$net_name" >/dev/null 2>&1 || {
+    echo "isolation: failed to create the internal network" >&2
+    rm -rf "$work_dir"
+    return 1
+  }
+
+  MSYS_NO_PATHCONV=1 "$runtime" run -d --name "$squid_name" \
+    --network bridge \
+    --mount "type=bind,src=${mount_conf},dst=/etc/squid/squid.conf,readonly" \
+    --mount "type=bind,src=${mount_cert},dst=/etc/squid/certs/dummy.pem,readonly" \
+    alpine:3 sh -c "apk add --no-cache squid >/dev/null 2>&1 && exec squid -N" >/dev/null 2>&1
+  "$runtime" network connect "$net_name" "$squid_name" >/dev/null 2>&1
+  sleep 8
+
+  echo "${net_name} ${squid_name} ${work_dir}"
+}
+
+# Tears down everything isolation_setup_sidecar created. Idempotent-ish
+# (every command is best-effort, >/dev/null 2>&1) since this runs on both
+# the success and failure paths of its callers, including after a partial
+# setup failure where some of the three may not exist yet.
+isolation_teardown_sidecar() {
+  local runtime="$1" squid_name="$2" net_name="$3" work_dir="$4"
+  "$runtime" rm -f "$squid_name" >/dev/null 2>&1
+  "$runtime" network rm "$net_name" >/dev/null 2>&1
+  rm -rf "$work_dir"
+}
+
 # Spawns the container for one containerized phase: bind-mounts the real
 # task worktree at /workspace and the git wrapper (section 8) ahead of the
 # real git on PATH, applies section 6's hardcoded v1 resource quotas, and
@@ -1132,40 +1191,11 @@ isolation_spawn_container() {
     mount_wrapper=$(cygpath -m "$git_wrapper")
   fi
 
-  local run_id net_name squid_name work_dir cert_file conf_file
-  run_id="iso$$-${RANDOM}"
-  net_name="isolation-net-${run_id}"
-  squid_name="isolation-squid-${run_id}"
-  work_dir=$(mktemp -d)
-  cert_file="${work_dir}/dummy.pem"
-  conf_file="${work_dir}/squid.conf"
-
-  isolation_generate_dummy_cert "$cert_file" || {
-    echo "isolation: failed to generate the sidecar's dummy certificate" >&2
-    rm -rf "$work_dir"
-    return 1
-  }
-  isolation_resolve_network_allowlist "$root" "$toolchain" | isolation_write_squid_config "$conf_file"
-
-  local mount_cert="$cert_file" mount_conf="$conf_file"
-  if command -v cygpath >/dev/null 2>&1; then
-    mount_cert=$(cygpath -m "$cert_file")
-    mount_conf=$(cygpath -m "$conf_file")
-  fi
-
-  "$runtime" network create --internal "$net_name" >/dev/null 2>&1 || {
-    echo "isolation: failed to create the internal network" >&2
-    rm -rf "$work_dir"
-    return 1
-  }
-
-  MSYS_NO_PATHCONV=1 "$runtime" run -d --name "$squid_name" \
-    --network bridge \
-    --mount "type=bind,src=${mount_conf},dst=/etc/squid/squid.conf,readonly" \
-    --mount "type=bind,src=${mount_cert},dst=/etc/squid/certs/dummy.pem,readonly" \
-    alpine:3 sh -c "apk add --no-cache squid >/dev/null 2>&1 && exec squid -N" >/dev/null 2>&1
-  "$runtime" network connect "$net_name" "$squid_name" >/dev/null 2>&1
-  sleep 8
+  local sidecar_info net_name squid_name work_dir
+  sidecar_info=$(isolation_setup_sidecar "$root" "$toolchain" "$runtime") || return 1
+  net_name=$(echo "$sidecar_info" | cut -d' ' -f1)
+  squid_name=$(echo "$sidecar_info" | cut -d' ' -f2)
+  work_dir=$(echo "$sidecar_info" | cut -d' ' -f3)
 
   MSYS_NO_PATHCONV=1 "$runtime" run --rm \
     --network "$net_name" \
@@ -1185,11 +1215,187 @@ isolation_spawn_container() {
     -c "$command"
   local exit_code=$?
 
-  "$runtime" rm -f "$squid_name" >/dev/null 2>&1
-  "$runtime" network rm "$net_name" >/dev/null 2>&1
-  rm -rf "$work_dir"
+  isolation_teardown_sidecar "$runtime" "$squid_name" "$net_name" "$work_dir"
 
   return "$exit_code"
+}
+
+# Builds the real container entrypoint command (section 3.4's verified
+# flags) that run-isolated actually ships. input_dir/output_dir/log_path
+# are CONTAINER-SIDE paths -- isolation_run_phase mounts the host's real
+# .llm/isolation/{slug}/{phase}/ directory there; this function only
+# constructs the string, it doesn't know or care how it got mounted.
+#
+# Bootstraps curl + Claude Code itself first (the sequence verified
+# end-to-end in test-container-spawn.sh scenarios 19/20) since the
+# resolved toolchain images (rust/dotnet/node/python, all Debian-based --
+# section 9) don't ship either. Guarded with `command -v` so an image that
+# already has them (a future custom/devcontainer image) skips the
+# reinstall. The apt-get bootstrap is Debian-specific, matching every
+# current default image; a non-Debian image would need a different
+# bootstrap -- not hit yet, not handled.
+#
+# allowedTools is a fixed v1 default (Bash,Read,Edit) for every
+# containerized phase, not yet tuned per agent -- RED/GREEN/REFACTOR/
+# AUDIT/IMPLEMENT all need to read/write files and run build/test
+# commands; a tighter per-agent allowlist is tracked, future work, not a
+# decided no (see workflow/isolation.md section 13).
+#
+# max-budget-usd's value (10) is a hardcoded v1 default, the same posture
+# section 6 already takes for the timeout/quota numbers -- not yet a
+# `.tech-decisions.yml` knob.
+#
+# WORKFLOW_ISOLATION_TEST_ENTRYPOINT, if set, is substituted verbatim for
+# the real command below -- a test-only seam (same posture as the
+# BASH_SOURCE[0] direct-execution guard at the bottom of this file) so
+# the isolation test suite can exercise isolation_run_phase/
+# cmd_run_isolated's real spawn-and-poll wiring end to end with a cheap
+# stub instead of a real `claude -p` call, which needs a live
+# ANTHROPIC_API_KEY (not available in this dev environment) and would
+# spend real money if it were. Affects only the command string that runs
+# inside the already-sandboxed container -- every mount/network/quota
+# decision is made by isolation_run_phase from its own parameters and is
+# identical either way.
+isolation_build_entrypoint_command() {
+  local input_dir="$1" output_dir="$2" log_path="$3"
+  if [ -n "${WORKFLOW_ISOLATION_TEST_ENTRYPOINT:-}" ]; then
+    printf '%s\n' "$WORKFLOW_ISOLATION_TEST_ENTRYPOINT"
+    return 0
+  fi
+  cat <<CMD
+mkdir -p '${output_dir}'
+command -v curl >/dev/null 2>&1 || { apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq curl ca-certificates >/dev/null 2>&1; }
+command -v claude >/dev/null 2>&1 || curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1
+export PATH="\$HOME/.local/bin:\$PATH"
+claude -p "\$(cat '${input_dir}/prompt.md')" \\
+  --bare --restricted \\
+  --permission-mode dontAsk --permission-prompts none \\
+  --tools "Bash,Read,Edit" --allowedTools "Bash,Read,Edit" \\
+  --output-format stream-json --verbose --include-partial-messages \\
+  --max-budget-usd 10 \\
+  > '${log_path}' 2>&1
+CMD
+}
+
+# Runs one containerized phase's real entrypoint with section 3.4's
+# liveness polling: unlike isolation_spawn_container (foreground,
+# blocking, used by the simple commands in test-container-spawn.sh), the
+# real `claude -p` entrypoint needs to run detached while this function
+# polls run_log's mtime and the container's own running state against two
+# independent timeout tiers. Either firing kills the container (and its
+# sidecar) and reports hung; a clean exit reports done. Shares the exact
+# sidecar/network topology isolation_spawn_container uses, via
+# isolation_setup_sidecar/isolation_teardown_sidecar (not duplicated).
+#
+# Prints "<status> <exit_code>" on stdout -- "done <code>" or
+# "hung <code-or-empty>" (a killed container has no meaningful exit code,
+# so hung never has one). extra_mount is "host_path:container_path",
+# bind-mounted alongside the standard /workspace + git-wrapper mounts
+# isolation_spawn_container also sets up -- this is where the real
+# entrypoint's /isolation/{input,output} and run.jsonl live, outside
+# /workspace, matching section 3.4's "host-visible path... outside the
+# otherwise-isolated container filesystem" requirement.
+#
+# liveness_timeout/wall_clock_ceiling are in seconds and take section 6's
+# hardcoded defaults (600/3600) when omitted -- callers pass short values
+# in tests to actually exercise the hung path without waiting it out for
+# real.
+isolation_run_phase() {
+  local root="$1" image="$2" command="$3" toolchain="$4" extra_mount_src="$5" extra_mount_dst="$6" \
+    run_log="$7" liveness_timeout="${8:-600}" wall_clock_ceiling="${9:-3600}"
+  local runtime
+  runtime=$(isolation_container_runtime) || return 1
+
+  local git_wrapper="${root}/tools/workflow/isolation/git-wrapper.sh"
+  [ -f "$git_wrapper" ] || { echo "isolation: git-wrapper.sh not found at ${git_wrapper}" >&2; return 1; }
+
+  # extra_mount_src/_dst are deliberately two separate parameters, not one
+  # "src:dst" string split on ":" -- found (2026-10-24) that this breaks on
+  # Windows, where a host path routinely contains its own ":" (the drive
+  # letter, e.g. "C:/Users/..."), so a naive colon split truncates the
+  # source to "C" and leaves the rest glued onto the destination. The exact
+  # same class of ambiguity Docker's own `--mount` flag sidesteps by using
+  # "type=bind,src=...,dst=..." (comma-delimited) instead of the older
+  # `-v host:container` form.
+  local mount_root="$root" mount_wrapper="$git_wrapper" mount_extra_src="$extra_mount_src"
+  if command -v cygpath >/dev/null 2>&1; then
+    mount_root=$(cygpath -m "$root")
+    mount_wrapper=$(cygpath -m "$git_wrapper")
+    mount_extra_src=$(cygpath -m "$mount_extra_src")
+  fi
+
+  local sidecar_info net_name squid_name work_dir
+  sidecar_info=$(isolation_setup_sidecar "$root" "$toolchain" "$runtime") || return 1
+  net_name=$(echo "$sidecar_info" | cut -d' ' -f1)
+  squid_name=$(echo "$sidecar_info" | cut -d' ' -f2)
+  work_dir=$(echo "$sidecar_info" | cut -d' ' -f3)
+
+  local container_name="isolation-main-${squid_name#isolation-squid-}"
+  local llm_key_env=()
+  [ -n "${ANTHROPIC_API_KEY:-}" ] && llm_key_env=(-e "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}")
+
+  MSYS_NO_PATHCONV=1 "$runtime" run -d --name "$container_name" \
+    --network "$net_name" \
+    --memory 4g --cpus 2 --pids-limit 512 \
+    --mount "type=bind,src=${mount_root},dst=/workspace" \
+    --mount "type=bind,src=${mount_wrapper},dst=/usr/local/bin/git,readonly" \
+    --mount "type=bind,src=${mount_extra_src},dst=${extra_mount_dst}" \
+    -e "GIT_WRAPPER_REAL_BIN=/usr/bin/git" \
+    -e "HTTP_PROXY=http://${squid_name}:3129" \
+    -e "http_proxy=http://${squid_name}:3129" \
+    -e "HTTPS_PROXY=http://${squid_name}:3129" \
+    -e "https_proxy=http://${squid_name}:3129" \
+    -e "NO_PROXY=localhost,127.0.0.1" \
+    -e "no_proxy=localhost,127.0.0.1" \
+    "${llm_key_env[@]}" \
+    -w /workspace \
+    --entrypoint sh \
+    "$image" \
+    -c "$command" >/dev/null 2>&1
+  local spawn_rc=$?
+
+  local status="hung" exit_code="" start_ts last_live_ts now elapsed since_live running mtime
+  start_ts=$(date +%s)
+  last_live_ts="$start_ts"
+
+  if [ "$spawn_rc" -ne 0 ]; then
+    echo "isolation: failed to start the main container" >&2
+  else
+    while :; do
+      now=$(date +%s)
+      elapsed=$((now - start_ts))
+
+      running=0
+      [ "$("$runtime" inspect -f '{{.State.Running}}' "$container_name" 2>/dev/null)" = "true" ] && running=1
+
+      if [ -f "$run_log" ]; then
+        mtime=$(stat -c %Y "$run_log" 2>/dev/null || stat -f %m "$run_log" 2>/dev/null || echo "$last_live_ts")
+        [ "$mtime" -gt "$last_live_ts" ] && last_live_ts="$mtime"
+      fi
+      since_live=$((now - last_live_ts))
+
+      if [ "$running" -eq 0 ]; then
+        status="done"
+        break
+      fi
+      if [ "$elapsed" -ge "$wall_clock_ceiling" ] || [ "$since_live" -ge "$liveness_timeout" ]; then
+        status="hung"
+        "$runtime" kill "$container_name" >/dev/null 2>&1
+        break
+      fi
+      sleep 2
+    done
+  fi
+
+  if [ "$status" = "done" ]; then
+    exit_code=$("$runtime" inspect -f '{{.State.ExitCode}}' "$container_name" 2>/dev/null)
+    [ -n "$exit_code" ] || exit_code=1
+  fi
+
+  "$runtime" rm -f "$container_name" >/dev/null 2>&1
+  isolation_teardown_sidecar "$runtime" "$squid_name" "$net_name" "$work_dir"
+
+  echo "${status} ${exit_code}"
 }
 
 # Materializes a containerized phase's input files under
@@ -1298,13 +1504,50 @@ cmd_run_isolated() {
   local input_dir
   input_dir=$(isolation_materialize_input "$root" "$task" "$pipeline_val" "$branch" "$phase" "$agent" "$state_file" "$slug")
 
-  local verdict_file="${root}/.llm/isolation/${slug}/${phase}/output/verdict.json"
-  if [ -f "$verdict_file" ]; then
-    cat "$verdict_file"
+  local phase_dir="${root}/.llm/isolation/${slug}/${phase}"
+  local output_dir="${phase_dir}/output"
+  local run_log="${phase_dir}/run.jsonl"
+  mkdir -p "$output_dir"
+  : > "$run_log"
+
+  local toolchain image_spec plain_image
+  toolchain=$(isolation_resolve_toolchain "$root")
+  image_spec=$(isolation_resolve_image "$root")
+  if ! plain_image=$(isolation_plain_image_ref "$image_spec" 2>&1); then
+    die "run-isolated: ${plain_image}"
+  fi
+
+  local entry_cmd
+  entry_cmd=$(isolation_build_entrypoint_command "/isolation/input" "/isolation/output" "/isolation/run.jsonl")
+
+  # WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT/_WALL_CLOCK_CEILING: test-only
+  # overrides of section 6's hardcoded 600s/3600s defaults, same posture
+  # (and same reason) as isolation_build_entrypoint_command's
+  # WORKFLOW_ISOLATION_TEST_ENTRYPOINT -- without this, a test proving the
+  # `hung` path through the real CLI would have to actually wait out the
+  # full 10-minute liveness window.
+  local liveness_timeout="${WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT:-600}"
+  local wall_clock_ceiling="${WORKFLOW_ISOLATION_TEST_WALL_CLOCK_CEILING:-3600}"
+
+  local result status container_exit
+  result=$(isolation_run_phase "$root" "$plain_image" "$entry_cmd" "$toolchain" "$phase_dir" "/isolation" "$run_log" "$liveness_timeout" "$wall_clock_ceiling")
+  status=$(echo "$result" | cut -d' ' -f1)
+  container_exit=$(echo "$result" | cut -d' ' -f2)
+
+  if [ "$status" = "hung" ]; then
+    printf '{"status":"hung","log":"%s"}\n' "$(json_escape "${phase_dir}/run.jsonl")"
     return 0
   fi
 
-  die "run-isolated: container spawn is not yet implemented (input materialized at ${input_dir}; workflow/isolation.md section 3's container lifecycle remains to be built)"
+  local verdict_file="${output_dir}/verdict.json"
+  if [ -f "$verdict_file" ]; then
+    local verdict_inner
+    verdict_inner=$(sed -E 's/^[[:space:]]*\{//; s/\}[[:space:]]*$//' "$verdict_file")
+    printf '{"status":"done",%s,"outputRefs":["%s"]}\n' "$verdict_inner" "$(json_escape "${output_dir}/")"
+    return 0
+  fi
+
+  die "run-isolated: the agent container exited (code ${container_exit}) without writing output/verdict.json -- see workflow/isolation.md sections 6/13; run log at ${run_log}"
 }
 
 cmd_classify() {

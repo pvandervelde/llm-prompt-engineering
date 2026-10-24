@@ -595,6 +595,21 @@ Assert-Contains "91 infra pipeline: SECURITY defaults to isolation:direct" $r.Ou
 Write-Host ""
 Write-Host "Tier 9 - run-isolated (materialization)"
 
+# Write-IsolationInput/Resolve-IsolationImage are exercised directly from
+# here on (dot-sourcing workflow.ps1 with the "__noop__" sentinel, same as
+# test-container-spawn.ps1), not through the full `run-isolated` CLI --
+# that command now always attempts a real container spawn once
+# materialization succeeds (sections 3/3.4), which needs docker/podman and
+# a git-wrapper.sh this suite's scratch repos don't carry (New-Scratch only
+# copies workflow.ps1/pipelines.yml/lib). The real spawn-and-poll path is
+# covered end to end, against a stub entrypoint (no ANTHROPIC_API_KEY is
+# available in this dev environment, and a real `claude -p` call would
+# spend real money), in
+# tools/workflow/isolation/test/test-container-spawn.ps1. This keeps the
+# main suite dependency-free while still testing the real production
+# materialization/image-resolution functions, not a reimplementation.
+. $WorkflowPs1 -Command "__noop__"
+
 function Set-TestSectionMarker([string]$Path, [string]$Heading, [string]$Marker) {
     $lines = Get-Content $Path
     $result = New-Object System.Collections.Generic.List[string]
@@ -616,49 +631,38 @@ $stateFile21 = Join-Path $scr21 ".llm/workflow-state.md"
 Set-TestSectionMarker $stateFile21 "Standards" "TEST STANDARDS MARKER"
 Set-TestSectionMarker $stateFile21 "Context" "TEST CONTEXT MARKER"
 
-$r = Invoke-Wf $scr21 @("run-isolated", "--phase", "RED")
-Assert-Eq "92 run-isolated on a container phase materializes inputs then reports the spawn as not yet built" "1" $r.ExitCode
-Assert-Contains "93 the not-yet-implemented message names what's missing, not a generic failure" $r.Output "container spawn is not yet implemented"
+$inputDir21 = Write-IsolationInput -Root $scr21 -Task "iso-run1" -Pipeline "software" -Branch "task/iso-run1" -PhaseId "RED" -Agent "Tester" -StateFile $stateFile21 -Slug "iso-run1"
+Assert-Eq "92 Write-IsolationInput returns the input directory" (Join-Path $scr21 ".llm/isolation/iso-run1/RED/input") $inputDir21
 
 $promptPath = Join-Path $scr21 ".llm/isolation/iso-run1/RED/input/prompt.md"
 $taskJsonPath = Join-Path $scr21 ".llm/isolation/iso-run1/RED/input/task.json"
-if (Test-Path $promptPath) { Pass "94 prompt.md was materialized" } else { Fail "94 prompt.md was materialized" "not found at $promptPath" }
+if (Test-Path $promptPath) { Pass "93 prompt.md was materialized" } else { Fail "93 prompt.md was materialized" "not found at $promptPath" }
 $promptContent = if (Test-Path $promptPath) { Get-Content $promptPath -Raw } else { "" }
-Assert-Contains "95 prompt.md carries the live Standards section content" $promptContent "TEST STANDARDS MARKER"
-Assert-Contains "96 prompt.md carries the live Context section content" $promptContent "TEST CONTEXT MARKER"
+Assert-Contains "94 prompt.md carries the live Standards section content" $promptContent "TEST STANDARDS MARKER"
+Assert-Contains "95 prompt.md carries the live Context section content" $promptContent "TEST CONTEXT MARKER"
 if ($promptContent.Contains("## Diff")) {
-    Fail "97 RED must not get a Diff section (nothing to diff before GREEN runs)" "found ## Diff"
+    Fail "96 RED must not get a Diff section (nothing to diff before GREEN runs)" "found ## Diff"
 } else {
-    Pass "97 RED must not get a Diff section (nothing to diff before GREEN runs)"
+    Pass "96 RED must not get a Diff section (nothing to diff before GREEN runs)"
 }
 $taskJsonContent = if (Test-Path $taskJsonPath) { Get-Content $taskJsonPath -Raw } else { "" }
-Assert-Contains "98 task.json carries the resolved phase" $taskJsonContent '"phase":"RED"'
-Assert-Contains "99 task.json carries the resolved agent name" $taskJsonContent '"agent":"Tester"'
-Assert-Contains "100 task.json carries the resolved pipeline" $taskJsonContent '"pipeline":"software"'
+Assert-Contains "97 task.json carries the resolved phase" $taskJsonContent '"phase":"RED"'
+Assert-Contains "98 task.json carries the resolved agent name" $taskJsonContent '"agent":"Tester"'
+Assert-Contains "99 task.json carries the resolved pipeline" $taskJsonContent '"pipeline":"software"'
 
 Invoke-Wf $scr21 @("gate", "--phase", "RED", "--verdict", "done") | Out-Null
 Invoke-Wf $scr21 @("gate", "--phase", "GREEN", "--verdict", "done") | Out-Null
 "a change" | Add-Content (Join-Path $scr21 "README.md")
 Push-Location $scr21; git add README.md; git commit -q -m "a change for the diff"; Pop-Location
-$r = Invoke-Wf $scr21 @("run-isolated", "--phase", "REFACTOR")
-Assert-Eq "101 run-isolated on REFACTOR also materializes then reports not-yet-implemented" "1" $r.ExitCode
+Write-IsolationInput -Root $scr21 -Task "iso-run1" -Pipeline "software" -Branch "task/iso-run1" -PhaseId "REFACTOR" -Agent "Refactor" -StateFile $stateFile21 -Slug "iso-run1" | Out-Null
 $refactorPromptPath = Join-Path $scr21 ".llm/isolation/iso-run1/REFACTOR/input/prompt.md"
 $refactorPromptContent = if (Test-Path $refactorPromptPath) { Get-Content $refactorPromptPath -Raw } else { "" }
-Assert-Contains "102 REFACTOR gets a Diff section" $refactorPromptContent "## Diff"
-Assert-Contains "103 the Diff section shows the actual change" $refactorPromptContent "a change"
+Assert-Contains "100 REFACTOR gets a Diff section" $refactorPromptContent "## Diff"
+Assert-Contains "101 the Diff section shows the actual change" $refactorPromptContent "a change"
 
 $r = Invoke-Wf $scr21 @("run-isolated", "--phase", "SECURITY")
-Assert-Eq "104 run-isolated on a direct phase refuses outright" "1" $r.ExitCode
-Assert-Contains "105 the refusal names the resolved (direct) mode" $r.Output "is not isolated"
-
-# Round-trip: a pre-seeded verdict.json is read back, not re-materialized
-# into a not-yet-implemented error.
-$outputDir21 = Join-Path $scr21 ".llm/isolation/iso-run1/REFACTOR/output"
-New-Item -ItemType Directory -Path $outputDir21 -Force | Out-Null
-'{"verdict":"CLEAR","findings":[]}' | Set-Content (Join-Path $outputDir21 "verdict.json")
-$r = Invoke-Wf $scr21 @("run-isolated", "--phase", "REFACTOR")
-Assert-Eq "106 a pre-existing verdict.json is read back successfully" "0" $r.ExitCode
-Assert-Contains "107 the read-back verdict is returned verbatim" $r.Output '"verdict":"CLEAR"'
+Assert-Eq "102 run-isolated on a direct phase refuses outright, before ever materializing or touching a runtime" "1" $r.ExitCode
+Assert-Contains "103 the refusal names the resolved (direct) mode" $r.Output "is not isolated"
 
 Write-Host ""
 Write-Host "Tier 10 - image resolution"
@@ -667,9 +671,9 @@ $scr22 = Join-Path $env:TEMP "wf-ps-t22-$(Get-Random)"
 New-Scratch $scr22
 Invoke-Wf $scr22 @("init", "--task", "img1", "--pipeline", "software") | Out-Null
 Invoke-Wf $scr22 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
-Invoke-Wf $scr22 @("run-isolated", "--phase", "RED") | Out-Null
+Write-IsolationInput -Root $scr22 -Task "img1" -Pipeline "software" -Branch "task/img1" -PhaseId "RED" -Agent "Tester" -StateFile (Join-Path $scr22 ".llm/workflow-state.md") -Slug "img1" | Out-Null
 $out = Get-Content (Join-Path $scr22 ".llm/isolation/img1/RED/input/task.json") -Raw
-Assert-Contains "108 no .tech-decisions.yml, no devcontainer.json -> generic fallback image" $out '"image":"image:debian:12-slim"'
+Assert-Contains "104 no .tech-decisions.yml, no devcontainer.json -> generic fallback image" $out '"image":"image:debian:12-slim"'
 
 $scr23 = Join-Path $env:TEMP "wf-ps-t23-$(Get-Random)"
 New-Scratch $scr23
@@ -687,9 +691,9 @@ toolchains:
 Push-Location $scr23; git add Cargo.toml .tech-decisions.yml; git commit -q -m "add cargo"; Pop-Location
 Invoke-Wf $scr23 @("init", "--task", "img2", "--pipeline", "software") | Out-Null
 Invoke-Wf $scr23 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
-Invoke-Wf $scr23 @("run-isolated", "--phase", "RED") | Out-Null
+Write-IsolationInput -Root $scr23 -Task "img2" -Pipeline "software" -Branch "task/img2" -PhaseId "RED" -Agent "Tester" -StateFile (Join-Path $scr23 ".llm/workflow-state.md") -Slug "img2" | Out-Null
 $out = Get-Content (Join-Path $scr23 ".llm/isolation/img2/RED/input/task.json") -Raw
-Assert-Contains "109 toolchains.detect matches Cargo.toml -> rust image" $out '"image":"image:rust:1-slim"'
+Assert-Contains "105 toolchains.detect matches Cargo.toml -> rust image" $out '"image":"image:rust:1-slim"'
 
 $scr24 = Join-Path $env:TEMP "wf-ps-t24-$(Get-Random)"
 New-Scratch $scr24
@@ -704,9 +708,9 @@ New-Item -ItemType Directory -Path (Join-Path $scr24 ".devcontainer") -Force | O
 Push-Location $scr24; git add Cargo.toml .devcontainer/devcontainer.json; git commit -q -m "add devcontainer"; Pop-Location
 Invoke-Wf $scr24 @("init", "--task", "img3", "--pipeline", "software") | Out-Null
 Invoke-Wf $scr24 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
-Invoke-Wf $scr24 @("run-isolated", "--phase", "RED") | Out-Null
+Write-IsolationInput -Root $scr24 -Task "img3" -Pipeline "software" -Branch "task/img3" -PhaseId "RED" -Agent "Tester" -StateFile (Join-Path $scr24 ".llm/workflow-state.md") -Slug "img3" | Out-Null
 $out = Get-Content (Join-Path $scr24 ".llm/isolation/img3/RED/input/task.json") -Raw
-Assert-Contains "110 a devcontainer.json image field takes precedence over toolchain detection" $out '"image":"image:custom/foo:latest"'
+Assert-Contains "106 a devcontainer.json image field takes precedence over toolchain detection" $out '"image":"image:custom/foo:latest"'
 
 $scr25 = Join-Path $env:TEMP "wf-ps-t25-$(Get-Random)"
 New-Scratch $scr25
@@ -720,9 +724,9 @@ New-Item -ItemType Directory -Path (Join-Path $scr25 ".devcontainer") -Force | O
 Push-Location $scr25; git add .devcontainer/devcontainer.json; git commit -q -m "add devcontainer build"; Pop-Location
 Invoke-Wf $scr25 @("init", "--task", "img4", "--pipeline", "software") | Out-Null
 Invoke-Wf $scr25 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
-Invoke-Wf $scr25 @("run-isolated", "--phase", "RED") | Out-Null
+Write-IsolationInput -Root $scr25 -Task "img4" -Pipeline "software" -Branch "task/img4" -PhaseId "RED" -Agent "Tester" -StateFile (Join-Path $scr25 ".llm/workflow-state.md") -Slug "img4" | Out-Null
 $out = Get-Content (Join-Path $scr25 ".llm/isolation/img4/RED/input/task.json") -Raw
-Assert-Contains "111 a devcontainer.json build block resolves to a build: spec, not an image pull" $out '"image":"build:Dockerfile:.."'
+Assert-Contains "107 a devcontainer.json build block resolves to a build: spec, not an image pull" $out '"image":"build:Dockerfile:.."'
 
 $scr26 = Join-Path $env:TEMP "wf-ps-t26-$(Get-Random)"
 New-Scratch $scr26
@@ -737,9 +741,35 @@ toolchains:
 Push-Location $scr26; git add .tech-decisions.yml; git commit -q -m "add tech-decisions"; Pop-Location
 Invoke-Wf $scr26 @("init", "--task", "img5", "--pipeline", "software") | Out-Null
 Invoke-Wf $scr26 @("gate", "--phase", "SPEC_REVIEW_GATE", "--verdict", "CLEAR") | Out-Null
-Invoke-Wf $scr26 @("run-isolated", "--phase", "RED") | Out-Null
+Write-IsolationInput -Root $scr26 -Task "img5" -Pipeline "software" -Branch "task/img5" -PhaseId "RED" -Agent "Tester" -StateFile (Join-Path $scr26 ".llm/workflow-state.md") -Slug "img5" | Out-Null
 $out = Get-Content (Join-Path $scr26 ".llm/isolation/img5/RED/input/task.json") -Raw
-Assert-Contains "112 no if_exists match falls back to toolchains.default" $out '"image":"image:rust:1-slim"'
+Assert-Contains "108 no if_exists match falls back to toolchains.default" $out '"image":"image:rust:1-slim"'
+
+Write-Host ""
+Write-Host "Tier 11 - real entrypoint command construction (section 3.4)"
+
+# Build-IsolationEntrypointCommand needs no container runtime at all -- it
+# only builds a command string -- so the verified flags it must carry are
+# checked here, dependency-free. The real spawn+liveness wiring that RUNS
+# this command is covered in test-container-spawn.ps1 instead, against a
+# stub, for the reasons noted in Tier 9 above.
+$entry = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl"
+Assert-Contains "109 the entrypoint reads the materialized prompt.md" $entry "cat '/isolation/input/prompt.md'"
+Assert-Contains "110 --bare is set (section 3.4: never auto-discover the target repo's own CLAUDE.md/hooks/MCP)" $entry "--bare"
+Assert-Contains "111 --restricted is set (never load the target repo's own .claude/settings.json)" $entry "--restricted"
+Assert-Contains "112 --permission-mode dontAsk is set" $entry "--permission-mode dontAsk"
+Assert-Contains "113 --permission-prompts none is set (removes AskUserQuestion from the tool list entirely)" $entry "--permission-prompts none"
+Assert-Contains "114 Bash/Read/Edit are restored via --tools after --restricted strips them" $entry '--tools "Bash,Read,Edit"'
+Assert-Contains "115 --output-format stream-json is set (what gets piped to run.jsonl)" $entry "--output-format stream-json"
+Assert-Contains "116 --include-partial-messages is set" $entry "--include-partial-messages"
+Assert-Contains "117 --max-budget-usd is set (section 6's hardcoded v1 default)" $entry "--max-budget-usd"
+Assert-Contains "118 the event stream is redirected to the host-visible run.jsonl path" $entry "/isolation/run.jsonl"
+Assert-Contains "119 Claude Code's own install is bootstrapped (the image doesn't ship it)" $entry "claude.ai/install.sh"
+
+$env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT = "echo stub"
+$entry2 = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl"
+Remove-Item Env:\WORKFLOW_ISOLATION_TEST_ENTRYPOINT
+Assert-Eq "120 WORKFLOW_ISOLATION_TEST_ENTRYPOINT substitutes the real command verbatim (test-only seam)" "echo stub" $entry2
 
 Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="

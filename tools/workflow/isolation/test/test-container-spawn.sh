@@ -173,6 +173,111 @@ assert_eq "19 Claude Code installs and runs successfully inside the sandbox, end
 assert_contains "20 the installed claude actually reports a version, not a stale/empty success" "$out" "Claude Code"
 
 echo
+echo "Liveness polling and the hung status (section 3.4, piece 6)"
+
+# isolation_run_phase is exercised directly against a cheap stub command,
+# not a real `claude -p` call -- no ANTHROPIC_API_KEY is available in
+# this dev environment, and a real call would spend real money. The real
+# entrypoint STRING (isolation_build_entrypoint_command's output) is
+# checked separately in tools/workflow/test/test-workflow.sh Tier 11,
+# dependency-free since it's pure string construction. What's unique to
+# this suite is the polling mechanism itself: liveness judged off the log
+# file's own write activity, the two independent timeout tiers, and the
+# kill-on-timeout behavior -- all of which need a real container.
+# A dedicated, separately bind-mounted directory for the log -- NOT the
+# same mount as /workspace -- matching how the real cmd_run_isolated flow
+# bind-mounts .llm/isolation/{slug}/{phase}/ at /isolation, distinct from
+# the worktree. The stub writes to the container-side path; isolation_run_phase
+# polls the HOST-side path across the same bind mount.
+LOG_DIR="$(mktemp -d)"
+RUN_LOG="${LOG_DIR}/run.jsonl"
+
+isolation_run_phase "$SCR" "alpine:3" \
+  "echo line1 >> /logs/run.jsonl; sleep 1; echo line2 >> /logs/run.jsonl; exit 7" \
+  "" "$LOG_DIR" "/logs" "$RUN_LOG" 30 60 > /tmp/run-phase-21.out 2>&1
+read -r status21 code21 < /tmp/run-phase-21.out
+assert_eq "21 a normal, quick completion reports done" "done" "$status21"
+assert_eq "22 the container's real exit code is propagated" "7" "$code21"
+assert_contains "23 the run log actually received the stub's output" "$(cat "$RUN_LOG" 2>/dev/null)" "line2"
+
+rm -f "$RUN_LOG"
+isolation_run_phase "$SCR" "alpine:3" \
+  "echo line1 >> /logs/run.jsonl; sleep 25" \
+  "" "$LOG_DIR" "/logs" "$RUN_LOG" 3 60 > /tmp/run-phase-24.out 2>&1
+read -r status24 code24 < /tmp/run-phase-24.out
+assert_eq "24 no new log activity within the liveness window reports hung, not a timeout-less hang" "hung" "$status24"
+assert_eq "25 hung carries no meaningful exit code" "" "$code24"
+
+rm -f "$RUN_LOG"
+isolation_run_phase "$SCR" "alpine:3" \
+  "i=0; while [ \$i -lt 60 ]; do echo \"line\$i\" >> /logs/run.jsonl; i=\$((i+1)); sleep 1; done" \
+  "" "$LOG_DIR" "/logs" "$RUN_LOG" 60 5 > /tmp/run-phase-26.out 2>&1
+read -r status26 code26 < /tmp/run-phase-26.out
+assert_eq "26 staying live past the wall-clock ceiling still reports hung (the ceiling is absolute, not liveness-conditional)" "hung" "$status26"
+
+rm -rf "$LOG_DIR"
+
+echo
+echo "run-isolated's full CLI wiring, end to end, against a stub entrypoint (section 6)"
+
+# WORKFLOW_ISOLATION_TEST_ENTRYPOINT substitutes for the real `claude -p`
+# command cmd_run_isolated would otherwise build -- same reasoning as
+# above. This is the one place the full CLI path (materialize -> resolve
+# image -> spawn -> poll -> read back verdict.json -> JSON response) is
+# tested end to end, not just its component functions individually.
+# This scratch repo needs BOTH halves other new_scratch helpers provide
+# separately: workflow.sh/pipelines.yml/lib (what test-workflow.sh's
+# new_scratch sets up, so `repo_root`/pipelines resolution works against
+# this directory) and tools/workflow/isolation/git-wrapper.sh (what this
+# file's own new_scratch sets up, so isolation_run_phase's mount check
+# succeeds) -- the full CLI path needs both. Always invoked via the real
+# repo's workflow.sh against this scratch dir as cwd, matching this
+# project's own root-resolution rule (CLAUDE.md): `repo_root` resolves
+# via `git rev-parse --show-toplevel` from cwd, never from the script's
+# own path, so running the real script against a scratch cwd is the
+# intended pattern, not a workaround.
+SCR27="$(mktemp -d)"
+rm -rf "$SCR27"
+mkdir -p "$SCR27/workflow" "$SCR27/tools/workflow/isolation" "$SCR27/docs/spec" "$SCR27/.llm/spec-review"
+cp "${REPO_ROOT}/workflow/pipelines.yml" "$SCR27/workflow/pipelines.yml"
+cp -r "${REPO_ROOT}/tools/workflow/lib" "$SCR27/tools/workflow/lib"
+cp "$GIT_WRAPPER" "$SCR27/tools/workflow/isolation/git-wrapper.sh"
+(
+  cd "$SCR27"
+  git init -q
+  git config user.email test@test.com
+  git config user.name test
+  echo "initial" > README.md
+  git add -A
+  git commit -q -m init
+)
+WF27="${REPO_ROOT}/tools/workflow/workflow.sh"
+(cd "$SCR27" && bash "$WF27" init --task runiso1 --pipeline software >/dev/null)
+(cd "$SCR27" && bash "$WF27" gate --phase SPEC_REVIEW_GATE --verdict CLEAR >/dev/null)
+
+STUB_DONE='mkdir -p /isolation/output
+echo "{\"verdict\":\"CLEAR\",\"findings\":[]}" > /isolation/output/verdict.json
+echo "stub line" >> /isolation/run.jsonl
+exit 0'
+out=$(cd "$SCR27" && WORKFLOW_ISOLATION_TEST_ENTRYPOINT="$STUB_DONE" bash "$WF27" run-isolated --phase RED 2>&1); code=$?
+assert_eq "27 the full run-isolated CLI returns success once the stub writes a verdict" "0" "$code"
+assert_contains "28 the response reports status:done" "$out" '"status":"done"'
+assert_contains "29 the agent's verdict.json fields are merged into the response, not nested" "$out" '"verdict":"CLEAR"'
+assert_contains "30 outputRefs points at the phase's output directory" "$out" "RED/output/"
+
+STUB_NO_VERDICT='echo "stub line" >> /isolation/run.jsonl
+exit 0'
+out=$(cd "$SCR27" && WORKFLOW_ISOLATION_TEST_ENTRYPOINT="$STUB_NO_VERDICT" bash "$WF27" run-isolated --phase GREEN 2>&1); code=$?
+assert_eq "31 a clean exit with no verdict.json is a structured error, not a silent success" "1" "$code"
+assert_contains "32 the error names the missing verdict.json, not a generic failure" "$out" "without writing output/verdict.json"
+
+STUB_HUNG='sleep 15'
+out=$(cd "$SCR27" && WORKFLOW_ISOLATION_TEST_ENTRYPOINT="$STUB_HUNG" WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT=3 WORKFLOW_ISOLATION_TEST_WALL_CLOCK_CEILING=30 bash "$WF27" run-isolated --phase REFACTOR 2>&1); code=$?
+assert_eq "33 a hung phase is reported, not an error, and exits 0 (the Conductor must branch on status, not exit code)" "0" "$code"
+assert_contains "34 the hung response carries the status" "$out" '"status":"hung"'
+assert_contains "35 the hung response points at the real run.jsonl path for a human to inspect" "$out" "REFACTOR/run.jsonl"
+
+echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed scenarios:"

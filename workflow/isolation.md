@@ -7,25 +7,43 @@ duplicated here).
 `.tech-decisions.yml`) described in [workflow/README.md](./README.md) with a
 per-phase isolation boundary. Read that file first — this one assumes its schema
 and CLI contract as a starting point and only describes the delta.
-**Implementation status (2026-10-23):**
+**Implementation status (2026-10-24):**
 
 - **Phase 1 (schema/CLI/state), done and tested:** `pipelines.yml`'s `isolation`
   key, `.tech-decisions.yml`'s `isolation` block, `workflow next`'s extended
   response, and `workflow isolation --override`.
-- **Phase 2 (`workflow run-isolated` itself), done and tested for everything
-  except the real entrypoint:** `isolation_materialize_input` (§6), image
-  resolution (§12), and — as of today — the full container spawn: the git
-  wrapper mounted and enforced (§8), resource quotas (§6), and the SNI-filtered
-  Squid sidecar with the internal-network topology (§9), all verified against
-  real Docker, including real allow/deny network traffic, not just config
-  validation. `cygpath`/`MSYS_NO_PATHCONV` handling makes this work correctly
-  from Git Bash on Windows too, confirmed empirically after hitting it twice.
-- **Still not built:** `cmd_run_isolated`/`Invoke-RunIsolated` don't call the
-  spawn function yet — materialization and spawning exist as separate,
-  independently-tested primitives, not yet wired together end-to-end. Nor is
-  §3.4's liveness polling/streaming entrypoint, the `conductor.md` dispatch
-  branch, §10's read-only/read-write narrowing, or the "build:" devcontainer
-  case (§12) — see §13.
+- **Phase 2 (`workflow run-isolated`), done and tested end to end:**
+  `isolation_materialize_input` (§6), image resolution (§12), the container
+  spawn primitives (git wrapper mounted and enforced per §8, resource quotas
+  per §6, the SNI-filtered Squid sidecar with the internal-network topology
+  per §9, all verified against real Docker including real allow/deny network
+  traffic, not just config validation), the real entrypoint command (§3.4's
+  verified flags, with Claude Code's own install bootstrapped since the
+  toolchain default images don't ship it), and §3.4's liveness/wall-clock
+  polling loop with the `hung` status. `cmd_run_isolated`/`Invoke-RunIsolated`
+  now actually call the spawn-and-poll function and return one of the two
+  documented response shapes. `cygpath`/`MSYS_NO_PATHCONV` handling makes all
+  of this work correctly from Git Bash on Windows too, confirmed empirically
+  after hitting it more than once.
+- **`conductor.md` dispatch branch:** added — `next`'s `isolation:"container"`
+  field routes to `workflow run-isolated` instead of the `Task` tool; `hung`
+  is handled before `gate` is ever called, per §3.4's contract.
+- **Tested against a stub, not a real `claude -p` call:** no `ANTHROPIC_API_KEY`
+  is available in this development environment, and a real call would spend
+  real money without authorization to do so. The real entrypoint command's
+  *construction* (the exact flags, §3.4) is tested directly and
+  dependency-free; the liveness-polling *mechanism* (log-write-activity
+  judging, the two timeout tiers, kill-on-timeout, the full `run-isolated` CLI
+  wired end to end) is tested against a cheap stub command via
+  `WORKFLOW_ISOLATION_TEST_ENTRYPOINT` — a documented test-only seam (see that
+  env var's own comment in `workflow.sh`/`workflow.ps1`) that substitutes the
+  command string run inside the already-sandboxed container without touching
+  any mount/network/quota decision. Exercising the real `claude -p` path
+  end-to-end is follow-up work gated on a funded, authorized test credential.
+- **Still not built (see §13 for the full list and why each is a reasonable
+  v1 boundary, not an oversight):** §10's read-only/read-write narrowing to
+  declared touched-paths, the "build:" devcontainer case (§12), dotfile/secret
+  path exclusion, and the sidecar's fixed-sleep readiness wait.
 
 ## 1. Goals and threat model
 
@@ -684,11 +702,24 @@ sandbox by granting access back in.
 ## 13. Open items
 
 - Dotfile/secret-path exclusion within the repo (§2, §10) — follow-up tightening.
-- The sidecar readiness wait in `isolation_spawn_container`/
-  `Start-IsolationContainer` is a fixed 8-second sleep after starting Squid,
-  not a poll for the listening port — a documented v1 simplification. Reliable
-  in testing, but a poll (e.g. retrying a `nc`/connect check) would be more
-  robust against a slow `apk add` on a loaded host than a fixed duration.
+- The sidecar readiness wait (shared by `isolation_spawn_container` and
+  `isolation_run_phase`/`Start-IsolationContainer` and `Start-IsolationPhase`
+  via `isolation_setup_sidecar`/`New-IsolationSidecar`) is a fixed 8-second
+  sleep after starting Squid, not a poll for the listening port — a
+  documented v1 simplification. Reliable in testing, but a poll (e.g.
+  retrying a `nc`/connect check) would be more robust against a slow
+  `apk add` on a loaded host than a fixed duration.
+- The agent's own task instructions (`prompt.md`, §6) don't yet tell it to
+  write `output/verdict.json` — `run-isolated` correctly detects and reports
+  a clean container exit with no verdict file as a structured error rather
+  than silently treating it as success, but nothing upstream of that yet
+  tells the containerized agent what file to write or what shape it should
+  take. Wiring that is a prompt-content concern (each agent's own file, e.g.
+  `tester.agent.md`, already documents how it reports completion for a
+  direct dispatch) rather than an isolation-mechanism one, and is the one
+  piece of §6's contract not yet closed end to end against a real agent —
+  every test here exercises it against a stub that writes the file
+  directly (see the implementation-status note above).
 - The "build:" image-spec case from §12 (a `devcontainer.json` with only a
   `build` block, no plain `image`) is refused outright by
   `isolation_plain_image_ref`/`Get-IsolationPlainImageRef`, not wired up —

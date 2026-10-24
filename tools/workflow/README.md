@@ -145,8 +145,8 @@ computed once per phase and cached in the state file's `## Isolation` section th
 `next` returns that phase, so a resumed task reuses the same recorded mode rather than
 re-resolving it (a later `.tech-decisions.yml` edit does not retroactively change a phase
 already recorded for this task). The Conductor branches on this field: `direct` dispatches via
-`Task` as always; `container` is not yet wired to an execution path (see `workflow/isolation.md`
-§13 — the container lifecycle itself is a follow-up).
+`Task` as always; `container` runs `workflow run-isolated --phase <id>` instead (see
+`workflow/isolation.md` §3/§6) — the Conductor never builds a prompt for that path itself.
 
 A `SPEC_REVIEW_GATE`-style conditional phase is skipped automatically (and `next` returns
 the phase after it) when its `skipWhen` condition in `pipelines.yml` already holds — see

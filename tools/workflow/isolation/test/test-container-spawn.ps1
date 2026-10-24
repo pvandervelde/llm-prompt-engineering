@@ -181,6 +181,121 @@ Assert-Eq "19 Claude Code installs and runs successfully inside the sandbox, end
 Assert-Contains "20 the installed claude actually reports a version, not a stale/empty success" $r.Output "Claude Code"
 
 Write-Host ""
+Write-Host "Liveness polling and the hung status (section 3.4, piece 6)"
+
+# Start-IsolationPhase is exercised directly against a cheap stub command,
+# not a real `claude -p` call -- no ANTHROPIC_API_KEY is available in this
+# dev environment, and a real call would spend real money. The real
+# entrypoint STRING (Build-IsolationEntrypointCommand's output) is checked
+# separately in tools/workflow/test/test-workflow.ps1 Tier 11,
+# dependency-free since it's pure string construction. A dedicated,
+# separately bind-mounted directory for the log (not the /workspace mount)
+# matches how the real Invoke-RunIsolated flow bind-mounts
+# .llm/isolation/{slug}/{phase}/ at /isolation, distinct from the worktree.
+$logDir21 = Join-Path $env:TEMP "wf-run-phase-log-$(Get-Random)"
+New-Item -ItemType Directory -Path $logDir21 -Force | Out-Null
+$runLog21 = Join-Path $logDir21 "run.jsonl"
+
+$r = Start-IsolationPhase -Root $scr -Image "alpine:3" -Command "echo line1 >> /logs/run.jsonl; sleep 1; echo line2 >> /logs/run.jsonl; exit 7" `
+    -Toolchain "" -ExtraMountSrc $logDir21 -ExtraMountDst "/logs" -RunLog $runLog21 -LivenessTimeoutSeconds 30 -WallClockCeilingSeconds 60
+Assert-Eq "21 a normal, quick completion reports done" "done" $r.Status
+Assert-Eq "22 the container's real exit code is propagated" "7" $r.ExitCode
+$logContent21 = if (Test-Path $runLog21) { Get-Content $runLog21 -Raw } else { "" }
+Assert-Contains "23 the run log actually received the stub's output" $logContent21 "line2"
+
+Remove-Item $runLog21 -Force -ErrorAction SilentlyContinue
+$r = Start-IsolationPhase -Root $scr -Image "alpine:3" -Command "echo line1 >> /logs/run.jsonl; sleep 25" `
+    -Toolchain "" -ExtraMountSrc $logDir21 -ExtraMountDst "/logs" -RunLog $runLog21 -LivenessTimeoutSeconds 3 -WallClockCeilingSeconds 60
+Assert-Eq "24 no new log activity within the liveness window reports hung, not a timeout-less hang" "hung" $r.Status
+Assert-Eq "25 hung carries no meaningful exit code" $null $r.ExitCode
+
+Remove-Item $runLog21 -Force -ErrorAction SilentlyContinue
+$r = Start-IsolationPhase -Root $scr -Image "alpine:3" -Command 'i=0; while [ $i -lt 60 ]; do echo "line$i" >> /logs/run.jsonl; i=$((i+1)); sleep 1; done' `
+    -Toolchain "" -ExtraMountSrc $logDir21 -ExtraMountDst "/logs" -RunLog $runLog21 -LivenessTimeoutSeconds 60 -WallClockCeilingSeconds 5
+Assert-Eq "26 staying live past the wall-clock ceiling still reports hung (the ceiling is absolute, not liveness-conditional)" "hung" $r.Status
+
+Remove-Item $logDir21 -Recurse -Force -ErrorAction SilentlyContinue
+
+Write-Host ""
+Write-Host "run-isolated's full CLI wiring, end to end, against a stub entrypoint (section 6)"
+
+# WORKFLOW_ISOLATION_TEST_ENTRYPOINT substitutes for the real `claude -p`
+# command Invoke-RunIsolated would otherwise build -- same reasoning as
+# above. This is the one place the full CLI path (materialize -> resolve
+# image -> spawn -> poll -> read back verdict.json -> JSON response) is
+# tested end to end, not just its component functions individually. Needs
+# its own scratch setup -- workflow.ps1/pipelines.yml/lib (what
+# test-workflow.ps1's New-Scratch provides) PLUS git-wrapper.sh (what this
+# file's own New-Scratch provides) -- since the full CLI dispatch needs
+# both.
+$scr27 = Join-Path $env:TEMP "wf-run-isolated-e2e-$(Get-Random)"
+if (Test-Path $scr27) { Remove-Item -Recurse -Force $scr27 }
+New-Item -ItemType Directory -Path "$scr27/workflow", "$scr27/tools/workflow/isolation", "$scr27/docs/spec", "$scr27/.llm/spec-review" -Force | Out-Null
+Copy-Item (Join-Path $RepoRoot "workflow/pipelines.yml") "$scr27/workflow/pipelines.yml"
+Copy-Item -Recurse (Join-Path $RepoRoot "tools/workflow/lib") "$scr27/tools/workflow/lib"
+Copy-Item $WorkflowPs1 "$scr27/tools/workflow/workflow.ps1"
+Copy-Item $GitWrapper "$scr27/tools/workflow/isolation/git-wrapper.sh"
+Push-Location $scr27
+try {
+    git init -q
+    git config user.email test@test.com
+    git config user.name test
+    "initial" | Set-Content README.md
+    git add -A
+    git commit -q -m init
+    git branch -m main 2>$null
+} finally {
+    Pop-Location
+}
+$scr27Script = Join-Path $scr27 "tools/workflow/workflow.ps1"
+Push-Location $scr27
+try {
+    & $scr27Script init --task runiso1 --pipeline software | Out-Null
+    & $scr27Script gate --phase SPEC_REVIEW_GATE --verdict CLEAR | Out-Null
+
+    $env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT = @'
+mkdir -p /isolation/output
+echo "{\"verdict\":\"CLEAR\",\"findings\":[]}" > /isolation/output/verdict.json
+echo "stub line" >> /isolation/run.jsonl
+exit 0
+'@
+    $out27 = & $scr27Script run-isolated --phase RED 2>&1
+    $code27 = $LASTEXITCODE
+    Remove-Item Env:\WORKFLOW_ISOLATION_TEST_ENTRYPOINT
+    $out27Str = ($out27 -join "`n")
+    Assert-Eq "27 the full run-isolated CLI returns success once the stub writes a verdict" "0" $code27
+    Assert-Contains "28 the response reports status:done" $out27Str '"status":"done"'
+    Assert-Contains "29 the agent's verdict.json fields are merged into the response, not nested" $out27Str '"verdict":"CLEAR"'
+    Assert-Contains "30 outputRefs points at the phase's output directory" ($out27Str.Replace('\\', '/')) "RED/output/"
+
+    $env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT = @'
+echo "stub line" >> /isolation/run.jsonl
+exit 0
+'@
+    $out31 = & $scr27Script run-isolated --phase GREEN 2>&1
+    $code31 = $LASTEXITCODE
+    Remove-Item Env:\WORKFLOW_ISOLATION_TEST_ENTRYPOINT
+    $out31Str = ($out31 -join "`n")
+    Assert-Eq "31 a clean exit with no verdict.json is a structured error, not a silent success" "1" $code31
+    Assert-Contains "32 the error names the missing verdict.json, not a generic failure" $out31Str "without writing output/verdict.json"
+
+    $env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT = "sleep 15"
+    $env:WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT = "3"
+    $env:WORKFLOW_ISOLATION_TEST_WALL_CLOCK_CEILING = "30"
+    $out33 = & $scr27Script run-isolated --phase REFACTOR 2>&1
+    $code33 = $LASTEXITCODE
+    Remove-Item Env:\WORKFLOW_ISOLATION_TEST_ENTRYPOINT
+    Remove-Item Env:\WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT
+    Remove-Item Env:\WORKFLOW_ISOLATION_TEST_WALL_CLOCK_CEILING
+    $out33Str = ($out33 -join "`n")
+    Assert-Eq "33 a hung phase is reported, not an error, and exits 0 (the Conductor must branch on status, not exit code)" "0" $code33
+    Assert-Contains "34 the hung response carries the status" $out33Str '"status":"hung"'
+    Assert-Contains "35 the hung response points at the real run.jsonl path for a human to inspect" ($out33Str.Replace('\\', '/')) "REFACTOR/run.jsonl"
+} finally {
+    Pop-Location
+}
+
+Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="
 if ($script:FailCount -gt 0) {
     Write-Host "Failed scenarios:"
