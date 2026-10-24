@@ -697,7 +697,7 @@ echo "Tier 11 - real entrypoint command construction (section 3.4)"
 # isolation suite. The real spawn+liveness wiring that RUNS this command
 # is covered there instead (test-container-spawn.sh), against a stub, for
 # the reasons noted in Tier 9 above.
-ENTRY=$(isolation_build_entrypoint_command /isolation/input /isolation/output /isolation/run.jsonl)
+ENTRY=$(isolation_build_entrypoint_command /isolation/input /isolation/output /isolation/run.jsonl /isolation/input/agents.json tester)
 assert_contains "109 the entrypoint reads the materialized prompt.md" "$ENTRY" "cat '/isolation/input/prompt.md'"
 assert_contains "110 --bare is set (section 3.4: never auto-discover the target repo's own CLAUDE.md/hooks/MCP)" "$ENTRY" "--bare"
 assert_contains "111 --restricted is set (never load the target repo's own .claude/settings.json)" "$ENTRY" "--restricted"
@@ -709,9 +709,62 @@ assert_contains "116 --include-partial-messages is set" "$ENTRY" "--include-part
 assert_contains "117 --max-budget-usd is set (section 6's hardcoded v1 default)" "$ENTRY" "--max-budget-usd"
 assert_contains "118 the event stream is redirected to the host-visible run.jsonl path" "$ENTRY" "/isolation/run.jsonl"
 assert_contains "119 Claude Code's own install is bootstrapped (the image doesn't ship it)" "$ENTRY" "claude.ai/install.sh"
+assert_contains "119b --agents registers the agent definition file" "$ENTRY" "--agents '/isolation/input/agents.json'"
+assert_contains "119c --agent selects it for the top-level session (not just delegation)" "$ENTRY" "--agent 'tester'"
 
-ENTRY2=$(WORKFLOW_ISOLATION_TEST_ENTRYPOINT="echo stub" isolation_build_entrypoint_command /isolation/input /isolation/output /isolation/run.jsonl)
+ENTRY2=$(WORKFLOW_ISOLATION_TEST_ENTRYPOINT="echo stub" isolation_build_entrypoint_command /isolation/input /isolation/output /isolation/run.jsonl /isolation/input/agents.json tester)
 assert_eq "120 WORKFLOW_ISOLATION_TEST_ENTRYPOINT substitutes the real command verbatim (test-only seam)" "echo stub" "$ENTRY2"
+
+echo
+echo "Tier 12 - agent persona injection (--agents/--agent, found while staging a real test)"
+
+assert_eq "121 agent-name mapping: Tester" "tester.md" "$(isolation_agent_definition_file "Tester")"
+assert_eq "122 agent-name mapping: Coder" "coder.md" "$(isolation_agent_definition_file "Coder")"
+assert_eq "123 agent-name mapping: Refactor" "refactor.md" "$(isolation_agent_definition_file "Refactor")"
+assert_eq "124 agent-name mapping: QA Engineer" "qa-engineer.md" "$(isolation_agent_definition_file "QA Engineer")"
+assert_eq "125 agent-name mapping: Infrastructure Engineer does NOT follow the mechanical lowercase/hyphenate pattern" "infra-engineer.md" "$(isolation_agent_definition_file "Infrastructure Engineer")"
+out=$(isolation_agent_definition_file "Nonexistent Agent" 2>&1); code=$?
+assert_eq "126 an unmapped agent name is refused, not silently guessed" "1" "$code"
+
+# A self-contained fixture "claude home" (not this dev machine's real
+# ~/.claude/agents/) -- isolation_build_agent_definition's third
+# (optional) parameter exists specifically so this suite can stay
+# dependency-free and deterministic rather than relying on whatever
+# happens to be globally installed on the machine running it.
+FIXTURE_HOME="$(mktemp -d)"
+mkdir -p "$FIXTURE_HOME/agents"
+cat > "$FIXTURE_HOME/agents/tester.md" <<'EOF'
+---
+name: "Tester"
+description: A test fixture description with "quotes" and a \backslash.
+tools:
+  - Read
+tier: balanced
+---
+
+## Role
+
+Line one of the body.
+Line two, with a "quoted" word and a \backslash too.
+EOF
+
+OUT_JSON="$(mktemp)"
+slug=$(isolation_build_agent_definition "Tester" "$OUT_JSON" "$FIXTURE_HOME")
+assert_eq "127 the returned slug is the filename stem" "tester" "$slug"
+assert_contains "128 the written file is valid-shaped JSON (opens with the slug key)" "$(cat "$OUT_JSON")" '{"tester":{"description":"'
+assert_contains "129 the description field is extracted from frontmatter" "$(cat "$OUT_JSON")" 'A test fixture description'
+assert_contains "130 embedded quotes in the description are escaped" "$(cat "$OUT_JSON")" '\"quotes\"'
+assert_contains "131 embedded backslashes are escaped" "$(cat "$OUT_JSON")" '\\backslash'
+assert_contains "132 the prompt field carries the body, not the frontmatter" "$(cat "$OUT_JSON")" 'Line one of the body.'
+case "$(cat "$OUT_JSON")" in
+  *'tools:'*) fail "133 frontmatter fields (tools/tier) are not forwarded into the prompt" "found 'tools:' in output" ;;
+  *) pass "133 frontmatter fields (tools/tier) are not forwarded into the prompt" ;;
+esac
+assert_contains "134 multi-line body content is joined with an escaped newline, not a raw line break" "$(cat "$OUT_JSON")" 'Line one of the body.\nLine two'
+
+out=$(isolation_build_agent_definition "Tester" "$(mktemp)" "$(mktemp -d)" 2>&1); code=$?
+assert_eq "135 a missing agent definition file refuses loudly rather than silently omitting the persona" "1" "$code"
+assert_contains "136 the refusal names what's missing and how to fix it" "$out" "run tools/ai-bootstrap/install.sh first"
 
 echo
 echo "=== Results: $PASS passed, $FAIL failed ==="

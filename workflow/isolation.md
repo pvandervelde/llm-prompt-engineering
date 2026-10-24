@@ -301,6 +301,31 @@ rather than onto liveness specifically:**
   control shouldn't get to run with the agent's privileges just by existing in
   the checkout.
 
+**A third gap, found later (2026-10-24) while staging the first real end-to-end
+test, not during the original verification pass above:** `--bare` and the lack
+of a mounted home directory together mean the dispatched agent's own persona
+(`claude-agents/tester.md`, `coder.md`, etc. — this project's Claude-Code-
+flavored agent definitions, installed globally by `tools/ai-bootstrap/
+install.sh`) never reaches the container through any implicit channel. Without
+it, `claude -p` runs as a fully generic session that knows the task context
+(§6's materialized `prompt.md`) but nothing about the dispatched agent's own
+role, scope, or behavioral constraints — not "running RED without isolation,"
+but a materially different, weaker thing.
+
+**Resolved, verified directly against Claude Code's own CLI reference, not
+assumed:** `--agents <file>` registers one or more named agents from a
+`{name: {description, prompt}}` JSON file; `--agent <name>` makes the
+*top-level* session run **as** that agent, not merely available for
+delegation (a distinct, easily-confused mechanism from `--agents` alone). The
+engine builds this file itself from the agent's own `claude-agents/*.md` —
+reading it from the same global `~/.claude/agents/` location it's always
+installed to (never from the target repo, matching this project's own
+distribution model), stripping the YAML frontmatter, and using the body as
+`prompt`. The frontmatter's own `tools`/`disallowedTools` fields are
+deliberately not forwarded — tool access is already governed by the
+top-level `--tools`/`--allowedTools` flags below, and forwarding both would
+risk a silent conflict between two scoping mechanisms instead of one.
+
 Combined with §6's resource quotas and the permission flags above, the full
 verified entrypoint invocation:
 
@@ -309,6 +334,7 @@ claude -p "<prompt>" \
   --bare --restricted \
   --permission-mode dontAsk --permission-prompts none \
   --tools "Bash,Read,Edit" --allowedTools "<task-specific allowlist>" \
+  --agents "<path-to-generated-agent-definition.json>" --agent "<slug>" \
   --output-format stream-json --verbose --include-partial-messages \
   --max-budget-usd <N>
 ```

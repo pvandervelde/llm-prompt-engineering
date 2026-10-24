@@ -753,7 +753,7 @@ Write-Host "Tier 11 - real entrypoint command construction (section 3.4)"
 # checked here, dependency-free. The real spawn+liveness wiring that RUNS
 # this command is covered in test-container-spawn.ps1 instead, against a
 # stub, for the reasons noted in Tier 9 above.
-$entry = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl"
+$entry = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl" -AgentDefsFile "/isolation/input/agents.json" -AgentSlug "tester"
 Assert-Contains "109 the entrypoint reads the materialized prompt.md" $entry "cat '/isolation/input/prompt.md'"
 Assert-Contains "110 --bare is set (section 3.4: never auto-discover the target repo's own CLAUDE.md/hooks/MCP)" $entry "--bare"
 Assert-Contains "111 --restricted is set (never load the target repo's own .claude/settings.json)" $entry "--restricted"
@@ -765,11 +765,80 @@ Assert-Contains "116 --include-partial-messages is set" $entry "--include-partia
 Assert-Contains "117 --max-budget-usd is set (section 6's hardcoded v1 default)" $entry "--max-budget-usd"
 Assert-Contains "118 the event stream is redirected to the host-visible run.jsonl path" $entry "/isolation/run.jsonl"
 Assert-Contains "119 Claude Code's own install is bootstrapped (the image doesn't ship it)" $entry "claude.ai/install.sh"
+Assert-Contains "119b --agents registers the agent definition file" $entry "--agents '/isolation/input/agents.json'"
+Assert-Contains "119c --agent selects it for the top-level session (not just delegation)" $entry "--agent 'tester'"
 
 $env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT = "echo stub"
-$entry2 = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl"
+$entry2 = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl" -AgentDefsFile "/isolation/input/agents.json" -AgentSlug "tester"
 Remove-Item Env:\WORKFLOW_ISOLATION_TEST_ENTRYPOINT
 Assert-Eq "120 WORKFLOW_ISOLATION_TEST_ENTRYPOINT substitutes the real command verbatim (test-only seam)" "echo stub" $entry2
+
+Write-Host ""
+Write-Host "Tier 12 - agent persona injection (--agents/--agent, found while staging a real test)"
+
+# Runs an expression in a fresh child pwsh process, after dot-sourcing
+# workflow.ps1 with the "__noop__" sentinel -- a child process, not direct
+# dot-sourcing in this test's own process, because Fail calls exit, which
+# would kill this test runner itself if an error-path call ran in-process.
+# Mirrors test-container-spawn.ps1's own Invoke-IsolationFn helper.
+function Invoke-IsolationFn([string]$Expr) {
+    $cmd = ". '$WorkflowPs1' -Command '__noop__'; $Expr"
+    $out = & pwsh -NoProfile -Command $cmd 2>&1
+    return [PSCustomObject]@{ Output = ($out -join "`n"); ExitCode = $LASTEXITCODE }
+}
+
+Assert-Eq "121 agent-name mapping: Tester" "tester.md" (Get-IsolationAgentDefinitionFile -AgentName "Tester")
+Assert-Eq "122 agent-name mapping: Coder" "coder.md" (Get-IsolationAgentDefinitionFile -AgentName "Coder")
+Assert-Eq "123 agent-name mapping: Refactor" "refactor.md" (Get-IsolationAgentDefinitionFile -AgentName "Refactor")
+Assert-Eq "124 agent-name mapping: QA Engineer" "qa-engineer.md" (Get-IsolationAgentDefinitionFile -AgentName "QA Engineer")
+Assert-Eq "125 agent-name mapping: Infrastructure Engineer does NOT follow the mechanical lowercase/hyphenate pattern" "infra-engineer.md" (Get-IsolationAgentDefinitionFile -AgentName "Infrastructure Engineer")
+
+$r = Invoke-IsolationFn "Get-IsolationAgentDefinitionFile -AgentName 'Nonexistent Agent'"
+Assert-Eq "126 an unmapped agent name is refused, not silently guessed" "1" $r.ExitCode
+
+# A self-contained fixture "claude home" (not this dev machine's real
+# ~/.claude/agents/) -- Build-IsolationAgentDefinition's -ClaudeHome
+# parameter exists specifically so this suite can stay dependency-free
+# and deterministic rather than relying on whatever happens to be
+# globally installed on the machine running it.
+$fixtureHome = Join-Path $env:TEMP "wf-agent-fixture-$(Get-Random)"
+New-Item -ItemType Directory -Path "$fixtureHome/agents" -Force | Out-Null
+@'
+---
+name: "Tester"
+description: A test fixture description with "quotes" and a \backslash.
+tools:
+  - Read
+tier: balanced
+---
+
+## Role
+
+Line one of the body.
+Line two, with a "quoted" word and a \backslash too.
+'@ | Set-Content (Join-Path $fixtureHome "agents/tester.md")
+
+$outJson = Join-Path $env:TEMP "wf-agent-def-$(Get-Random).json"
+$slug = Build-IsolationAgentDefinition -AgentName "Tester" -OutFile $outJson -ClaudeHome $fixtureHome
+Assert-Eq "127 the returned slug is the filename stem" "tester" $slug
+$jsonContent = Get-Content $outJson -Raw
+Assert-Contains "128 the written file is valid-shaped JSON (opens with the slug key)" $jsonContent '{"tester":{"description":"'
+Assert-Contains "129 the description field is extracted from frontmatter" $jsonContent 'A test fixture description'
+Assert-Contains "130 embedded quotes in the description are escaped" $jsonContent '\"quotes\"'
+Assert-Contains "131 embedded backslashes are escaped" $jsonContent '\\backslash'
+Assert-Contains "132 the prompt field carries the body, not the frontmatter" $jsonContent 'Line one of the body.'
+if ($jsonContent.Contains("tools:")) {
+    Fail "133 frontmatter fields (tools/tier) are not forwarded into the prompt" "found 'tools:' in output"
+} else {
+    Pass "133 frontmatter fields (tools/tier) are not forwarded into the prompt"
+}
+Assert-Contains "134 multi-line body content is joined with an escaped newline, not a raw line break" $jsonContent 'Line one of the body.\nLine two'
+
+$emptyHome = Join-Path $env:TEMP "wf-agent-empty-$(Get-Random)"
+New-Item -ItemType Directory -Path $emptyHome -Force | Out-Null
+$r = Invoke-IsolationFn "Build-IsolationAgentDefinition -AgentName 'Tester' -OutFile (Join-Path '$env:TEMP' 'wf-agent-out-$(Get-Random).json') -ClaudeHome '$emptyHome'"
+Assert-Eq "135 a missing agent definition file refuses loudly rather than silently omitting the persona" "1" $r.ExitCode
+Assert-Contains "136 the refusal names what's missing and how to fix it" $r.Output "run tools/ai-bootstrap/install.ps1 first"
 
 Write-Host ""
 Write-Host "=== Results: $($script:PassCount) passed, $($script:FailCount) failed ==="

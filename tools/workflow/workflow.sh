@@ -1259,6 +1259,23 @@ isolation_spawn_container() {
 # section 6 already takes for the timeout/quota numbers -- not yet a
 # `.tech-decisions.yml` knob.
 #
+# --agents/--agent (found 2026-10-24, while staging a real end-to-end
+# test): without these, claude -p runs as a fully generic session with no
+# awareness of the dispatched agent's own role at all -- --bare
+# deliberately skips project-local discovery, and there is no home
+# directory mount bringing in ~/.claude/agents/ either, so neither
+# "agents/tester.agent.md" (Copilot-flavored) nor "claude-agents/tester.md"
+# (Claude-Code-flavored -- the one that matters here) would ever reach the
+# container through any implicit channel. Verified directly against
+# Claude Code's own CLI reference, not assumed: `--agents <file>`
+# registers a named agent from {name: {description, prompt}} JSON, and
+# `--agent <name>` makes the TOP-LEVEL session run AS that agent, not just
+# available for delegation. agent_defs_file/agent_slug come from
+# isolation_build_agent_definition, called by the caller before this
+# function (co-located with where prompt.md/task.json are built would also
+# work, but keeping "what agent is this" resolution in one function is
+# simpler to reason about than splitting it across two).
+#
 # WORKFLOW_ISOLATION_TEST_ENTRYPOINT, if set, is substituted verbatim for
 # the real command below -- a test-only seam (same posture as the
 # BASH_SOURCE[0] direct-execution guard at the bottom of this file) so
@@ -1271,7 +1288,7 @@ isolation_spawn_container() {
 # decision is made by isolation_run_phase from its own parameters and is
 # identical either way.
 isolation_build_entrypoint_command() {
-  local input_dir="$1" output_dir="$2" log_path="$3"
+  local input_dir="$1" output_dir="$2" log_path="$3" agent_defs_file="$4" agent_slug="$5"
   if [ -n "${WORKFLOW_ISOLATION_TEST_ENTRYPOINT:-}" ]; then
     printf '%s\n' "$WORKFLOW_ISOLATION_TEST_ENTRYPOINT"
     return 0
@@ -1285,10 +1302,78 @@ claude -p "\$(cat '${input_dir}/prompt.md')" \\
   --bare --restricted \\
   --permission-mode dontAsk --permission-prompts none \\
   --tools "Bash,Read,Edit" --allowedTools "Bash,Read,Edit" \\
+  --agents '${agent_defs_file}' --agent '${agent_slug}' \\
   --output-format stream-json --verbose --include-partial-messages \\
   --max-budget-usd 10 \\
   > '${log_path}' 2>&1
 CMD
+}
+
+# Maps a phase's agent display name (pipelines.yml's `agent:` field) to
+# its claude-agents/*.md filename -- the Claude-Code-flavored instructions
+# (not agents/*.agent.md, the Copilot-flavored sibling; see this repo's
+# own distribution model). An explicit table, not a mechanical
+# lowercase/hyphenate transform, because one entry doesn't follow that
+# pattern: "Infrastructure Engineer" -> infra-engineer.md, not
+# infrastructure-engineer.md.
+isolation_agent_definition_file() {
+  case "$1" in
+    Tester) echo "tester.md" ;;
+    Coder) echo "coder.md" ;;
+    Refactor) echo "refactor.md" ;;
+    "QA Engineer") echo "qa-engineer.md" ;;
+    "Infrastructure Engineer") echo "infra-engineer.md" ;;
+    *) echo "isolation: no claude-agents/*.md mapping for agent '${1}'" >&2; return 1 ;;
+  esac
+}
+
+# Escapes a string for embedding as a JSON string value, INCLUDING literal
+# newlines -- json_escape (above) only handles backslash/quote, which is
+# all its existing single-line callers ever needed; an agent definition's
+# markdown body is multi-line, so this is a separate function rather than
+# changing json_escape's contract for every existing caller.
+json_escape_multiline() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  printf '%s' "$s"
+}
+
+# Builds the --agents registration file isolation_build_entrypoint_command
+# needs: reads the agent's definition from ~/.claude/agents/<file>.md --
+# the same global location tools/ai-bootstrap/install.sh installs it to,
+# read from HERE (the host running the workflow engine), not from the
+# target repo's own checkout, matching this project's own distribution
+# model (agent files are never copied into a target repo's workspace).
+# Strips the YAML frontmatter with an NR-based awk pass (counting `---`
+# delimiters), not a real YAML parser -- matches this engine's existing
+# "not a general parser" posture elsewhere. Writes {"<slug>":
+# {"description": "...", "prompt": "<body>"}} to out_file and prints
+# <slug> (for the caller to pass as --agent's argument). The frontmatter's
+# own tools/disallowedTools fields are deliberately NOT forwarded --
+# forwarding them would create a second, possibly conflicting tool-scoping
+# mechanism alongside the top-level --tools/--allowedTools flags that
+# already govern this (section 3.4).
+isolation_build_agent_definition() {
+  local agent_name="$1" out_file="$2" claude_home="${3:-${HOME}/.claude}"
+  local md_file
+  md_file=$(isolation_agent_definition_file "$agent_name") || return 1
+
+  local src="${claude_home}/agents/${md_file}"
+  [ -f "$src" ] || {
+    echo "isolation: agent definition not found at ${src} -- run tools/ai-bootstrap/install.sh first" >&2
+    return 1
+  }
+
+  local body description slug
+  body=$(awk '/^---$/{c++; next} c>=2' "$src")
+  description=$(awk '/^---$/{c++; next} c==1 && /^description:/{sub(/^description: */,""); print; exit}' "$src")
+  slug="${md_file%.md}"
+
+  printf '{"%s":{"description":"%s","prompt":"%s"}}\n' \
+    "$slug" "$(json_escape_multiline "$description")" "$(json_escape_multiline "$body")" > "$out_file"
+  echo "$slug"
 }
 
 # Runs one containerized phase's real entrypoint with section 3.4's
@@ -1540,8 +1625,17 @@ cmd_run_isolated() {
     die "run-isolated: ${plain_image}"
   fi
 
+  local agent_slug
+  if [ -z "${WORKFLOW_ISOLATION_TEST_ENTRYPOINT:-}" ]; then
+    if ! agent_slug=$(isolation_build_agent_definition "$agent" "${input_dir}/agents.json" 2>&1); then
+      die "run-isolated: ${agent_slug}"
+    fi
+  else
+    agent_slug="test"
+  fi
+
   local entry_cmd
-  entry_cmd=$(isolation_build_entrypoint_command "/isolation/input" "/isolation/output" "/isolation/run.jsonl")
+  entry_cmd=$(isolation_build_entrypoint_command "/isolation/input" "/isolation/output" "/isolation/run.jsonl" "/isolation/input/agents.json" "$agent_slug")
 
   # WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT/_WALL_CLOCK_CEILING: test-only
   # overrides of section 6's hardcoded 600s/3600s defaults, same posture

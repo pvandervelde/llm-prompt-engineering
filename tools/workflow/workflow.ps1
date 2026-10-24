@@ -1068,7 +1068,7 @@ function Start-IsolationContainer {
 # Start-IsolationPhase/Invoke-RunIsolated's real spawn-and-poll wiring
 # end to end with a cheap stub instead).
 function Build-IsolationEntrypointCommand {
-    param([string]$InputDir, [string]$OutputDir, [string]$LogPath)
+    param([string]$InputDir, [string]$OutputDir, [string]$LogPath, [string]$AgentDefsFile, [string]$AgentSlug)
     if ($env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT) { return $env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT }
     return @"
 mkdir -p '$OutputDir'
@@ -1079,10 +1079,79 @@ claude -p "`$(cat '$InputDir/prompt.md')" \
   --bare --restricted \
   --permission-mode dontAsk --permission-prompts none \
   --tools "Bash,Read,Edit" --allowedTools "Bash,Read,Edit" \
+  --agents '$AgentDefsFile' --agent '$AgentSlug' \
   --output-format stream-json --verbose --include-partial-messages \
   --max-budget-usd 10 \
   > '$LogPath' 2>&1
 "@
+}
+
+# Maps a phase's agent display name to its claude-agents/*.md filename --
+# see isolation_agent_definition_file in workflow.sh for why this is an
+# explicit table, not a mechanical transform.
+function Get-IsolationAgentDefinitionFile {
+    param([string]$AgentName)
+    switch ($AgentName) {
+        "Tester" { return "tester.md" }
+        "Coder" { return "coder.md" }
+        "Refactor" { return "refactor.md" }
+        "QA Engineer" { return "qa-engineer.md" }
+        "Infrastructure Engineer" { return "infra-engineer.md" }
+        default { Fail "isolation: no claude-agents/*.md mapping for agent '$AgentName'" }
+    }
+}
+
+# Builds the --agents registration file Build-IsolationEntrypointCommand
+# needs -- see isolation_build_agent_definition in workflow.sh for the
+# full rationale (found 2026-10-24: without this, claude -p runs as a
+# fully generic session with no awareness of the dispatched agent's own
+# role) and why the frontmatter's own tools/disallowedTools fields are
+# deliberately not forwarded. Mirrors that function function-for-function;
+# reads from the same global ~/.claude/agents/ location
+# tools/ai-bootstrap/install.ps1 installs to, not from the target repo.
+function Build-IsolationAgentDefinition {
+    param([string]$AgentName, [string]$OutFile, [string]$ClaudeHome = "")
+    $mdFile = Get-IsolationAgentDefinitionFile -AgentName $AgentName
+    if (-not $ClaudeHome) {
+        $homeDir = if ($env:USERPROFILE) { $env:USERPROFILE } else { $HOME }
+        $ClaudeHome = Join-Path $homeDir ".claude"
+    }
+    $src = Join-Path $ClaudeHome "agents/$mdFile"
+    if (-not (Test-Path $src)) {
+        Fail "isolation: agent definition not found at $src -- run tools/ai-bootstrap/install.ps1 first"
+    }
+
+    $lines = Get-Content $src
+    $dashCount = 0
+    $bodyLines = New-Object System.Collections.Generic.List[string]
+    $description = ""
+    foreach ($line in $lines) {
+        if ($line -eq "---") { $dashCount++; continue }
+        if ($dashCount -eq 1 -and $line -match '^description:\s*(.*)$' -and -not $description) {
+            $description = $Matches[1]
+        }
+        if ($dashCount -ge 2) { $bodyLines.Add($line) }
+    }
+    $body = $bodyLines -join "`n"
+    $slug = [System.IO.Path]::GetFileNameWithoutExtension($mdFile)
+
+    # Escapes a string for embedding as a JSON string value, including
+    # literal newlines -- order matters: backslashes first, so escaping
+    # the quote/newline steps below doesn't get re-escaped by the
+    # backslash step. `'\\'` is two literal backslash characters in a
+    # single-quoted PowerShell string (no escape processing); '\\' as a
+    # replacement means "insert two backslash chars for each one found" --
+    # the correct JSON escape for a single backslash.
+    function ConvertTo-JsonEscapedMultiline([string]$S) {
+        $S = $S.Replace('\', '\\')
+        $S = $S.Replace('"', '\"')
+        $S = $S.Replace("`n", '\n')
+        return $S
+    }
+    $descEsc = ConvertTo-JsonEscapedMultiline $description
+    $bodyEsc = ConvertTo-JsonEscapedMultiline $body
+    "{`"$slug`":{`"description`":`"$descEsc`",`"prompt`":`"$bodyEsc`"}}" | Set-Content -Path $OutFile -NoNewline
+    return $slug
 }
 
 # Runs one containerized phase's real entrypoint with section 3.4's
@@ -1283,7 +1352,12 @@ function Invoke-RunIsolated {
     $imageSpec = Resolve-IsolationImage -Root $root
     $plainImage = Get-IsolationPlainImageRef -Spec $imageSpec
 
-    $entryCmd = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl"
+    $agentSlug = if ($env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT) { "test" } else {
+        Build-IsolationAgentDefinition -AgentName $agent -OutFile (Join-Path $phaseDir "input/agents.json")
+    }
+
+    $entryCmd = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl" `
+        -AgentDefsFile "/isolation/input/agents.json" -AgentSlug $agentSlug
 
     # WORKFLOW_ISOLATION_TEST_LIVENESS_TIMEOUT/_WALL_CLOCK_CEILING: test-only
     # overrides, same posture as Build-IsolationEntrypointCommand's
