@@ -668,6 +668,24 @@ elif [ -d "$FRAMEWORK_ROOT/tools/workflow/lib" ]; then
     done
 fi
 
+# tools/workflow/isolation/git-wrapper.sh: required for any phase that
+# resolves to container isolation (workflow/isolation.md section 8) --
+# isolation_spawn_container/isolation_run_phase look for it at this exact
+# path under the TARGET repo's own root and refuse to spawn without it.
+# Found missing here (2026-10-24) while setting up a real end-to-end test:
+# every repo bootstrapped before this fix would have container isolation
+# resolve correctly but fail at spawn time with "git-wrapper.sh not found".
+if [ -L "$FRAMEWORK_ROOT/tools/workflow/isolation" ]; then
+    print_error "Refusing to follow symlink (security): $FRAMEWORK_ROOT/tools/workflow/isolation"
+elif [ -d "$FRAMEWORK_ROOT/tools/workflow/isolation" ]; then
+    for iso_file in "$FRAMEWORK_ROOT"/tools/workflow/isolation/*; do
+        [ -f "$iso_file" ] || [ -L "$iso_file" ] || continue
+        case "$(basename "$iso_file")" in
+            git-wrapper.sh) copy_workflow_file "tools/workflow/isolation/git-wrapper.sh" x ;;
+        esac
+    done
+fi
+
 copy_workflow_file "workflow/pipelines.yml"
 
 # ============================================================================

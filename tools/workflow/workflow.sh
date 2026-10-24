@@ -763,7 +763,17 @@ isolation_diff_base() {
 # its toolchains: block is missing, or neither resolves (including an
 # explicit YAML `default: null`). See workflow/isolation.md section 12.
 isolation_resolve_toolchain() {
-  local root="$1" tech_file="${root}/.tech-decisions.yml"
+  # Deliberately two separate `local` statements, not one chained
+  # declaration -- found (2026-10-24) that bash evaluates every word on a
+  # `local a=... b=${a}...` line in the OUTER scope before any of them are
+  # actually declared local, so `${a}` on the right doesn't see the value
+  # just assigned on the left. Harmless whenever a same-named outer `root`
+  # already happens to hold the same value (every existing caller of this
+  # function did), but a real "root: unbound variable" crash under `set -u`
+  # the moment that coincidence doesn't hold -- confirmed directly with a
+  # minimal `local a=1 b=$a` repro under `set -u`, not guessed.
+  local root="$1"
+  local tech_file="${root}/.tech-decisions.yml"
   [ -f "$tech_file" ] || { echo ""; return 0; }
 
   local toolchains_block
@@ -848,7 +858,11 @@ isolation_default_image() {
 # it. Matches this engine's existing "not a general parser" posture for
 # .tech-decisions.yml/pipelines.yml.
 isolation_resolve_image() {
-  local root="$1" dc_file="${root}/.devcontainer/devcontainer.json"
+  # Two separate `local` statements -- see isolation_resolve_toolchain's
+  # comment above for why a single chained `local root=$1 dc_file=${root}/...`
+  # is a latent "unbound variable" bug under `set -u`, not just style.
+  local root="$1"
+  local dc_file="${root}/.devcontainer/devcontainer.json"
 
   if [ -f "$dc_file" ]; then
     local image
@@ -1448,6 +1462,15 @@ isolation_materialize_input() {
     printf '## Context\n%s\n\n' "$context"
     printf '## Existing Work\n%s\n' "$existing_work"
     [ -n "$diff_block" ] && printf '%s' "$diff_block"
+    printf '\n## Output Contract\n'
+    printf 'This phase is running in an isolated sandbox with no conversational\n'
+    printf 'channel back to a human or Conductor. When you are finished, write your\n'
+    printf 'result to /isolation/output/verdict.json as a single JSON object:\n\n'
+    printf '  {"verdict": "<verdict>", "findings": [<findings>]}\n\n'
+    printf 'Use the exact same verdict value and findings you would otherwise return\n'
+    printf 'in conversation for this phase (see your own agent instructions for what\n'
+    printf 'that value should be). This file is the ONLY way your result reaches the\n'
+    printf 'Conductor -- nothing you say in conversation is read by anything else.\n'
   } > "${dir}/prompt.md"
 
   local image

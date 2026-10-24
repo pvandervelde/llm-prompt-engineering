@@ -1220,6 +1220,15 @@ function Write-IsolationInput {
     $prompt += "## Context`n$context`n`n"
     $prompt += "## Existing Work`n$existingWork`n"
     if ($diffBlock) { $prompt += $diffBlock }
+    $prompt += "`n## Output Contract`n"
+    $prompt += "This phase is running in an isolated sandbox with no conversational`n"
+    $prompt += "channel back to a human or Conductor. When you are finished, write your`n"
+    $prompt += "result to /isolation/output/verdict.json as a single JSON object:`n`n"
+    $prompt += '  {"verdict": "<verdict>", "findings": [<findings>]}' + "`n`n"
+    $prompt += "Use the exact same verdict value and findings you would otherwise return`n"
+    $prompt += "in conversation for this phase (see your own agent instructions for what`n"
+    $prompt += "that value should be). This file is the ONLY way your result reaches the`n"
+    $prompt += "Conductor -- nothing you say in conversation is read by anything else.`n"
 
     Set-Content -Path (Join-Path $dir "prompt.md") -Value $prompt
 

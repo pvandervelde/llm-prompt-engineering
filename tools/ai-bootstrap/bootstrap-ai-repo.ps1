@@ -839,6 +839,26 @@ elseif (Test-Path $libSrcDir)
     }
 }
 
+# tools/workflow/isolation/git-wrapper.sh: required for any phase that
+# resolves to container isolation (workflow/isolation.md section 8) --
+# isolation_spawn_container/isolation_run_phase look for it at this exact
+# path under the TARGET repo's own root and refuse to spawn without it.
+# Found missing here (2026-10-24) while setting up a real end-to-end test:
+# every repo bootstrapped before this fix would have container isolation
+# resolve correctly but fail at spawn time with "git-wrapper.sh not found".
+# Only this one file, not the whole isolation/ directory -- isolation/test/
+# is dev-only tooling for this framework's own test suite, never shipped.
+$isoSrcDir = Join-Path $frameworkRoot "tools/workflow/isolation"
+$isoSrcItem = Get-Item -Path $isoSrcDir -ErrorAction SilentlyContinue
+if ($isoSrcItem -and ($isoSrcItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint))
+{
+    Write-Error "Refusing to follow symlink (security): $isoSrcDir"
+}
+elseif (Test-Path (Join-Path $isoSrcDir "git-wrapper.sh"))
+{
+    Copy-WorkflowFile "tools/workflow/isolation/git-wrapper.sh"
+}
+
 Copy-WorkflowFile "workflow/pipelines.yml"
 
 # ============================================================================
