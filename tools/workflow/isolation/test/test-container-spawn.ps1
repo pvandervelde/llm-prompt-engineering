@@ -180,6 +180,30 @@ $r = Start-IsolationContainer -Root $scr -Image "debian:12-slim" -Command $insta
 Assert-Eq "19 Claude Code installs and runs successfully inside the sandbox, end to end" "0" $r.ExitCode
 Assert-Contains "20 the installed claude actually reports a version, not a stale/empty success" $r.Output "Claude Code"
 
+# Regression check for a real bug found via an actual live-agent run
+# (2026-11-06), not the automated suite: every default toolchain image
+# except the .NET SDK one lacks git entirely, which silently defeats
+# section 8's git-wrapper mount (GIT_WRAPPER_REAL_BIN=/usr/bin/git has
+# nothing to exec). Runs the REAL Build-IsolationEntrypointCommand
+# output's bootstrap lines (not a hand-copied reconstruction) against
+# python:3.12-slim -- the exact image class that failed in practice --
+# stopping before the `claude -p` line so this doesn't pay for a second
+# Claude Code install on top of scenario 19/20's.
+$entryCmd = Build-IsolationEntrypointCommand -InputDir "/isolation/input" -OutputDir "/isolation/output" -LogPath "/isolation/run.jsonl" -AgentDefsFile "/isolation/input/agents.json" -AgentSlug "tester"
+$bootstrapLines = New-Object System.Collections.Generic.List[string]
+foreach ($line in ($entryCmd -split "`n")) {
+    if ($line -match '^claude -p') { break }
+    $bootstrapLines.Add($line)
+}
+# /usr/bin/git directly, bypassing the mounted wrapper on PATH -- `git
+# --version` would go through the wrapper instead, which correctly denies
+# "version" as an unlisted subcommand (section 8's own, separately tested
+# policy) and would fail this check for the wrong reason.
+$bootstrapOnly = ($bootstrapLines -join "`n") + "`n/usr/bin/git --version"
+$r = Start-IsolationContainer -Root $scr -Image "python:3.12-slim" -Command $bootstrapOnly
+Assert-Eq "20b git is bootstrapped into an image that doesn't ship it (found via a real agent run, not guessed)" "0" $r.ExitCode
+Assert-Contains "20c the bootstrapped git actually runs, not just exists" $r.Output "git version"
+
 Write-Host ""
 Write-Host "Liveness polling and the hung status (section 3.4, piece 6)"
 

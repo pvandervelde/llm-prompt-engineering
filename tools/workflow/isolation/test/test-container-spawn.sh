@@ -172,6 +172,27 @@ out=$(isolation_spawn_container "$SCR" "debian:12-slim" \
 assert_eq "19 Claude Code installs and runs successfully inside the sandbox, end to end" "0" "$code"
 assert_contains "20 the installed claude actually reports a version, not a stale/empty success" "$out" "Claude Code"
 
+# Regression check for a real bug found via an actual live-agent run
+# (2026-11-06), not the automated suite: every default toolchain image
+# except the .NET SDK one lacks git entirely, which silently defeats
+# section 8's git-wrapper mount (GIT_WRAPPER_REAL_BIN=/usr/bin/git has
+# nothing to exec). Runs the REAL isolation_build_entrypoint_command
+# output's bootstrap lines (not a hand-copied reconstruction) against
+# python:3.12-slim -- the exact image class that failed in practice --
+# stopping before the `claude -p` line so this doesn't pay for a second
+# Claude Code install on top of scenario 19/20's.
+# Checks /usr/bin/git directly, bypassing the mounted wrapper on PATH --
+# `git --version` would go through the wrapper instead, which correctly
+# denies "version" as an unlisted subcommand (section 8's own, separately
+# tested policy) and would fail this check for the wrong reason.
+ENTRY_CMD=$(isolation_build_entrypoint_command "/isolation/input" "/isolation/output" "/isolation/run.jsonl" "/isolation/input/agents.json" "tester")
+BOOTSTRAP_ONLY=$(printf '%s\n' "$ENTRY_CMD" | sed -n '1,/^claude -p/p' | sed '$d')
+out=$(isolation_spawn_container "$SCR" "python:3.12-slim" \
+  "${BOOTSTRAP_ONLY}
+/usr/bin/git --version" 2>&1); code=$?
+assert_eq "20b git is bootstrapped into an image that doesn't ship it (found via a real agent run, not guessed)" "0" "$code"
+assert_contains "20c the bootstrapped git actually runs, not just exists" "$out" "git version"
+
 echo
 echo "Liveness polling and the hung status (section 3.4, piece 6)"
 

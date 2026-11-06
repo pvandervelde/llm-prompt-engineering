@@ -1059,20 +1059,33 @@ function Start-IsolationContainer {
 }
 
 # Builds the real container entrypoint command (section 3.4's verified
-# flags). Mirrors Get-IsolationBuildEntrypointCommand... i.e.
-# isolation_build_entrypoint_command in workflow.sh function-for-function,
-# including the WORKFLOW_ISOLATION_TEST_ENTRYPOINT test-only seam (see
-# that function's comment for why: no ANTHROPIC_API_KEY is available in
-# this dev environment, and a real `claude -p` call would spend real
-# money -- this lets the isolation test suite exercise
-# Start-IsolationPhase/Invoke-RunIsolated's real spawn-and-poll wiring
-# end to end with a cheap stub instead).
+# flags). Mirrors isolation_build_entrypoint_command in workflow.sh
+# function-for-function, including the WORKFLOW_ISOLATION_TEST_ENTRYPOINT
+# test-only seam (see that function's comment for why: no
+# ANTHROPIC_API_KEY is available in this dev environment, and a real
+# `claude -p` call would spend real money -- this lets the isolation test
+# suite exercise Start-IsolationPhase/Invoke-RunIsolated's real
+# spawn-and-poll wiring end to end with a cheap stub instead) and the git
+# bootstrap (found 2026-11-06 via a real end-to-end agent run -- see that
+# function's comment for the full rationale: every default toolchain
+# image except the .NET SDK one lacks git entirely, which silently
+# defeats section 8's git-wrapper mount). git's own check deliberately
+# tests `[ -x /usr/bin/git ]` directly rather than `command -v git` --
+# the git wrapper is already mounted at /usr/local/bin/git, ahead of
+# /usr/bin on PATH, before this command starts, so `command -v git`
+# finds the WRAPPER and wrongly concludes git is already installed,
+# silently skipping the real install forever. Found exactly this way: a
+# first version of this fix used `command -v git` and still failed.
 function Build-IsolationEntrypointCommand {
     param([string]$InputDir, [string]$OutputDir, [string]$LogPath, [string]$AgentDefsFile, [string]$AgentSlug)
     if ($env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT) { return $env:WORKFLOW_ISOLATION_TEST_ENTRYPOINT }
     return @"
 mkdir -p '$OutputDir'
-command -v curl >/dev/null 2>&1 || { apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq curl ca-certificates >/dev/null 2>&1; }
+if ! command -v curl >/dev/null 2>&1 || [ ! -x /usr/bin/git ]; then
+  apt-get update -qq >/dev/null 2>&1
+  command -v curl >/dev/null 2>&1 || apt-get install -y -qq curl ca-certificates >/dev/null 2>&1
+  [ -x /usr/bin/git ] || apt-get install -y -qq git >/dev/null 2>&1
+fi
 command -v claude >/dev/null 2>&1 || curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1
 export PATH="`$HOME/.local/bin:`$PATH"
 claude -p "`$(cat '$InputDir/prompt.md')" \

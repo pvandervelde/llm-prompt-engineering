@@ -1240,12 +1240,30 @@ isolation_spawn_container() {
 # .llm/isolation/{slug}/{phase}/ directory there; this function only
 # constructs the string, it doesn't know or care how it got mounted.
 #
-# Bootstraps curl + Claude Code itself first (the sequence verified
-# end-to-end in test-container-spawn.sh scenarios 19/20) since the
-# resolved toolchain images (rust/dotnet/node/python, all Debian-based --
-# section 9) don't ship either. Guarded with `command -v` so an image that
-# already has them (a future custom/devcontainer image) skips the
-# reinstall. The apt-get bootstrap is Debian-specific, matching every
+# Bootstraps curl, git, and Claude Code itself first (the curl+claude
+# sequence verified end-to-end in test-container-spawn.sh scenarios
+# 19/20) since the resolved toolchain images don't reliably ship any of
+# them. git's absence was found (2026-11-06) via a REAL end-to-end agent
+# run, not the automated suite -- every scenario there used alpine/git as
+# the test image, which ships git by definition and masked the gap.
+# Confirmed directly against every current default image: rust:1-slim,
+# node:20-slim, python:3.12-slim, and the debian:12-slim fallback all lack
+# git entirely; only mcr.microsoft.com/dotnet/sdk:8.0 ships it. Without
+# this, the git-wrapper mount (section 8) is silently useless in every
+# real task -- `GIT_WRAPPER_REAL_BIN=/usr/bin/git` has nothing to exec.
+# curl's check is `command -v`; git's deliberately is NOT -- the git
+# wrapper is already mounted at /usr/local/bin/git, ahead of /usr/bin on
+# PATH, before this command even starts running, so `command -v git`
+# would find the WRAPPER and conclude git is already installed, silently
+# skipping the real install forever. Found this exact way (2026-11-06):
+# the first version of this fix used `command -v git` and still failed,
+# caught only because test-container-spawn.sh's isolation_spawn_container
+# mounts the wrapper too (matching real usage), unlike an earlier manual
+# check that ran the bootstrap with no wrapper mounted and got a false
+# pass. Checking `[ -x /usr/bin/git ]` directly -- the exact path
+# GIT_WRAPPER_REAL_BIN execs -- is immune to that shadowing. `apt-get
+# update` itself runs at most once regardless of which of the two is
+# missing. The apt-get bootstrap is Debian-specific, matching every
 # current default image; a non-Debian image would need a different
 # bootstrap -- not hit yet, not handled.
 #
@@ -1295,7 +1313,11 @@ isolation_build_entrypoint_command() {
   fi
   cat <<CMD
 mkdir -p '${output_dir}'
-command -v curl >/dev/null 2>&1 || { apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq curl ca-certificates >/dev/null 2>&1; }
+if ! command -v curl >/dev/null 2>&1 || [ ! -x /usr/bin/git ]; then
+  apt-get update -qq >/dev/null 2>&1
+  command -v curl >/dev/null 2>&1 || apt-get install -y -qq curl ca-certificates >/dev/null 2>&1
+  [ -x /usr/bin/git ] || apt-get install -y -qq git >/dev/null 2>&1
+fi
 command -v claude >/dev/null 2>&1 || curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1
 export PATH="\$HOME/.local/bin:\$PATH"
 claude -p "\$(cat '${input_dir}/prompt.md')" \\

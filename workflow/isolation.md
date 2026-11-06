@@ -7,7 +7,34 @@ duplicated here).
 `.tech-decisions.yml`) described in [workflow/README.md](./README.md) with a
 per-phase isolation boundary. Read that file first — this one assumes its schema
 and CLI contract as a starting point and only describes the delta.
-**Implementation status (2026-10-24):**
+**Implementation status (2026-11-06):**
+
+- **Validated end to end against a real `claude -p` agent run**, not just a
+  stub: a real Tester-persona agent, dispatched via `run-isolated` against a
+  live scratch repo (Python palindrome task, resolved to `python:3.12-slim`),
+  correctly wrote an adversarial pytest suite (228 cases across 28 named
+  tests + property tests), correctly withheld an implementation (RED
+  discipline), and correctly wrote `output/verdict.json` per §6's Output
+  Contract. This surfaced one real bug, now fixed: **every default toolchain
+  image except the .NET SDK one lacks `git` entirely** (confirmed directly
+  against `rust:1-slim`, `node:20-slim`, `python:3.12-slim`, and the
+  `debian:12-slim` fallback), which silently defeated §8's git-wrapper mount
+  (`GIT_WRAPPER_REAL_BIN=/usr/bin/git` had nothing to exec — the agent's own
+  report said as much: "git is broken... the test file has NOT been
+  committed"). The automated suite never caught this because every one of
+  its scenarios used `alpine/git` as the test image, which ships git by
+  definition. Fixed by bootstrapping git alongside curl in the entrypoint
+  (`isolation_build_entrypoint_command`/`Build-IsolationEntrypointCommand`),
+  verified against the real image that failed, and locked in as a
+  regression test (`test-container-spawn.{sh,ps1}` scenarios 20b/20c).
+- **A second, lower-severity gap found by the same run, not yet fixed:**
+  the resolved image doesn't carry the toolchain's own test framework either
+  (`python:3.12-slim` has no `pytest`) — the agent noticed, worked around it
+  with a stand-in runner, and reported the gap transparently rather than
+  silently producing a weaker result. Tracked in §13, not fixed here: unlike
+  git (needed by every phase regardless of toolchain, and core to §8's
+  security model), per-toolchain test-framework bootstrapping is toolchain-
+  specific scope that needs its own design, not a one-line fix.
 
 - **Phase 1 (schema/CLI/state), done and tested:** `pipelines.yml`'s `isolation`
   key, `.tech-decisions.yml`'s `isolation` block, `workflow next`'s extended
@@ -28,22 +55,28 @@ and CLI contract as a starting point and only describes the delta.
 - **`conductor.md` dispatch branch:** added — `next`'s `isolation:"container"`
   field routes to `workflow run-isolated` instead of the `Task` tool; `hung`
   is handled before `gate` is ever called, per §3.4's contract.
-- **Tested against a stub, not a real `claude -p` call:** no `ANTHROPIC_API_KEY`
-  is available in this development environment, and a real call would spend
-  real money without authorization to do so. The real entrypoint command's
-  *construction* (the exact flags, §3.4) is tested directly and
-  dependency-free; the liveness-polling *mechanism* (log-write-activity
-  judging, the two timeout tiers, kill-on-timeout, the full `run-isolated` CLI
-  wired end to end) is tested against a cheap stub command via
+- **The automated suite is tested against a stub, not a real `claude -p`
+  call:** no `ANTHROPIC_API_KEY` is available in this development
+  environment, and a real call would spend real money without authorization
+  to do so in an automated, repeated test run. (A real, one-off `claude -p`
+  validation *was* done manually with the user's own credential — see the
+  entry above.) The real entrypoint command's *construction* (the exact
+  flags, §3.4) is tested directly and dependency-free; the liveness-polling
+  *mechanism* (log-write-activity judging, the two timeout tiers,
+  kill-on-timeout, the full `run-isolated` CLI wired end to end) is tested
+  against a cheap stub command via
   `WORKFLOW_ISOLATION_TEST_ENTRYPOINT` — a documented test-only seam (see that
   env var's own comment in `workflow.sh`/`workflow.ps1`) that substitutes the
   command string run inside the already-sandboxed container without touching
-  any mount/network/quota decision. Exercising the real `claude -p` path
-  end-to-end is follow-up work gated on a funded, authorized test credential.
+  any mount/network/quota decision. The real `claude -p` path has now been
+  exercised end-to-end at least once, manually, with the user's own
+  credential — see the entry above; repeating that automatically on every
+  CI run is still gated on a funded, authorized test credential.
 - **Still not built (see §13 for the full list and why each is a reasonable
   v1 boundary, not an oversight):** §10's read-only/read-write narrowing to
   declared touched-paths, the "build:" devcontainer case (§12), dotfile/secret
-  path exclusion, and the sidecar's fixed-sleep readiness wait.
+  path exclusion, the sidecar's fixed-sleep readiness wait, and per-toolchain
+  test-framework bootstrapping (pytest et al. — found via the real run above).
 
 ## 1. Goals and threat model
 
@@ -735,17 +768,6 @@ sandbox by granting access back in.
   documented v1 simplification. Reliable in testing, but a poll (e.g.
   retrying a `nc`/connect check) would be more robust against a slow
   `apk add` on a loaded host than a fixed duration.
-- The agent's own task instructions (`prompt.md`, §6) don't yet tell it to
-  write `output/verdict.json` — `run-isolated` correctly detects and reports
-  a clean container exit with no verdict file as a structured error rather
-  than silently treating it as success, but nothing upstream of that yet
-  tells the containerized agent what file to write or what shape it should
-  take. Wiring that is a prompt-content concern (each agent's own file, e.g.
-  `tester.agent.md`, already documents how it reports completion for a
-  direct dispatch) rather than an isolation-mechanism one, and is the one
-  piece of §6's contract not yet closed end to end against a real agent —
-  every test here exercises it against a stub that writes the file
-  directly (see the implementation-status note above).
 - The "build:" image-spec case from §12 (a `devcontainer.json` with only a
   `build` block, no plain `image`) is refused outright by
   `isolation_plain_image_ref`/`Get-IsolationPlainImageRef`, not wired up —
@@ -754,3 +776,12 @@ sandbox by granting access back in.
 - §10's read-only/read-write narrowing to declared touched-paths is still not
   implemented in `isolation_spawn_container` — the whole worktree is
   read-write today, within the (fully enforced) confinement ceiling.
+- The resolved toolchain image carries the language runtime but not its test
+  framework (`python:3.12-slim` has no `pytest`; found via the real agent run
+  logged in the implementation-status note above). `rust`/`dotnet` are
+  unaffected — `cargo test`/`dotnet test` are already built into those
+  images — so this is specifically a Python (and likely Node, untested)
+  gap, not a universal one the way the git bootstrap was. Needs its own
+  per-toolchain design (what to install, via which package manager, and
+  whether that belongs in `isolation_build_entrypoint_command` or in a
+  toolchain-specific hook), not a one-line fix.
